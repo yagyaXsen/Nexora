@@ -957,7 +957,7 @@ export default function App() {
             <div className="discovery-feed-scroll">
               {/* Hero Header */}
               <div style={{
-                background: 'var(--gradient-brand)',
+                background: '#004de6',
                 borderRadius: '12px',
                 padding: '2.5rem 2rem',
                 color: '#fff',

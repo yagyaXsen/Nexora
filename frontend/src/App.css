@@ -1425,8 +1425,8 @@ body::after {
   font-family: var(--font-mono);
   font-size: 0.85rem;
   font-weight: 700;
-  color: var(--color-indigo);
-  text-shadow: 0 0 10px rgba(79, 70, 229, 0.2);
+  color: #000000;
+  text-shadow: none;
 }
 
 .match-score-text {
@@ -1447,9 +1447,9 @@ body::after {
 
 .match-bar-fill {
   height: 100%;
-  background: linear-gradient(90deg, var(--color-indigo) 0%, var(--color-cyan) 100%);
+  background: #000000;
   border-radius: 3px;
-  box-shadow: 0 0 8px rgba(34, 211, 238, 0.4);
+  box-shadow: none;
 }
 
 
@@ -1578,8 +1578,8 @@ body::after {
   font-family: var(--font-mono);
   font-size: 0.9rem;
   font-weight: 800;
-  color: var(--color-purple);
-  text-shadow: 0 0 10px rgba(168, 85, 247, 0.2);
+  color: #000000;
+  text-shadow: none;
 }
 
 .completeness-bar-track {
@@ -1591,9 +1591,9 @@ body::after {
 
 .completeness-bar-fill {
   height: 100%;
-  background: linear-gradient(90deg, var(--color-purple) 0%, var(--color-indigo) 100%);
+  background: #000000;
   border-radius: 4px;
-  box-shadow: 0 0 10px rgba(168, 85, 247, 0.3);
+  box-shadow: none;
   transition: width 0.4s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
@@ -1826,14 +1826,14 @@ body::after {
 }
 
 .btn-save-profile-glow {
-  background: #004de6 !important; /* Solid blue matching Nexora brand */
+  background: #000000 !important; /* Solid black */
   color: #ffffff !important;
   border: none !important;
   font-weight: 700 !important;
   font-size: 0.85rem !important;
   padding: 0.75rem 2rem !important;
-  border-radius: 100px !important; /* Capsule/Pill shape from image */
-  box-shadow: 0 4px 15px rgba(0, 77, 230, 0.3) !important;
+  border-radius: 100px !important; /* Capsule/Pill shape */
+  box-shadow: none !important;
   display: inline-flex;
   align-items: center;
   cursor: pointer;
@@ -1842,23 +1842,9 @@ body::after {
   overflow: hidden;
 }
 
-.btn-save-profile-glow::after {
-  content: "";
-  position: absolute;
-  top: -50%; left: -50%; right: -50%; bottom: -50%;
-  background: linear-gradient(to right, transparent, rgba(255,255,255,0.15), transparent);
-  transform: rotate(30deg);
-  animation: glow-shine 3s ease-in-out infinite;
-}
-
-@keyframes glow-shine {
-  0% { transform: translate(-100%, -100%) rotate(30deg); }
-  100% { transform: translate(100%, 100%) rotate(30deg); }
-}
-
 .btn-save-profile-glow:hover {
   transform: translateY(-2px);
-  box-shadow: 0 6px 20px rgba(0, 77, 230, 0.45);
+  box-shadow: none !important;
 }
 
 .btn-save-profile-glow:active {
