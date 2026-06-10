@@ -58,3 +58,8 @@ postgres_data/
 SYSTEM_ARCHITECTURE.md
 walkthrough*.md
 implementation_plan*.md
+
+# Kombai files
+.kombai/
+frontend/public/kombai*
+
