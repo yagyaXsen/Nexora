@@ -63,3 +63,11 @@ implementation_plan*.md
 .kombai/
 frontend/public/kombai*
 
+# Memory and Architecture documentation files
+memory/
+*features.md
+TEST_FCC.md
+git_diff.txt
+*.recovered
+
+
