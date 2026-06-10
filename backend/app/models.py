@@ -73,3 +73,5 @@ class UserProfile(Base):
     base_city = Column(String(255), nullable=True)
     willing_to_relocate = Column(String(10), default="Yes")
     preferred_regions = Column(JSON, nullable=True)  # JSON list of strings
+    # Add reminder preferences
+    reminder_preferences = Column(JSON, nullable=True)  # JSON object for reminder settings

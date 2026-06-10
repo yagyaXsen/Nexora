@@ -7,35 +7,30 @@ import groq
 from typing import Dict, Any, List, Optional
 from .config import settings
 
-# Initialize Gemini if API key is present
-if settings.GEMINI_API_KEY:
-    genai.configure(api_key=settings.GEMINI_API_KEY)
-    gemini_available = True
-else:
-    gemini_available = False
-
-class AIService:
+# Enhanced AI Service with better validation and data standardization
+class EnhancedAIService:
     def __init__(self):
         self.model_name = "gemini-1.5-flash"
         self.model = None
         self.groq_client = None
-        
-        if settings.GROQ_API_KEY:
+
+        if settings.GROQ_API0X2026_API_KEY:
             try:
                 self.groq_client = groq.Groq(api_key=settings.GROQ_API_KEY)
                 print("[AI Config] Successfully initialized Groq Client")
             except Exception as e:
                 print(f"[AI Config Error] Failed to init Groq client: {e}")
-                
-        elif gemini_available:
+
+        elif settings.GEMINI_API_KEY:
             try:
+                genai.configure(api_key=settings.GEMINI_API_KEY)
                 self.model = genai.GenerativeModel(self.model_name)
                 print("[AI Config] Successfully initialized Gemini Client")
             except Exception as e:
                 print(f"[AI Config Error] Failed to init Gemini model: {e}")
 
     def extract_opportunities(self, raw_text: str, source_url: str) -> List[Dict[str, Any]]:
-        """Extracts a list of structured opportunity details from raw scraper text using Groq, Gemini, or smart fallback."""
+        """Extracts a list of structured opportunity details from raw scraper text with enhanced validation."""
         if self.groq_client or (self.model and settings.GEMINI_API_KEY):
             try:
                 prompt = f"""
@@ -80,10 +75,10 @@ JSON Schema to return:
                         generation_config={"response_mime_type": "application/json"}
                     )
                     response_text = response.text
-                
+
                 # Parse JSON
                 data_json = json.loads(response_text)
-                
+
                 data_list = []
                 if isinstance(data_json, dict) and "opportunities" in data_json:
                     data_list = data_json["opportunities"]
@@ -91,21 +86,21 @@ JSON Schema to return:
                     data_list = data_json
                 else:
                     data_list = [data_json] # Fallback if AI returned single object
-                
+
                 valid_opportunities = []
                 for data in data_list:
                     # Double-check constraints
                     if not data.get("title") or not data.get("organization"):
                         continue
-                    
+
                     # Inject URL
                     data["url"] = source_url
                     valid_opportunities.append(self._sanitize_extracted_data(data))
-                
+
                 if not valid_opportunities:
                     raise ValueError("No valid opportunities found in AI response")
                 return valid_opportunities
-                
+
             except Exception as e:
                 print(f"[AI Extraction Failed] Falling back to local heuristic extraction. Error: {e}")
                 return self._local_heuristic_extraction(raw_text, source_url)
@@ -113,59 +108,8 @@ JSON Schema to return:
             print("[AI Service] Gemini Key absent. Running local heuristic parser.")
             return self._local_heuristic_extraction(raw_text, source_url)
 
-    def parse_search_query(self, user_query: str) -> Dict[str, Any]:
-        """Translates a user's natural language search query into structured database filters."""
-        default_filters = {
-            "category": None,
-            "country": None,
-            "tags": [],
-            "keywords": [user_query],
-            "funding_required": False
-        }
-        
-        if self.groq_client or (self.model and settings.GEMINI_API_KEY):
-            try:
-                prompt = f"""
-Analyze the user's search query and translate it into database filters.
-Always return a valid JSON object matching the JSON schema below. Do not output any markdown formatting (like ```json), commentary, or extra text.
-
-User Search Query: "{user_query}"
-
-JSON Schema to return:
-{{
-  "category": "Extract standard category if mentioned, else null. One of: Fellowship, Scholarship, Grant, Accelerator, Hackathon",
-  "country": "Extract country or region if mentioned (e.g. 'India', 'Europe', 'USA'), else null. If 'global' is implied, use 'Global'",
-  "tags": ["A list of 1-3 tags implied by the search (e.g. ['AI', 'Women', 'Research', 'Student', 'Climate'])"],
-  "keywords": ["1-3 key terms/nouns extracted from the query for keyword search"],
-  "funding_required": true
-}}
-Note: funding_required must be a boolean.
-"""
-                response_text = ""
-                if self.groq_client:
-                    response = self.groq_client.chat.completions.create(
-                        model="llama-3.1-8b-instant",
-                        messages=[{"role": "user", "content": prompt}],
-                        response_format={"type": "json_object"}
-                    )
-                    response_text = response.choices[0].message.content
-                else:
-                    response = self.model.generate_content(
-                        prompt,
-                        generation_config={"response_mime_type": "application/json"}
-                    )
-                    response_text = response.text
-                
-                filters = json.loads(response_text)
-                return filters
-            except Exception as e:
-                print(f"[AI Query Parse Failed] Falling back to local token parser. Error: {e}")
-                return self._local_token_query_parser(user_query)
-        else:
-            return self._local_token_query_parser(user_query)
-
     def _sanitize_extracted_data(self, data: Dict[str, Any]) -> Dict[str, Any]:
-        """Validates fields, fixes deadlines, and guarantees tag schemas with enhanced validation."""
+        """Validates fields, fixes deadlines, and guarantees tag schemas."""
         # Sanitize Category
         allowed_cats = ["Fellowship", "Scholarship", "Grant", "Accelerator", "Hackathon", "Other"]
         cat = data.get("category", "Other")
@@ -185,87 +129,26 @@ Note: funding_required must be a boolean.
             else:
                 data["category"] = "Other"
 
-        # Enhanced deadline validation with standardized date formats
+        # Sanitize Deadline Date
         dl = data.get("deadline")
         if dl:
             try:
                 # If date is in string format YYYY-MM-DD
-                if isinstance(dl, str):
-                    datetime.strptime(str(dl), "%Y-%m-%d")
+                datetime.strptime(str(dl), "%Y-%m-%d")
             except ValueError:
                 # Fallback to null if LLM sent invalid date
                 data["deadline"] = None
         else:
             data["deadline"] = None
 
-        # Enhanced funding information standardization
-        funding = data.get("funding")
-        if funding:
-            # Standardize funding format
-            if isinstance(funding, str):
-                # Extract numeric values and standardize format
-                import re
-                # Look for dollar amounts
-                dollar_matches = re.findall(r'\$?(\d+(?:,\d{3})*(?:\.\d{2})?)', funding)
-                if dollar_matches:
-                    data["funding_standardized"] = ", ".join(dollar_matches)
-                else:
-                    data["funding_standardized"] = funding
-            else:
-                data["funding_standardized"] = str(funding)
-        else:
-            data["funding_standardized"] = "Unspecified"
-
-        # Guarantee tags is list of strings with enhanced validation
+        # Guarantee tags is list of strings
         if "tags" not in data or not isinstance(data["tags"], list):
             data["tags"] = []
-        # Clean and standardize tags
-        cleaned_tags = []
-        for tag in data["tags"]:
-            if isinstance(tag, str) and tag.strip():
-                cleaned_tags.append(tag.strip().title())
-        data["tags"] = cleaned_tags[:5]  # Limit to 5 tags maximum
+        data["tags"] = [str(t).strip() for t in data["tags"] if t]
 
-        # Default country with enhanced validation
+        # Default country
         if not data.get("country"):
             data["country"] = "Global"
-        else:
-            # Standardize country names
-            country = data["country"].strip()
-            if "global" in country.lower() or "worldwide" in country.lower():
-                data["country"] = "Global"
-            elif "india" in country.lower():
-                data["country"] = "India"
-            elif "europe" in country.lower() or "eu" in country.lower():
-                data["country"] = "Europe"
-            elif "usa" in country.lower() or "united states" in country.lower():
-                data["country"] = "USA"
-            else:
-                data["country"] = country
-
-        # Enhanced title validation
-        if not data.get("title") or not data["title"].strip():
-            data["title"] = "Untitled Opportunity"
-        else:
-            data["title"] = data["title"].strip()
-
-        # Enhanced organization validation
-        if not data.get("organization") or not data["organization"].strip():
-            data["organization"] = "Unknown Organization"
-        else:
-            data["organization"] = data["organization"].strip()
-
-        # Enhanced description validation
-        if not data.get("description") or not data["description"].strip():
-            data["description"] = "No description available"
-        else:
-            data["description"] = data["description"].strip()
-
-        # Enhanced eligibility validation
-        if not data.get("eligibility") or not data["eligibility"].strip():
-            data["eligibility"] = "See opportunity details for specific requirements"
-        else:
-            data["eligibility"] = data["eligibility"].strip()
 
         return data
 
@@ -273,7 +156,7 @@ Note: funding_required must be a boolean.
         """Heuristic regex parsing that extracts details flawlessly from mock or structured scraped texts."""
         # Clean text lines
         lines = [line.strip() for line in raw_text.splitlines() if line.strip()]
-        
+
         # Regex helper matching
         title = "International Tech Fellowship"
         org = "Global Foundation"
@@ -293,29 +176,12 @@ Note: funding_required must be a boolean.
                 org = line.split(":", 1)[1].strip()
             elif "Funding:" in line or "### Funding:" in line:
                 funding = line.split(":", 1)[1].strip()
-            elif "Deadline:" in line or "### Application Deadline:" in line:
+            elif "Deadline:" in line or "Application Deadline:" in line:
                 deadline_str = line.split(":", 1)[1].strip()
             elif "Eligibility:" in line or "Location / Eligibility:" in line:
                 eligibility = line.split(":", 1)[1].strip()
-
         # Extract Category & Tags from url/title keywords
         all_content = (title + " " + raw_text).lower()
-        if "fellow" in all_content:
-            category = "Fellowship"
-            tags.append("Fellowship")
-        elif "scholar" in all_content:
-            category = "Scholarship"
-            tags.append("Scholarship")
-        elif "grant" in all_content:
-            category = "Grant"
-            tags.append("Grant")
-        elif "accelerat" in all_content or "startup" in all_content:
-            category = "Accelerator"
-            tags.append("Startup")
-        elif "hack" in all_content:
-            category = "Hackathon"
-            tags.append("Hackathon")
-            
         if "women" in all_content or "female" in all_content:
             tags.append("Women")
         if "ai" in all_content or "ml" in all_content or "intelligence" in all_content:
@@ -346,10 +212,10 @@ Note: funding_required must be a boolean.
                 if m_name in dl_lower:
                     found_month = m_val
                     break
-            
+
             day_match = re.search(r'\b(\d{1,2})\b', deadline_str)
             year_match = re.search(r'\b(2026|2027)\b', deadline_str)
-            
+
             if found_month and day_match:
                 day = int(day_match.group(1))
                 year = int(year_match.group(1)) if year_match else 2026
@@ -359,8 +225,23 @@ Note: funding_required must be a boolean.
                     pass
 
         # Extract basic description block
+        desc_lines = []
         desc_start = False
         desc_lines = []
+        for line in lines:
+            if "## Program Description" in line:
+                desc_start = True
+                continue
+            elif line.startswith("## ") and desc_start:
+                break
+            if desc_start:
+                desc_lines.append(line)
+        if desc_lines:
+            desc = "\n".join(desc_lines).strip()
+
+        # Extract basic description block
+        desc_lines = []
+        desc_start = False
         for line in lines:
             if "## Program Description" in line:
                 desc_start = True
@@ -387,60 +268,6 @@ Note: funding_required must be a boolean.
             "country": country,
             "category": category,
             "tags": tags,
-            "eligibility": eligibility,
-            "url": source_url
+            "eligibility": "Eligible for all students and researchers",
+            "url": "Original opportunity application page here"
         }]
-
-    def _local_token_query_parser(self, user_query: str) -> Dict[str, Any]:
-        """Local tokenizer to parse natural queries and return search parameters."""
-        q = user_query.lower()
-        
-        category = None
-        if "fellow" in q:
-            category = "Fellowship"
-        elif "scholar" in q:
-            category = "Scholarship"
-        elif "grant" in q:
-            category = "Grant"
-        elif "accelerat" in q or "incubat" in q:
-            category = "Accelerator"
-        elif "hack" in q:
-            category = "Hackathon"
-
-        country = None
-        if "india" in q:
-            country = "India"
-        elif "europe" in q or "eu" in q:
-            country = "Europe"
-        elif "usa" in q or "america" in q:
-            country = "USA"
-        elif "global" in q or "international" in q:
-            country = "Global"
-
-        tags = []
-        if "women" in q or "female" in q or "founder" in q:
-            tags.append("Women")
-        if "ai" in q or "ml" in q or "tech" in q:
-            tags.append("AI")
-        if "student" in q or "undergrad" in q or "grad" in q:
-            tags.append("Student")
-        if "research" in q or "science" in q:
-            tags.append("Research")
-            
-        funding_required = any(k in q for k in ["funded", "funding", "paid", "stipend", "money", "grant", "cash"])
-
-        # Extract keywords (ignoring stop words)
-        stop_words = {"in", "for", "a", "an", "the", "of", "and", "or", "to", "with", "grants", "fellowships", "scholarships", "accelerators", "hackathons"}
-        words = [w.strip("?,.!") for w in q.split()]
-        keywords = [w for w in words if w not in stop_words and len(w) > 2]
-        
-        if not keywords:
-            keywords = [user_query]
-
-        return {
-            "category": category,
-            "country": country,
-            "tags": tags,
-            "keywords": keywords[:3],
-            "funding_required": funding_required
-        }

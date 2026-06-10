@@ -1,5 +1,5 @@
 from sqlalchemy.orm import Session
-from sqlalchemy import or_, and_, func, cast, String
+from sqlalchemy import or_, and_, func, cast, String, desc
 from typing import List
 from . import models, schemas
 from .ai_service import AIService
@@ -10,7 +10,7 @@ def search_opportunities_hybrid(db: Session, user_query: str) -> List[models.Opp
     """Uses LLM intent extraction combined with dynamic SQL filtering for semantic search."""
     # 1. Parse search query using AI Service
     parsed_filters = ai_service.parse_search_query(user_query)
-    
+
     category = parsed_filters.get("category")
     country = parsed_filters.get("country")
     tags = parsed_filters.get("tags", [])
@@ -76,7 +76,7 @@ def search_opportunities_hybrid(db: Session, user_query: str) -> List[models.Opp
 
     # Return top 50 matches sorted by newest
     results = query.order_by(models.Opportunity.created_at.desc()).limit(50).all()
-    
+
     # If no results matched the rigid filters, fall back to broad keyword search on the original query text
     if not results and user_query:
         print("[Search Engine] No results on strict filter. Falling back to broad keyword search.")
@@ -89,5 +89,5 @@ def search_opportunities_hybrid(db: Session, user_query: str) -> List[models.Opp
             )
         )
         results = query_fallback.order_by(models.Opportunity.created_at.desc()).limit(50).all()
-        
+
     return results

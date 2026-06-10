@@ -114,8 +114,25 @@ def update_scraped_source_status(
 
 # ==================== APPLICATION CRUD ====================
 
-def get_applications(db: Session) -> List[models.Application]:
-    return db.query(models.Application).order_by(models.Application.updated_at.desc()).all()
+def get_upcoming_deadlines(db: Session) -> List[models.Opportunity]:
+    """Get opportunities with upcoming deadlines for the user's applications."""
+    from datetime import datetime, timedelta
+
+    # Get all applications with their opportunities
+    applications = get_applications(db)
+
+    # Filter for applications with upcoming deadlines
+    upcoming_deadlines = []
+    today = datetime.now().date()
+
+    for app in applications:
+        if app.opportunity.deadline:
+            days_until_deadline = (app.opportunity.deadline - today).days
+            # Check if deadline is within the next 30 days
+            if 0 <= days_until_deadline <= 30:
+                upcoming_deadlines.append(app)
+
+    return upcoming_deadlines
 
 def get_application(db: Session, application_id: UUID) -> Optional[models.Application]:
     return db.query(models.Application).filter(models.Application.id == application_id).first()
@@ -195,12 +212,32 @@ def update_user_profile(db: Session, profile_update: schemas.UserProfileUpdate) 
     db_profile = get_user_profile(db)
     if not db_profile:
         return None
-        
+
     update_data = profile_update.model_dump()
     for key, value in update_data.items():
         setattr(db_profile, key, value)
-        
+
     db.commit()
     db.refresh(db_profile)
     return db_profile
+
+def get_upcoming_deadlines(db: Session) -> List[models.Application]:
+    """Get applications with upcoming deadlines."""
+    from datetime import datetime, timedelta
+
+    # Get all applications with their opportunities
+    applications = db.query(models.Application).order_by(models.Application.updated_at.desc()).all()
+
+    # Filter for applications with upcoming deadlines
+    upcoming_deadlines = []
+    today = datetime.now().date()
+
+    for app in applications:
+        if app.opportunity.deadline:
+            days_until_deadline = (app.opportunity.deadline - today).days
+            # Check if deadline is within the next 30 days
+            if 0 <= days_until_deadline <= 30:
+                upcoming_deadlines.append(app)
+
+    return upcoming_deadlines
 

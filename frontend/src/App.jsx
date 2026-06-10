@@ -1,30 +1,21 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
 import './App.css';
-import { 
-  Search, 
-  LayoutDashboard, 
-  ListTree, 
-  Calendar, 
-  Server, 
-  DollarSign, 
-  MapPin, 
-  Globe, 
-  Pin, 
-  Send, 
-  Trophy, 
-  Clock, 
-  AlertCircle, 
-  ArrowRight, 
-  Filter, 
-  Database, 
-  Terminal, 
-  CheckCircle2, 
-  XCircle, 
-  Trash2, 
-  Save, 
-  FileText, 
-  ExternalLink, 
-  RefreshCw, 
+import {
+  Search,
+  LayoutDashboard,
+  ListTree,
+  Calendar,
+  DollarSign,
+  MapPin,
+  Globe,
+  Pin,
+  Send,
+  Trophy,
+  Clock,
+  ArrowRight,
+  CheckCircle2,
+  Trash2,
+  Save,
   Layers,
   User,
   GraduationCap,
@@ -32,11 +23,14 @@ import {
   Plus,
   X,
   Briefcase,
-  Percent,
-  Palette,
   Users,
   Rocket
 } from 'lucide-react';
+
+import OpportunityDetails from './components/features/OpportunityDetails';
+import ProfileSettings from './components/features/ProfileSettings';
+import ScraperConsole from './components/features/ScraperConsole';
+import LandingPage from './components/features/LandingPage';
 
 
 
@@ -48,14 +42,14 @@ const PRESET_THEMES = [
     bgSidebar: 'rgba(248, 250, 252, 0.9)',
     bgCard: '#ffffff',
     bgInput: '#eef2f6',
-    bgActive: 'rgba(37, 99, 235, 0.08)',
+    bgActive: 'rgba(204, 92, 109, 0.08)',
     borderPrimary: 'rgba(0, 0, 0, 0.06)',
     borderSecondary: 'rgba(0, 0, 0, 0.12)',
     textPrimary: '#1e293b',
     textSecondary: '#475569',
     textMuted: '#64748b',
-    primaryAccent: '#2563eb',
-    secondaryAccent: '#06b6d4',
+    primaryAccent: '#cc5c6d',
+    secondaryAccent: '#cc5c6d',
     successAccent: '#10b981',
     borderRadius: '8px',
     fontHeadline: 'Plus Jakarta Sans',
@@ -129,6 +123,16 @@ const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:8000/api';
 export default function App() {
   // Navigation
   const [activeTab, setActiveTab] = useState('discovery'); // Set AI Search as default home page
+  const [showLanding, setShowLanding] = useState(true);
+
+  const handleLaunchApp = (query) => {
+    setShowLanding(false);
+    setActiveTab('discovery');
+    if (query && query.trim()) {
+      setSearchQuery(query);
+      triggerDirectSearch(query);
+    }
+  };
   
   // Theme States
   const [activeTheme, setActiveTheme] = useState('nexora');
@@ -140,6 +144,7 @@ export default function App() {
   const [opportunities, setOpportunities] = useState([]);
   const [applications, setApplications] = useState([]);
   const [scraperSources, setScraperSources] = useState([]);
+  const [upcomingReminders, setUpcomingReminders] = useState([]);
   const [stats, setStats] = useState({
     total_opportunities: 0,
     saved_applications: 0,
@@ -161,6 +166,31 @@ export default function App() {
   const [selectedCountry, setSelectedCountry] = useState('All');
   const [searching, setSearching] = useState(false);
 
+  // Advanced Filter States
+  const [minMatchScore, setMinMatchScore] = useState(0);
+  const [filterAppStatus, setFilterAppStatus] = useState('All');
+  const [filterDuration, setFilterDuration] = useState('All');
+  const [filterComplexity, setFilterComplexity] = useState('All');
+
+  // Voice Search State
+  const [voiceActive, setVoiceActive] = useState(false);
+
+  // Search History State
+  const [searchHistory, setSearchHistory] = useState(['AI research fellowships', 'fully funded PhD Europe', 'Y Combinator winter batch']);
+  const [showHistoryDropdown, setShowHistoryDropdown] = useState(false);
+
+  // AI Copilot Sidebar State
+  const [showCopilot, setShowCopilot] = useState(false);
+  const [copilotMessages, setCopilotMessages] = useState([
+    { sender: 'ai', text: 'Hi! I am your Nexora Copilot. How can I help you find fellowships, grants or scholarships today?' }
+  ]);
+  const [copilotInput, setCopilotInput] = useState('');
+  const [copilotSending, setCopilotSending] = useState(false);
+
+  // Deadline banner & Daily digest dismissals
+  const [hideDeadlineBanner, setHideDeadlineBanner] = useState(false);
+  const [hideDigest, setHideDigest] = useState(false);
+
   // Modal / Detail States
   const [selectedOpportunity, setSelectedOpportunity] = useState(null);
   const [activeApplication, setActiveApplication] = useState(null);
@@ -168,15 +198,24 @@ export default function App() {
   // Scraper Progress States
   const [scraperLogs, setScraperLogs] = useState([]);
   const [scraperRunning, setScraperRunning] = useState(false);
-  const logEndRef = useRef(null);
 
   // Profile & Recommendation States
   const [profile, setProfile] = useState(null);
   const [discoveryMode, setDiscoveryMode] = useState('all'); // 'all' or 'matched'
   const [recommendations, setRecommendations] = useState([]);
   const [loadingRecommendations, setLoadingRecommendations] = useState(false);
-  const [newInterestInput, setNewInterestInput] = useState('');
-  const [newRegionInput, setNewRegionInput] = useState('');
+
+  const getProfileCompleteness = (prof) => {
+    if (!prof) return 40;
+    let score = 40;
+    if (prof.field_of_study) score += 10;
+    if (prof.academic_status) score += 10;
+    if (prof.relocation_preference) score += 10;
+    if (prof.research_interests && prof.research_interests.length > 0) score += 15;
+    if (prof.gpa) score += 15;
+    return Math.min(100, score);
+  };
+  const profileCompleteness = getProfileCompleteness(profile);
 
   const applyThemeById = (themeId) => {
     setActiveTheme(themeId);
@@ -223,7 +262,7 @@ export default function App() {
         setTotalCount(oppsData.total);
       }
 
-      // 3. Fetch Applications
+      // 3. Fetch applications
       const appsRes = await fetch(`${API_BASE}/applications/`);
       if (appsRes.ok) {
         const appsData = await appsRes.json();
@@ -235,6 +274,13 @@ export default function App() {
       if (srcRes.ok) {
         const srcData = await srcRes.json();
         setScraperSources(srcData);
+      }
+
+      // 5. Fetch Upcoming Reminders
+      const remindersRes = await fetch(`${API_BASE}/reminders/upcoming`);
+      if (remindersRes.ok) {
+        const remindersData = await remindersRes.json();
+        setUpcomingReminders(remindersData);
       }
     } catch (err) {
       console.error("Error loading Nexora API data:", err);
@@ -311,27 +357,15 @@ export default function App() {
     setCurrentPage(1);
   }, [selectedCategory, selectedCountry]);
 
-  // Scroll logging console to bottom
-  useEffect(() => {
-    if (logEndRef.current) {
-      logEndRef.current.scrollIntoView({ behavior: 'smooth' });
-    }
-  }, [scraperLogs]);
 
-  // Execute NLP/AI Search
-  const handleSearchSubmit = async (e) => {
-    e.preventDefault();
-    if (!searchQuery.trim()) {
-      fetchData();
-      return;
-    }
 
+  const triggerDirectSearch = async (query) => {
     setSearching(true);
     try {
       const res = await fetch(`${API_BASE}/opportunities/search`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ query: searchQuery })
+        body: JSON.stringify({ query: query })
       });
       if (res.ok) {
         const data = await res.json();
@@ -343,6 +377,116 @@ export default function App() {
     } finally {
       setSearching(false);
     }
+  };
+
+  // Execute NLP/AI Search
+  const handleSearchSubmit = async (e) => {
+    if (e) e.preventDefault();
+    if (!searchQuery.trim()) {
+      fetchData();
+      return;
+    }
+    setSearchHistory(prev => {
+      const filtered = prev.filter(h => h !== searchQuery.trim());
+      return [searchQuery.trim(), ...filtered].slice(0, 5);
+    });
+    await triggerDirectSearch(searchQuery);
+  };
+
+  const handleVoiceSearch = () => {
+    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+    if (!SpeechRecognition) {
+      alert("Speech recognition is not supported in this browser. Please try Google Chrome.");
+      return;
+    }
+    const recognition = new SpeechRecognition();
+    recognition.lang = 'en-US';
+    recognition.onstart = () => {
+      setVoiceActive(true);
+    };
+    recognition.onresult = (event) => {
+      const transcript = event.results[0][0].transcript;
+      setSearchQuery(transcript);
+      setSearchHistory(prev => {
+        const filtered = prev.filter(h => h !== transcript);
+        return [transcript, ...filtered].slice(0, 5);
+      });
+      triggerDirectSearch(transcript);
+      setVoiceActive(false);
+    };
+    recognition.onerror = () => {
+      setVoiceActive(false);
+    };
+    recognition.onend = () => {
+      setVoiceActive(false);
+    };
+    recognition.start();
+  };
+
+  const handleCopilotSend = async (e) => {
+    if (e) e.preventDefault();
+    if (!copilotInput.trim()) return;
+    const userMsg = copilotInput.trim();
+    setCopilotMessages(prev => [...prev, { sender: 'user', text: userMsg }]);
+    setCopilotInput('');
+    setCopilotSending(true);
+    
+    try {
+      const res = await fetch(`${API_BASE}/opportunities/search`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ query: userMsg })
+      });
+      if (res.ok) {
+        const data = await res.json();
+        const resultsText = data.length > 0 
+          ? `I found ${data.length} matches for you. Here are the top ones:\n` + data.slice(0, 3).map(o => `• **${o.title}** (${o.funding || 'Fully Funded'}, ${o.country})`).join('\n')
+          : "I searched global portals but couldn't find any direct matches. Try adjusting your research interests or search terms.";
+        setCopilotMessages(prev => [...prev, { sender: 'ai', text: resultsText }]);
+      } else {
+        setCopilotMessages(prev => [...prev, { sender: 'ai', text: "Sorry, I ran into a connection issue. Let me try again." }]);
+      }
+    } catch (err) {
+      setCopilotMessages(prev => [...prev, { sender: 'ai', text: "Error searching databases. Please try again." }]);
+    } finally {
+      setCopilotSending(false);
+    }
+  };
+
+  const getFilteredOpps = (list) => {
+    return list.filter(opp => {
+      // 1. Match score filter
+      const score = opp.match_score || getDeterministicMatch(opp.title);
+      if (minMatchScore > 0 && score < minMatchScore) return false;
+      
+      // 2. Application status filter
+      const isPinned = applications.some(app => app.opportunity_id === opp.id);
+      const appRecord = applications.find(app => app.opportunity_id === opp.id);
+      if (filterAppStatus === 'Not Applied' && isPinned) return false;
+      if (filterAppStatus === 'Saved' && (!isPinned || appRecord?.status !== 'Saved')) return false;
+      if (filterAppStatus === 'Applied' && (!isPinned || appRecord?.status !== 'Applied')) return false;
+      if (filterAppStatus === 'Interview' && (!isPinned || appRecord?.status !== 'Interview')) return false;
+      if (filterAppStatus === 'Accepted' && (!isPinned || appRecord?.status !== 'Accepted')) return false;
+
+      // 3. Duration filter
+      if (filterDuration !== 'All') {
+        const desc = (opp.description || '').toLowerCase();
+        if (filterDuration === '1-3 months' && !desc.includes('1-3') && !desc.includes('month') && !desc.includes('weeks')) return false;
+        if (filterDuration === '3-6 months' && !desc.includes('3-6') && !desc.includes('6 month') && !desc.includes('semester')) return false;
+        if (filterDuration === '6-12 months' && !desc.includes('6-12') && !desc.includes('year') && !desc.includes('annual')) return false;
+      }
+
+      // 4. Complexity filter
+      if (filterComplexity !== 'All') {
+        const title = (opp.title || '').toLowerCase();
+        const isEasy = title.includes('hackathon') || title.includes('competition');
+        const isCompetitive = title.includes('fellowship') || title.includes('schmidt') || title.includes('gates');
+        const estComplexity = isEasy ? 'Easy' : isCompetitive ? 'Competitive' : 'Medium';
+        if (filterComplexity !== estComplexity) return false;
+      }
+      
+      return true;
+    });
   };
 
   // Save opportunity to tracker
@@ -476,19 +620,7 @@ export default function App() {
     return 75 + (Math.abs(hash) % 25); // returns between 75% and 99%
   };
 
-  const calculateCompleteness = () => {
-    if (!profile) return 0;
-    let score = 0;
-    if (profile.name) score += 10;
-    if (profile.email) score += 10;
-    if (profile.bio && profile.bio.trim().length > 10) score += 15;
-    if (profile.academic_status) score += 15;
-    if (profile.university) score += 15;
-    if (profile.verified_academic_id) score += 10;
-    if (profile.research_interests && profile.research_interests.length > 0) score += 15;
-    if (profile.preferred_regions && profile.preferred_regions.length > 0) score += 10;
-    return score;
-  };
+
 
   const totalPages = Math.ceil(totalCount / itemsPerPage);
 
@@ -579,295 +711,42 @@ export default function App() {
     );
   };
 
-  const renderFullPageOpportunityDetail = () => {
-    const opp = selectedOpportunity;
-    const daysLeft = getDaysLeft(opp.deadline);
-    const isPinned = applications.some(app => app.opportunity_id === opp.id);
-    const matchScore = opp.match_score || getDeterministicMatch(opp.title);
 
-    const isGoogleFellowship = opp.title?.includes("Google AI Fellowship");
-    const fundingVal = isGoogleFellowship ? "$50,000 USD stipend + tuition coverage" : (opp.funding || 'Full funding coverage');
-    const deadlineVal = isGoogleFellowship ? "December 01, 2025 (11:59 PM PST)" : formatDeadline(opp.deadline);
-    const eligibilityVal = isGoogleFellowship ? "Full-time Ph.D. students in Computer Science or related fields" : (opp.eligibility || 'Ph.D. candidates or graduate students doing machine learning research');
-    const durationVal = isGoogleFellowship ? "Up to 3 years of funding" : (opp.duration || 'Up to 3 years of program support');
-    const locationVal = isGoogleFellowship ? "Global (Affiliated with recognized universities)" : (opp.country || 'Global');
-    const materialsVal = isGoogleFellowship ? "CV, 3 Recommendation Letters, Research Proposal" : 'CV, 3 Recommendation Letters, Research Statement';
-    const descriptionVal = isGoogleFellowship 
-      ? "The Google AI Fellowship Program recognizes outstanding graduate students doing exceptional and innovative research in areas relevant to computer science and related fields. Fellowships support promising Ph.D. candidates of all backgrounds who seek to influence the future of technology."
-      : opp.description;
 
-    const alignmentTags = opp.category === 'Fellowship' 
-      ? ['Ph.D. Required', 'Deep Learning', 'Publication Track']
-      : ['Student Eligible', 'Relocation Supported', 'Tech Track'];
 
+  if (showLanding) {
     return (
-      <div className="opportunity-full-detail-view" style={{ animation: 'fade-in 0.3s ease-out', paddingBottom: '3rem' }}>
-        
-        {/* Back navigation */}
-        <div style={{ marginBottom: '1.5rem' }}>
-          <button 
-            type="button" 
-            className="btn btn-secondary" 
-            onClick={() => setSelectedOpportunity(null)}
-            style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', padding: '0.5rem 1rem', borderRadius: '20px' }}
-          >
-            &larr; Back to Discoveries
-          </button>
-        </div>
-
-        {/* 1. Opportunity Header card */}
-        <div className="glass-card" style={{ padding: '2rem', marginBottom: '1.5rem', position: 'relative' }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '2rem', flexWrap: 'wrap' }}>
-            <div>
-              <span className="card-category-badge" style={{ display: 'inline-block', marginBottom: '0.75rem', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-                {opp.category === 'Fellowship' ? 'Education & Research' : opp.category}
-              </span>
-              <h1 style={{ fontSize: '2.2rem', fontWeight: '800', color: 'var(--text-primary)', marginBottom: '0.75rem', lineHeight: '1.2' }}>{opp.title}</h1>
-              
-              <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
-                <span className="academic-verified-badge" style={{ position: 'static', padding: '0.3rem 0.65rem', fontSize: '0.7rem', display: 'inline-flex', alignItems: 'center' }}>
-                  <CheckCircle2 size={12} style={{ marginRight: '4px' }} />
-                  Verified Opportunity
-                </span>
-                {opp.deadline && (
-                  <span className="card-deadline-countdown" style={{ padding: '0.3rem 0.65rem', fontSize: '0.7rem', display: 'inline-flex', alignItems: 'center' }}>
-                    <Clock size={12} style={{ marginRight: '4px' }} />
-                    {daysLeft > 0 ? `Closing in ${daysLeft} days` : daysLeft === 0 ? 'Closing today' : 'Closed'}
-                  </span>
-                )}
-              </div>
-            </div>
-
-            {/* Action buttons */}
-            <div style={{ display: 'flex', gap: '0.75rem', alignSelf: 'center' }}>
-              <button 
-                type="button"
-                className="btn btn-secondary" 
-                style={{ borderRadius: '8px', padding: '0.65rem 1.25rem', background: isPinned ? 'var(--bg-active)' : 'var(--bg-card)', color: isPinned ? 'var(--text-secondary)' : 'var(--text-primary)', display: 'inline-flex', alignItems: 'center', gap: '6px' }}
-                onClick={() => handleSaveToTracker(opp.id)}
-                disabled={isPinned}
-              >
-                <Pin size={14} />
-                {isPinned ? '✓ Saved' : 'Save for Later'}
-              </button>
-              <a 
-                href={opp.url} 
-                target="_blank" 
-                rel="noopener noreferrer"
-                className="btn btn-save-profile-glow"
-                style={{ borderRadius: '100px', padding: '0.75rem 2rem', textDecoration: 'none', color: '#fff', fontSize: '0.9rem', boxShadow: '0 4px 15px rgba(0, 77, 230, 0.4)' }}
-              >
-                Apply Now
-              </a>
-            </div>
-          </div>
-        </div>
-
-        {/* 2. AI Personal Alignment Card */}
-        <div className="glass-card" style={{ padding: '2rem', marginBottom: '1.5rem', display: 'flex', alignItems: 'center', gap: '2rem', flexWrap: 'wrap' }}>
-          {/* Radial progress meter */}
-          <div style={{ position: 'relative', width: '90px', height: '90px', flexShrink: 0 }}>
-            <svg width="90" height="90" viewBox="0 0 36 36">
-              <path
-                className="circle-bg"
-                d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
-                fill="none"
-                stroke="rgba(255,255,255,0.05)"
-                strokeWidth="2.5"
-              />
-              <path
-                className="circle"
-                strokeDasharray={`${matchScore}, 100`}
-                d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
-                fill="none"
-                stroke="var(--color-primary)"
-                strokeWidth="2.5"
-                strokeLinecap="round"
-                style={{ transition: 'stroke-dasharray 0.6s ease-out' }}
-              />
-            </svg>
-            <div style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: 'var(--font-mono)', fontSize: '1.25rem', fontWeight: '800', color: 'var(--text-primary)' }}>
-              {matchScore}%
-            </div>
-          </div>
-
-          <div style={{ flexGrow: 1, minWidth: '250px' }}>
-            <h3 style={{ fontSize: '1.1rem', fontWeight: '700', color: 'var(--text-primary)', marginBottom: '0.35rem' }}>AI Personal Alignment</h3>
-            <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', lineHeight: '1.6' }}>
-              Based on your research history in {profile?.research_interests?.[0] || 'Neural Radiance Fields'} and your {profile?.academic_status || 'academic'} status, this opportunity is an elite match for your profile.
-            </p>
-          </div>
-
-          {/* Tags */}
-          <div style={{ display: 'flex', gap: '0.4rem', flexWrap: 'wrap', alignSelf: 'center' }}>
-            {alignmentTags.map(tag => (
-              <span key={tag} className="chat-filter-select" style={{ fontSize: '0.7rem', padding: '0.3rem 0.6rem', border: '1px solid var(--border-primary)', borderRadius: '16px' }}>
-                {tag}
-              </span>
-            ))}
-          </div>
-        </div>
-
-        {/* 3. Main content body Bento Layout */}
-        <div className="bento-grid" style={{ marginBottom: '1.5rem' }}>
-          
-          {/* Left column (Bento Col 4) */}
-          <div className="bento-col-4" style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
-            {/* Tracking Status */}
-            <div className="glass-card" style={{ padding: '1.5rem' }}>
-              <h3 style={{ fontSize: '1rem', fontWeight: '700', color: 'var(--text-primary)', marginBottom: '1.25rem' }}>Tracking Status</h3>
-              
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem', position: 'relative' }}>
-                {/* Vertical line indicator */}
-                <div style={{ position: 'absolute', left: '11px', top: '10px', bottom: '10px', width: '2px', background: 'var(--border-primary)' }}></div>
-                
-                {/* Step 1 */}
-                <div style={{ display: 'flex', gap: '1rem', position: 'relative', zIndex: 1 }}>
-                  <div style={{ width: '24px', height: '24px', borderRadius: '50%', background: 'var(--color-primary)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontSize: '0.7rem' }}>✓</div>
-                  <div>
-                    <h4 style={{ fontSize: '0.8rem', fontWeight: '700', color: 'var(--text-primary)' }}>Application Discovered</h4>
-                    <p style={{ fontSize: '0.7rem', color: 'var(--text-secondary)', marginTop: '0.2rem' }}>Identified by Nexora on Oct 12</p>
-                  </div>
-                </div>
-
-                {/* Step 2 */}
-                <div style={{ display: 'flex', gap: '1rem', position: 'relative', zIndex: 1 }}>
-                  <div style={{ width: '24px', height: '24px', borderRadius: '50%', background: 'var(--color-primary)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontSize: '0.7rem' }}>✓</div>
-                  <div>
-                    <h4 style={{ fontSize: '0.8rem', fontWeight: '700', color: 'var(--text-primary)' }}>Profile Alignment Check</h4>
-                    <p style={{ fontSize: '0.7rem', color: 'var(--text-secondary)', marginTop: '0.2rem' }}>{matchScore}% match verified</p>
-                  </div>
-                </div>
-
-                {/* Step 3 */}
-                <div style={{ display: 'flex', gap: '1rem', position: 'relative', zIndex: 1 }}>
-                  <div style={{ width: '24px', height: '24px', borderRadius: '50%', background: 'var(--bg-darkest)', border: '2px solid var(--color-primary)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                    <span className="animate-pulse" style={{ display: 'inline-block', width: '8px', height: '8px', borderRadius: '50%', background: 'var(--color-primary)' }}></span>
-                  </div>
-                  <div>
-                    <h4 style={{ fontSize: '0.8rem', fontWeight: '700', color: 'var(--text-primary)' }}>Preparation Phase</h4>
-                    <p style={{ fontSize: '0.7rem', color: 'var(--text-secondary)', marginTop: '0.2rem' }}>Drafting research proposal</p>
-                  </div>
-                </div>
-
-                {/* Step 4 */}
-                <div style={{ display: 'flex', gap: '1rem', position: 'relative', zIndex: 1 }}>
-                  <div style={{ width: '24px', height: '24px', borderRadius: '50%', background: 'var(--bg-darkest)', border: '2px solid var(--border-primary)' }}></div>
-                  <div>
-                    <h4 style={{ fontSize: '0.8rem', fontWeight: '700', color: 'var(--text-muted)' }}>Final Submission</h4>
-                    <p style={{ fontSize: '0.7rem', color: 'var(--text-muted)', marginTop: '0.2rem' }}>Deadline: {isGoogleFellowship ? "Dec 01, 2025" : formatDeadline(opp.deadline)}</p>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            {/* Nexora Insights */}
-            <div className="glass-card" style={{ padding: '1.5rem', background: 'linear-gradient(135deg, rgba(147, 51, 234, 0.03) 0%, rgba(6, 182, 212, 0.03) 100%)' }}>
-              <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center', marginBottom: '0.75rem', color: 'var(--color-cyan)' }}>
-                <Layers size={16} />
-                <h4 style={{ fontSize: '0.8rem', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Nexora Insights</h4>
-              </div>
-              <p style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', fontStyle: 'italic', lineHeight: '1.6' }}>
-                "Applicants who emphasize cross-disciplinary applications of AI in climate science have had a 15% higher acceptance rate in previous cohorts."
-              </p>
-            </div>
-          </div>
-
-          {/* Right column (Bento Col 8) */}
-          <div className="bento-col-8" style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
-            {/* Detailed Specifications Table */}
-            <div className="glass-card" style={{ padding: '1.5rem' }}>
-              <h3 style={{ fontSize: '1rem', fontWeight: '700', color: 'var(--text-primary)', marginBottom: '1rem' }}>Detailed Specifications</h3>
-              
-              <div style={{ display: 'flex', flexDirection: 'column' }}>
-                <div style={{ display: 'flex', padding: '0.75rem 0', borderBottom: '1px solid var(--border-primary)' }}>
-                  <div style={{ width: '150px', fontSize: '0.8rem', color: 'var(--text-secondary)' }}>Funding Amount</div>
-                  <div style={{ fontSize: '0.8rem', color: 'var(--text-primary)', fontWeight: '700' }}>{fundingVal}</div>
-                </div>
-                <div style={{ display: 'flex', padding: '0.75rem 0', borderBottom: '1px solid var(--border-primary)' }}>
-                  <div style={{ width: '150px', fontSize: '0.8rem', color: 'var(--text-secondary)' }}>Application Deadline</div>
-                  <div style={{ fontSize: '0.8rem', color: 'var(--text-primary)' }}>{deadlineVal}</div>
-                </div>
-                <div style={{ display: 'flex', padding: '0.75rem 0', borderBottom: '1px solid var(--border-primary)' }}>
-                  <div style={{ width: '150px', fontSize: '0.8rem', color: 'var(--text-secondary)' }}>Eligibility</div>
-                  <div style={{ fontSize: '0.8rem', color: 'var(--text-primary)' }}>{eligibilityVal}</div>
-                </div>
-                <div style={{ display: 'flex', padding: '0.75rem 0', borderBottom: '1px solid var(--border-primary)' }}>
-                  <div style={{ width: '150px', fontSize: '0.8rem', color: 'var(--text-secondary)' }}>Duration</div>
-                  <div style={{ fontSize: '0.8rem', color: 'var(--text-primary)' }}>{durationVal}</div>
-                </div>
-                <div style={{ display: 'flex', padding: '0.75rem 0', borderBottom: '1px solid var(--border-primary)' }}>
-                  <div style={{ width: '150px', fontSize: '0.8rem', color: 'var(--text-secondary)' }}>Location</div>
-                  <div style={{ fontSize: '0.8rem', color: 'var(--text-primary)' }}>{locationVal}</div>
-                </div>
-                <div style={{ display: 'flex', padding: '0.75rem 0' }}>
-                  <div style={{ width: '150px', fontSize: '0.8rem', color: 'var(--text-secondary)' }}>Required Materials</div>
-                  <div style={{ fontSize: '0.8rem', color: 'var(--text-primary)' }}>{materialsVal}</div>
-                </div>
-              </div>
-            </div>
-
-            {/* About the Fellowship */}
-            <div className="glass-card" style={{ padding: '1.5rem' }}>
-              <h3 style={{ fontSize: '1rem', fontWeight: '700', color: 'var(--text-primary)', marginBottom: '0.75rem' }}>About the Fellowship</h3>
-              <p style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', lineHeight: '1.6', marginBottom: '1.25rem' }}>
-                {descriptionVal}
-              </p>
-
-              {/* Two Column Feature Cards */}
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
-                <div className="glass-card" style={{ padding: '1rem', background: 'rgba(255,255,255,0.02)' }}>
-                  <div style={{ display: 'flex', gap: '0.4rem', alignItems: 'center', marginBottom: '0.35rem', color: 'var(--color-primary)' }}>
-                    <Users size={14} />
-                    <h4 style={{ fontSize: '0.75rem', fontWeight: '700' }}>Mentorship</h4>
-                  </div>
-                  <p style={{ fontSize: '0.65rem', color: 'var(--text-secondary)', lineHeight: '1.5' }}>
-                    Direct connection to a Google Research Mentor for the duration of the fellowship.
-                  </p>
-                </div>
-
-                <div className="glass-card" style={{ padding: '1rem', background: 'rgba(255,255,255,0.02)' }}>
-                  <div style={{ display: 'flex', gap: '0.4rem', alignItems: 'center', marginBottom: '0.35rem', color: 'var(--color-secondary)' }}>
-                    <Rocket size={14} />
-                    <h4 style={{ fontSize: '0.75rem', fontWeight: '700' }}>Industry Exposure</h4>
-                  </div>
-                  <p style={{ fontSize: '0.65rem', color: 'var(--text-secondary)', lineHeight: '1.5' }}>
-                    Opportunity for paid internships at Google research hubs globally.
-                  </p>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* 4. Interactive Google Maps Locator */}
-        <div style={{ position: 'relative', width: '100%', borderRadius: '12px', overflow: 'hidden', height: '320px', boxShadow: 'var(--shadow-main)', border: '1px solid var(--border-primary)' }}>
-          <iframe 
-            title="Opportunity Location Map"
-            width="100%" 
-            height="100%" 
-            style={{ border: 0, filter: 'grayscale(0.1) contrast(1.1)' }} 
-            loading="lazy" 
-            allowFullScreen 
-            referrerPolicy="no-referrer-when-downgrade"
-            src={`https://maps.google.com/maps?q=${encodeURIComponent(`${opp.organization} ${opp.country || ''}`.trim())}&t=&z=13&ie=UTF8&iwloc=&output=embed`}
-          ></iframe>
-          <div style={{ position: 'absolute', bottom: '1.25rem', left: '1.25rem', background: 'rgba(0,0,0,0.7)', backdropFilter: 'blur(8px)', padding: '0.4rem 0.8rem', borderRadius: '4px', fontSize: '0.7rem', color: '#fff', fontFamily: 'var(--font-mono)', border: '1px solid rgba(255,255,255,0.1)', pointerEvents: 'none' }}>
-            Google Maps Locator &mdash; {opp.organization} ({opp.country || 'Global'})
-          </div>
-        </div>
-
-      </div>
+      <LandingPage 
+        opportunities={opportunities}
+        stats={stats}
+        searchQuery={searchQuery}
+        setSearchQuery={setSearchQuery}
+        handleSearchSubmit={handleSearchSubmit}
+        selectedCategory={selectedCategory}
+        setSelectedCategory={setSelectedCategory}
+        selectedCountry={selectedCountry}
+        setSelectedCountry={setSelectedCountry}
+        currentPage={currentPage}
+        setCurrentPage={setCurrentPage}
+        totalPages={totalPages}
+        itemsPerPage={itemsPerPage}
+        setItemsPerPage={setItemsPerPage}
+        totalCount={totalCount}
+        setActiveTab={setActiveTab}
+        onLaunchApp={handleLaunchApp} 
+      />
     );
-  };
-
+  }
 
   return (
     <div className="app-container">
       {/* SIDEBAR NAVIGATION */}
       <aside className="sidebar">
         <div className="sidebar-nav-container">
-          <div className="brand-section">
+          <div className="brand-section" onClick={() => setShowLanding(true)}>
+            <div className="brand-logo-box">
+              <span>✦</span>
+            </div>
             <span className="brand-name">Nexora</span>
           </div>
 
@@ -917,15 +796,51 @@ export default function App() {
         </div>
 
         <div className="sidebar-footer">
-          <span className="system-dot"></span>
-          <span>System Active</span>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', fontSize: '0.8rem' }}>
+            <span className="system-dot"></span>
+            <span>System Active</span>
+          </div>
+          <button 
+            type="button"
+            onClick={() => {
+              // Sign out flow
+              setProfile(null);
+              setApplications([]);
+              setSelectedOpportunity(null);
+              setIsLoggedIn(false);
+            }} 
+            style={{
+              background: 'transparent',
+              border: 'none',
+              color: '#cc5c6d',
+              fontWeight: '700',
+              fontSize: '0.8rem',
+              cursor: 'pointer',
+              padding: 0,
+              display: 'flex',
+              alignItems: 'center',
+              gap: '4px',
+              marginTop: '0.25rem'
+            }}
+          >
+            <i className="ti ti-logout"></i> Sign Out / Exit
+          </button>
         </div>
       </aside>
 
       {/* MAIN CONTENT CANVAS */}
       <main className="main-canvas">
         {selectedOpportunity ? (
-          renderFullPageOpportunityDetail()
+          <OpportunityDetails
+            opportunity={selectedOpportunity}
+            profile={profile}
+            applications={applications}
+            getDaysLeft={getDaysLeft}
+            getDeterministicMatch={getDeterministicMatch}
+            formatDeadline={formatDeadline}
+            handleSaveToTracker={handleSaveToTracker}
+            onBack={() => setSelectedOpportunity(null)}
+          />
         ) : (
           <>
             {/* HEADER BAR */}
@@ -952,21 +867,124 @@ export default function App() {
 
 
         {activeTab === 'discovery' && (
-          <div className="discovery-container">
+          <div className="discovery-container" style={{ position: 'relative' }}>
             {/* Scrollable feed section */}
             <div className="discovery-feed-scroll">
-              {/* Hero Header */}
+              {/* Authenticated Welcome Card */}
               <div style={{
-                background: '#004de6',
-                borderRadius: '12px',
-                padding: '2.5rem 2rem',
-                color: '#fff',
-                marginBottom: '2rem',
-                boxShadow: 'var(--shadow-main)'
+                background: '#ffffff',
+                borderRadius: '16px',
+                padding: '2rem',
+                marginBottom: '1.5rem',
+                border: '1px solid #d0d0cc',
+                boxShadow: '0 1px 3px rgba(0,0,0,0.05)',
+                position: 'relative',
+                overflow: 'hidden'
               }}>
-                <h1 style={{ fontSize: '2.2rem', fontWeight: '700', marginBottom: '0.5rem', textShadow: '0 2px 10px rgba(0,0,0,0.2)' }}>Discover Your Next Big Opportunity</h1>
-                <p style={{ fontSize: '1rem', opacity: '0.9', maxWidth: '600px' }}>Our AI-powered hybrid reasoning engine continuously monitors global portals to bring you the best fellowships, grants, and internships tailored to your profile.</p>
+                <div style={{
+                  position: 'absolute',
+                  top: 0, right: 0,
+                  width: '200px',
+                  height: '100%',
+                  background: 'linear-gradient(135deg, transparent, rgba(204, 92, 109, 0.04))',
+                  pointerEvents: 'none'
+                }}></div>
+                <h1 style={{ fontSize: '1.8rem', fontWeight: '800', marginBottom: '0.4rem', fontFamily: 'Instrument Sans, sans-serif', color: '#111111', letterSpacing: '-0.03em' }}>
+                  Welcome back, {profile?.full_name || 'Aarav'}
+                </h1>
+                <p style={{ fontSize: '0.9rem', color: '#475569', maxWidth: '560px', fontWeight: '400', fontFamily: 'Be Vietnam Pro, sans-serif' }}>
+                  Your daily opportunity digest and AI-matched recommendations.
+                </p>
               </div>
+
+              {/* Quick Stats Strip */}
+              <div className="glass-card" style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                padding: '1rem 2rem',
+                borderRadius: '16px',
+                marginBottom: '1.5rem',
+                gap: '1rem',
+                flexWrap: 'wrap'
+              }}>
+                <div style={{ display: 'flex', gap: '2rem', flexWrap: 'wrap', fontSize: '0.85rem', fontWeight: '600' }}>
+                  <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}><i className="ti ti-bookmark" style={{ color: 'var(--text-muted)' }}></i> Saved: <strong style={{ color: '#cc5c6d' }}>{stats.saved_applications}</strong></span>
+                  <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}><i className="ti ti-mail" style={{ color: 'var(--text-muted)' }}></i> Applied: <strong style={{ color: '#cc5c6d' }}>{stats.applied_applications}</strong></span>
+                  <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}><i className="ti ti-calendar" style={{ color: 'var(--text-muted)' }}></i> Interviews: <strong style={{ color: '#cc5c6d' }}>{stats.pipeline_stages?.Interview || 1}</strong></span>
+                  <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}><i className="ti ti-trophy" style={{ color: 'var(--text-muted)' }}></i> Accepted: <strong style={{ color: '#cc5c6d' }}>{stats.accepted_applications}</strong></span>
+                </div>
+                <div style={{ fontSize: '0.85rem', fontWeight: '700', color: '#cc5c6d', display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+                  <i className="ti ti-flame"></i> 7-Day Streak!
+                </div>
+              </div>
+
+              {/* Deadline Alert Strip */}
+              {!hideDeadlineBanner && applications.filter(app => app.opportunity.deadline && getDaysLeft(app.opportunity.deadline) >= 0 && getDaysLeft(app.opportunity.deadline) <= 7).length > 0 && (
+                <div className="glass-card" style={{
+                  background: 'linear-gradient(135deg, rgba(239, 68, 68, 0.08) 0%, rgba(245, 158, 11, 0.08) 100%)',
+                  border: '1px solid rgba(239, 68, 68, 0.2)',
+                  borderRadius: '16px',
+                  padding: '1rem 1.5rem',
+                  marginBottom: '1.5rem',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  gap: '1rem'
+                }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                    <span style={{ fontSize: '1.25rem', color: '#f59e0b', display: 'flex', alignItems: 'center' }}><i className="ti ti-alert-triangle"></i></span>
+                    <span style={{ fontSize: '0.85rem', fontWeight: '600', color: 'var(--text-primary)' }}>
+                      You have <strong>{applications.filter(app => app.opportunity.deadline && getDaysLeft(app.opportunity.deadline) >= 0 && getDaysLeft(app.opportunity.deadline) <= 7).length} saved opportunities</strong> closing in the next 7 days!
+                    </span>
+                  </div>
+                  <div style={{ display: 'flex', gap: '8px' }}>
+                    <button className="btn btn-secondary" style={{ padding: '0.4rem 0.8rem', fontSize: '0.75rem', borderRadius: '10px' }} onClick={() => setActiveTab('calendar')}>
+                      Open Calendar
+                    </button>
+                    <button className="btn btn-secondary" style={{ padding: '0.4rem 0.6rem', fontSize: '0.75rem', borderRadius: '10px' }} onClick={() => setHideDeadlineBanner(true)}>
+                      Dismiss
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {/* Daily Digest Card */}
+              {!hideDigest && (
+                <div className="glass-card" style={{ padding: '1.5rem', marginBottom: '1.5rem', position: 'relative' }}>
+                  <button 
+                    style={{ position: 'absolute', top: '0.75rem', right: '0.75rem', background: 'transparent', border: 'none', cursor: 'pointer', fontSize: '1.2rem', color: 'var(--text-muted)' }}
+                    onClick={() => setHideDigest(true)}
+                  >
+                    ×
+                  </button>
+                  <h3 className="chart-header" style={{ marginBottom: '1rem', fontSize: '0.8rem', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                    <i className="ti ti-sparkles" style={{ color: '#cc5c6d' }}></i> Today's Top Matches For You
+                  </h3>
+                  <div style={{ display: 'flex', gap: '1rem', overflowX: 'auto', paddingBottom: '0.5rem' }} className="no-bar">
+                    {opportunities
+                      .sort((a, b) => (b.match_score || getDeterministicMatch(b.title)) - (a.match_score || getDeterministicMatch(a.title)))
+                      .slice(0, 4)
+                      .map(opp => {
+                        const match = opp.match_score || getDeterministicMatch(opp.title);
+                        return (
+                          <div 
+                            key={opp.id} 
+                            className="glass-card" 
+                            style={{ minWidth: '240px', padding: '1rem', flexShrink: 0, cursor: 'pointer', border: '1px solid rgba(204, 92, 109, 0.15)' }}
+                            onClick={() => setSelectedOpportunity(opp)}
+                          >
+                            <span className="font-mono" style={{ fontSize: '0.65rem', color: '#cc5c6d', fontWeight: '700', display: 'inline-flex', alignItems: 'center', gap: '2px' }}>
+                              <i className="ti ti-bolt"></i> {match}% MATCH
+                            </span>
+                            <h4 style={{ fontSize: '0.85rem', fontWeight: '700', margin: '4px 0', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{opp.title}</h4>
+                            <p style={{ fontSize: '0.7rem', color: 'var(--text-secondary)', margin: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{opp.organization}</p>
+                          </div>
+                        );
+                      })}
+                  </div>
+                </div>
+              )}
 
               {/* Discovery Mode Switch Tabs */}
               <div className="mode-switch-tabs" style={{ marginBottom: '1.5rem' }}>
@@ -986,47 +1004,103 @@ export default function App() {
                 </button>
               </div>
 
-              {discoveryMode === 'all' ? (
-                /* Advanced filter select tools */
-                <div className="chat-filters-panel" style={{ marginBottom: '2rem' }}>
-                  <select 
-                    className="chat-filter-select"
-                    value={selectedCategory}
-                    onChange={(e) => setSelectedCategory(e.target.value)}
-                  >
-                    <option value="All">All Categories</option>
-                    <option value="Fellowship">Fellowships</option>
-                    <option value="Scholarship">Scholarships</option>
-                    <option value="Grant">Grants</option>
-                    <option value="Accelerator">Accelerators</option>
-                    <option value="Hackathon">Hackathons</option>
-                  </select>
+              {/* Advanced filter select tools */}
+              <div className="chat-filters-panel" style={{ marginBottom: '2.5rem', display: 'flex', gap: '0.75rem', flexWrap: 'wrap' }}>
+                <select 
+                  className="chat-filter-select"
+                  value={selectedCategory}
+                  onChange={(e) => setSelectedCategory(e.target.value)}
+                >
+                  <option value="All">All Categories</option>
+                  <option value="Fellowship">Fellowships</option>
+                  <option value="Scholarship">Scholarships</option>
+                  <option value="Grant">Grants</option>
+                  <option value="Accelerator">Accelerators</option>
+                  <option value="Hackathon">Hackathons</option>
+                </select>
 
-                  <select 
-                    className="chat-filter-select"
-                    value={selectedCountry}
-                    onChange={(e) => setSelectedCountry(e.target.value)}
-                  >
-                    <option value="All">All Regions</option>
-                    <option value="Global">Global</option>
-                    <option value="India">India</option>
-                    <option value="Europe">Europe</option>
-                    <option value="USA">USA</option>
-                  </select>
+                <select 
+                  className="chat-filter-select"
+                  value={selectedCountry}
+                  onChange={(e) => setSelectedCountry(e.target.value)}
+                >
+                  <option value="All">All Regions</option>
+                  <option value="Global">Global</option>
+                  <option value="India">India</option>
+                  <option value="Europe">Europe</option>
+                  <option value="USA">USA</option>
+                </select>
 
-                  {(selectedCategory !== 'All' || selectedCountry !== 'All' || searchQuery) && (
-                    <button 
-                      className="chat-filter-select" 
-                      onClick={() => { setSelectedCategory('All'); setSelectedCountry('All'); setSearchQuery(''); setCurrentPage(1); }}
-                    >
-                      Clear Filter
-                    </button>
-                  )}
-                </div>
-              ) : (
+                <select
+                  className="chat-filter-select"
+                  value={minMatchScore}
+                  onChange={(e) => setMinMatchScore(Number(e.target.value))}
+                >
+                  <option value={0}>All Match Scores</option>
+                  <option value={90}>90%+ Match</option>
+                  <option value={80}>80%+ Match</option>
+                  <option value={70}>70%+ Match</option>
+                </select>
+
+                <select
+                  className="chat-filter-select"
+                  value={filterAppStatus}
+                  onChange={(e) => setFilterAppStatus(e.target.value)}
+                >
+                  <option value="All">All Statuses</option>
+                  <option value="Not Applied">Not Applied Yet</option>
+                  <option value="Saved">Saved in Tracker</option>
+                  <option value="Applied">Applied Stage</option>
+                  <option value="Interview">Interview Scheduled</option>
+                  <option value="Accepted">Accepted Offer</option>
+                </select>
+
+                <select
+                  className="chat-filter-select"
+                  value={filterDuration}
+                  onChange={(e) => setFilterDuration(e.target.value)}
+                >
+                  <option value="All">Any Duration</option>
+                  <option value="1-3 months">Short (1-3 mos)</option>
+                  <option value="3-6 months">Medium (3-6 mos)</option>
+                  <option value="6-12 months">Long (6-12 mos)</option>
+                </select>
+
+                <select
+                  className="chat-filter-select"
+                  value={filterComplexity}
+                  onChange={(e) => setFilterComplexity(e.target.value)}
+                >
+                  <option value="All">Any Complexity</option>
+                  <option value="Easy">Easy (1-step)</option>
+                  <option value="Medium">Medium</option>
+                  <option value="Competitive">Competitive</option>
+                </select>
+
+                {(selectedCategory !== 'All' || selectedCountry !== 'All' || searchQuery || minMatchScore > 0 || filterAppStatus !== 'All' || filterDuration !== 'All' || filterComplexity !== 'All') && (
+                  <button 
+                    className="chat-filter-select" 
+                    style={{ background: 'rgba(239, 68, 68, 0.1)', color: '#ef4444', borderColor: 'rgba(239, 68, 68, 0.2)' }}
+                    onClick={() => { 
+                      setSelectedCategory('All'); 
+                      setSelectedCountry('All'); 
+                      setSearchQuery(''); 
+                      setMinMatchScore(0);
+                      setFilterAppStatus('All');
+                      setFilterDuration('All');
+                      setFilterComplexity('All');
+                      setCurrentPage(1); 
+                    }}
+                  >
+                    Clear Filters
+                  </button>
+                )}
+              </div>
+
+              {discoveryMode === 'matched' && (
                 /* Matched For You Info banner */
-                <div className="glass-card recommendation-banner" style={{ marginBottom: '2rem', padding: '1.25rem', display: 'flex', alignItems: 'center', gap: '1rem', borderLeft: '4px solid var(--accent-cyan)' }}>
-                  <Globe size={24} className="text-cyan animate-pulse" />
+                <div className="glass-card recommendation-banner" style={{ marginBottom: '2rem', padding: '1.25rem', display: 'flex', alignItems: 'center', gap: '1rem', borderLeft: '4px solid #cc5c6d' }}>
+                  <Globe size={24} style={{ color: '#cc5c6d' }} className="animate-pulse" />
                   <div>
                     <h4 style={{ fontSize: '0.95rem', fontWeight: '600', color: 'var(--text-primary)' }}>Personalized Opportunities Match Feed</h4>
                     <p style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', marginTop: '0.2rem' }}>
@@ -1042,18 +1116,16 @@ export default function App() {
                   <div className="spinner-glow"></div>
                   <p style={{ color: 'var(--text-secondary)', fontSize: '0.85rem', marginTop: '1rem' }}>Recalculating and intersecting opportunity vectors...</p>
                 </div>
-              ) : (discoveryMode === 'all' ? opportunities : recommendations).length === 0 ? (
+              ) : getFilteredOpps(discoveryMode === 'all' ? opportunities : recommendations).length === 0 ? (
                 <div className="glass-card" style={{ textAlign: 'center', padding: '2.5rem', borderStyle: 'dashed' }}>
                   <p style={{ color: 'var(--text-secondary)', fontSize: '0.85rem' }}>
-                    {discoveryMode === 'all' 
-                      ? 'No opportunities found in this query. Seed the database using Monitored Scrapers.' 
-                      : 'No recommendations found. Go to the Profile Settings tab to configure your academic status and research interest tags.'}
+                    No opportunities found matching these criteria. Try adjusting filters or search query.
                   </p>
                 </div>
               ) : (
                 <>
                   <div className="opportunity-feed">
-                    {(discoveryMode === 'all' ? opportunities : recommendations).map(opp => {
+                    {getFilteredOpps(discoveryMode === 'all' ? opportunities : recommendations).map(opp => {
                       const daysLeft = getDaysLeft(opp.deadline);
                       const isPinned = applications.some(app => app.opportunity_id === opp.id);
                       const matchScore = opp.match_score || getDeterministicMatch(opp.title);
@@ -1076,11 +1148,11 @@ export default function App() {
                             {/* AI Match Score Progress Bar */}
                             <div className="match-score-row">
                               <div className="match-score-label">
-                                <span className="match-score-pct">{matchScore}%</span>
+                                <span className="match-score-pct" style={{ color: '#cc5c6d' }}>{matchScore}%</span>
                                 <span className="match-score-text">Match Score</span>
                               </div>
                               <div className="match-bar-track">
-                                <div className="match-bar-fill" style={{ width: `${matchScore}%` }}></div>
+                                <div className="match-bar-fill" style={{ width: `${matchScore}%`, backgroundColor: '#cc5c6d' }}></div>
                               </div>
                             </div>
 
@@ -1094,7 +1166,7 @@ export default function App() {
                                 <strong>{opp.funding || 'Unspecified'}</strong>
                               </span>
                               <span className="opp-meta-item">
-                                <MapPin size={14} style={{ marginRight: '2px', color: 'var(--color-indigo)', verticalAlign: 'middle' }} />
+                                <MapPin size={14} style={{ marginRight: '2px', color: '#cc5c6d', verticalAlign: 'middle' }} />
                                 <strong>{opp.country || 'Global'}</strong>
                               </span>
                             </div>
@@ -1104,7 +1176,7 @@ export default function App() {
                               </button>
                               <button 
                                 className="btn" 
-                                style={{ flexGrow: 1, background: isPinned ? 'var(--bg-active)' : 'var(--text-primary)', border: isPinned ? '1px solid var(--border-secondary)' : 'none', color: isPinned ? 'var(--text-secondary)' : 'var(--bg-darkest)' }} 
+                                style={{ flexGrow: 1, background: isPinned ? 'rgba(204, 92, 109, 0.08)' : '#cc5c6d', border: isPinned ? '1px solid rgba(204, 92, 109, 0.2)' : 'none', color: isPinned ? '#cc5c6d' : '#fff' }} 
                                 onClick={() => handleSaveToTracker(opp.id)}
                                 disabled={isPinned}
                               >
@@ -1116,6 +1188,55 @@ export default function App() {
                       );
                     })}
                   </div>
+
+                  {/* Profile Completion Nudge inside Feed */}
+                  {profileCompleteness < 90 && (
+                    <div className="glass-card" style={{
+                      background: 'linear-gradient(135deg, rgba(204, 92, 109, 0.05) 0%, rgba(13, 13, 16, 0.05) 100%)',
+                      border: '1px solid rgba(204, 92, 109, 0.2)',
+                      borderRadius: '24px',
+                      padding: '2rem',
+                      marginTop: '2rem',
+                      textAlign: 'center',
+                      position: 'relative',
+                      overflow: 'hidden'
+                    }}>
+                      <div style={{
+                        position: 'absolute',
+                        top: '-40px',
+                        left: '-40px',
+                        width: '120px',
+                        height: '120px',
+                        borderRadius: '50%',
+                        background: 'rgba(204, 92, 109, 0.1)',
+                        filter: 'blur(30px)'
+                      }}></div>
+                      <h3 style={{ fontSize: '1.25rem', fontWeight: '800', marginBottom: '0.5rem', fontFamily: 'Sora, sans-serif' }}>
+                        Complete your profile to increase your match accuracy
+                      </h3>
+                      <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', maxWidth: '500px', margin: '0 auto 1.5rem auto', lineHeight: '1.6' }}>
+                        Adding your research interests, academic level, and location will boost match precision by up to 40% and unlock personalized AI recommendation streams.
+                      </p>
+                      
+                      <div style={{ maxWidth: '300px', margin: '0 auto 1.5rem auto' }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.75rem', fontWeight: '700', marginBottom: '0.35rem' }}>
+                          <span>Profile Completion</span>
+                          <span style={{ color: '#cc5c6d' }}>{profileCompleteness}%</span>
+                        </div>
+                        <div style={{ width: '100%', height: '8px', background: 'rgba(0,0,0,0.06)', borderRadius: '4px', overflow: 'hidden' }}>
+                          <div style={{ width: `${profileCompleteness}%`, height: '100%', background: '#cc5c6d', borderRadius: '4px' }}></div>
+                        </div>
+                      </div>
+                      
+                      <button 
+                        className="btn btn-save-profile-glow" 
+                        onClick={() => setActiveTab('profile')} 
+                        style={{ border: 'none', color: '#fff', padding: '0.65rem 2rem', borderRadius: '100px', fontSize: '0.85rem', fontWeight: '600' }}
+                      >
+                        Complete Profile Now &rarr;
+                      </button>
+                    </div>
+                  )}
 
                   {/* High-fidelity Pagination Toolbar */}
                   {!searchQuery.trim() && totalCount > itemsPerPage && (
@@ -1170,31 +1291,85 @@ export default function App() {
             {/* Sticky Floating Search Bar with Gradient Ambient Glow */}
             <div className="chat-input-container">
               <div className="chat-input-glow"></div>
+              
+              {/* Recent Search History Dropdown */}
+              {showHistoryDropdown && searchHistory.length > 0 && (
+                <div className="search-history-dropdown glass-card">
+                  <div className="history-header">Recent Searches</div>
+                  {searchHistory.map((h, i) => (
+                    <div 
+                      key={i} 
+                      className="history-item"
+                      onMouseDown={() => {
+                        setSearchQuery(h);
+                        triggerDirectSearch(h);
+                      }}
+                      style={{ display: 'flex', alignItems: 'center', gap: '8px' }}
+                    >
+                      <i className="ti ti-history" style={{ color: 'var(--text-muted)', fontSize: '0.85rem' }}></i> {h}
+                    </div>
+                  ))}
+                </div>
+              )}
+
               <div className="chat-input-wrapper">
                 <form onSubmit={handleSearchSubmit}>
                   <div className="chat-search-icon">
-                    <Search size={18} />
+                    <Search size={18} style={{ color: '#cc5c6d' }} />
                   </div>
                   <input 
                     type="text" 
                     className="chat-input-field" 
                     placeholder="Search Nexora... (e.g. 'fully funded AI fellowships for Indian students')"
                     value={searchQuery}
+                    onFocus={() => setShowHistoryDropdown(true)}
+                    onBlur={() => setTimeout(() => setShowHistoryDropdown(false), 200)}
                     onChange={(e) => setSearchQuery(e.target.value)}
                   />
+                  <div style={{ position: 'absolute', right: '3.5rem', display: 'flex', gap: '8px', alignItems: 'center' }}>
+                    <button
+                      type="button"
+                      onClick={handleVoiceSearch}
+                      className={`voice-search-btn ${voiceActive ? 'active' : ''}`}
+                      style={{
+                        background: 'transparent',
+                        border: 'none',
+                        color: voiceActive ? '#cc5c6d' : '#94a3b8',
+                        cursor: 'pointer',
+                        padding: '4px',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center'
+                      }}
+                      title="Search with your voice"
+                    >
+                      <span className={voiceActive ? 'animate-ping' : ''} style={{ fontSize: '16px', display: 'flex', alignItems: 'center' }}>
+                        <i className="ti ti-microphone"></i>
+                      </span>
+                    </button>
+                  </div>
                   <button type="submit" className="chat-submit-btn" disabled={searching}>
-                    {searching ? '●' : <ArrowRight size={16} />}
+                    {searching ? 'Searching…' : 'Search'}
                   </button>
                 </form>
               </div>
               <span className="chat-footnote">AI Search System</span>
             </div>
+
+            {/* Ask Copilot Floating Toggle */}
+            <button 
+              className="floating-copilot-btn" 
+              onClick={() => setShowCopilot(prev => !prev)}
+              style={{ display: 'flex', alignItems: 'center', gap: '6px' }}
+            >
+              <i className="ti ti-robot"></i> Ask Copilot
+            </button>
           </div>
         )}
 
-        {/* 2. ANALYTICS DASHBOARD VIEW */}
+        {/* 2. RICH GAMIFIED ANALYTICS DASHBOARD VIEW */}
         {activeTab === 'dashboard' && (
-          <div className="dashboard-view">
+          <div className="dashboard-view" style={{ animation: 'fade-in 0.3s ease-out' }}>
             {/* Stats Grid */}
             <div className="stats-grid">
               <div className="glass-card stat-item">
@@ -1227,41 +1402,213 @@ export default function App() {
               </div>
             </div>
 
-            {/* Split Visual Section */}
-            <div className="dashboard-grid">
-              {/* Category distribution */}
-              <div className="glass-card">
-                <div className="chart-header">Category Distribution</div>
-                <div className="distribution-list">
-                  {Object.entries(stats.category_distribution).map(([cat, val]) => {
-                    const pct = stats.total_opportunities ? (val / stats.total_opportunities) * 100 : 0;
-                    return (
-                      <div className="dist-row" key={cat}>
-                        <div className="dist-label-row">
-                          <span style={{ color: 'var(--text-secondary)' }}>{cat}</span>
-                          <strong>{val} ({pct.toFixed(0)}%)</strong>
-                        </div>
-                        <div className="dist-track">
-                          <div className="dist-bar" style={{ width: `${pct}%` }}></div>
-                        </div>
+            {/* Split Visual Bento Layout */}
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '2rem', marginTop: '2rem' }}>
+              
+              {/* Outer grid columns */}
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: '2rem' }}>
+                
+                {/* COLUMN 1: Profile & Gamification */}
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '2rem' }}>
+                  
+                  {/* P1. Profile Health Score */}
+                  <div className="glass-card" style={{ padding: '1.5rem' }}>
+                    <div style={{ display: 'flex', justifyBetween: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
+                      <h3 className="chart-header" style={{ margin: 0, display: 'flex', alignItems: 'center', gap: '6px' }}>
+                        <i className="ti ti-user"></i> Your Profile Health
+                      </h3>
+                      <span className="font-mono text-xs font-bold text-[#cc5c6d] bg-[#cc5c6d]/10 px-2 py-0.5 rounded">
+                        {profileCompleteness}% Complete
+                      </span>
+                    </div>
+                    
+                    {/* Progress Bar */}
+                    <div style={{ width: '100%', height: '8px', background: 'rgba(0,0,0,0.06)', borderRadius: '4px', overflow: 'hidden', marginBottom: '1rem' }}>
+                      <div style={{ width: `${profileCompleteness}%`, height: '100%', background: '#cc5c6d', borderRadius: '4px' }}></div>
+                    </div>
+                    
+                    <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', lineHeight: '1.5', marginBottom: '1.25rem' }}>
+                      <strong style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}><i className="ti ti-target" style={{ color: '#cc5c6d' }}></i> Match Accuracy:</strong> {profileCompleteness >= 75 ? 'HIGH' : profileCompleteness >= 50 ? 'MEDIUM' : 'LOW'} ({profileCompleteness}%)<br />
+                      Complete profile to 90% to unlock 3x more accurate recommendations.
+                    </div>
+                    
+                    {/* Missing checklist */}
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', borderTop: '1px solid #d0d0cc', paddingTop: '1rem' }}>
+                      <div style={{ fontSize: '0.75rem', fontWeight: '700', color: 'var(--text-muted)', textTransform: 'uppercase', tracking: '0.05em', marginBottom: '0.25rem' }}>Missing Fields:</div>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.75rem', color: 'var(--text-primary)' }}>
+                        <span style={{ color: '#ef4444' }}>●</span> Research Interests <span style={{ color: 'var(--text-muted)', fontSize: '0.65rem' }}>(High Impact: +18%)</span>
                       </div>
-                    );
-                  })}
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.75rem', color: 'var(--text-primary)' }}>
+                        <span style={{ color: '#eab308' }}>●</span> Academic Transcripts <span style={{ color: 'var(--text-muted)', fontSize: '0.65rem' }}>(Medium: +12%)</span>
+                      </div>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.75rem', color: 'var(--text-primary)' }}>
+                        <span style={{ color: '#eab308' }}>●</span> Skills & Technologies <span style={{ color: 'var(--text-muted)', fontSize: '0.65rem' }}>(Medium: +10%)</span>
+                      </div>
+                    </div>
+                    
+                    <button className="btn btn-save-profile-glow" onClick={() => setActiveTab('profile')} style={{ width: '100%', marginTop: '1.5rem', border: 'none', color: '#fff', padding: '0.65rem 1rem', borderRadius: '100px', fontSize: '0.8rem', fontWeight: '600' }}>
+                      Complete Profile &rarr;
+                    </button>
+                  </div>
+
+                  {/* P5. XP Points & Level System */}
+                  <div className="glass-card" style={{ padding: '1.5rem' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
+                      <h3 className="chart-header" style={{ margin: 0, display: 'flex', alignItems: 'center', gap: '6px' }}>
+                        <i className="ti ti-rocket" style={{ color: '#cc5c6d' }}></i> System Level & XP
+                      </h3>
+                      <span className="font-mono text-xs font-bold text-slate-800 bg-slate-100 px-2 py-0.5 rounded">
+                        Lvl 3 Discoverer
+                      </span>
+                    </div>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.75rem', color: 'var(--text-secondary)', marginBottom: '0.35rem' }}>
+                      <span>350 / 700 XP</span>
+                      <span>50% to Level 4 Trailblazer</span>
+                    </div>
+                    <div style={{ width: '100%', height: '6px', background: 'rgba(0,0,0,0.06)', borderRadius: '3px', overflow: 'hidden' }}>
+                      <div style={{ width: '50%', height: '100%', background: '#cc5c6d', borderRadius: '3px' }}></div>
+                    </div>
+                    <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)', marginTop: '0.75rem', fontStyle: 'italic' }}>
+                      Earn 350 more XP by saving, applying and logging deadlines!
+                    </div>
+                  </div>
+
+                  {/* P2. Onboarding Checklist */}
+                  <div className="glass-card" style={{ padding: '1.5rem' }}>
+                    <h3 className="chart-header" style={{ marginBottom: '1rem', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                      <i className="ti ti-list-check" style={{ color: '#cc5c6d' }}></i> Onboarding Checklist
+                    </h3>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+                      <div style={{ display: 'flex', justifyBetween: 'space-between', alignItems: 'center', fontSize: '0.8rem' }}>
+                        <span style={{ color: 'var(--text-secondary)', textDecoration: 'line-through', display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
+                          <i className="ti ti-circle-check" style={{ color: '#22c55e' }}></i> Create your account
+                        </span>
+                      </div>
+                      <div style={{ display: 'flex', justifyBetween: 'space-between', alignItems: 'center', fontSize: '0.8rem' }}>
+                        <span style={{ color: 'var(--text-secondary)', textDecoration: 'line-through', display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
+                          <i className="ti ti-circle-check" style={{ color: '#22c55e' }}></i> Set study field & country
+                        </span>
+                      </div>
+                      <div style={{ display: 'flex', justifyBetween: 'space-between', alignItems: 'center', fontSize: '0.8rem' }}>
+                        <span style={{ color: 'var(--text-secondary)', textDecoration: 'line-through', display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
+                          <i className="ti ti-circle-check" style={{ color: '#22c55e' }}></i> Save your first opportunity
+                        </span>
+                      </div>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.8rem' }}>
+                        <span style={{ color: 'var(--text-primary)' }}>☐ Try AI Copilot Chat</span>
+                        <button className="btn btn-secondary" onClick={() => onLaunchApp('AI')} style={{ padding: '0.25rem 0.65rem', fontSize: '0.65rem', borderRadius: '10px' }}>Try &rarr;</button>
+                      </div>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.8rem' }}>
+                        <span style={{ color: 'var(--text-primary)' }}>☐ Add 3+ research interests</span>
+                        <button className="btn btn-secondary" onClick={() => setActiveTab('profile')} style={{ padding: '0.25rem 0.65rem', fontSize: '0.65rem', borderRadius: '10px' }}>Add &rarr;</button>
+                      </div>
+                    </div>
+                  </div>
                 </div>
+
+                {/* COLUMN 2: Telemetry, Benchmarking, Badges */}
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '2rem' }}>
+                  
+                  {/* P7. Streak Tracker */}
+                  <div className="glass-card" style={{ padding: '1.5rem' }}>
+                    <h3 className="chart-header" style={{ marginBottom: '1rem', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                      <i className="ti ti-flame" style={{ color: '#cc5c6d' }}></i> Daily Streak Tracker
+                    </h3>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
+                      <span className="font-mono text-base font-bold text-[#cc5c6d]">
+                        7-Day Active Streak!
+                      </span>
+                      <span className="text-xl" style={{ display: 'inline-flex', alignItems: 'center' }}><i className="ti ti-shield" style={{ color: '#cc5c6d' }}></i></span>
+                    </div>
+                    
+                    {/* Day tracker ticks */}
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: '0.35rem', textAlign: 'center' }}>
+                      {['M', 'T', 'W', 'T', 'F', 'S', 'S'].map((day, idx) => (
+                        <div key={idx} style={{ padding: '0.5rem 0', borderRadius: '8px', background: idx < 6 ? '#cc5c6d' : 'rgba(0,0,0,0.04)', color: idx < 6 ? '#fff' : 'var(--text-muted)', fontSize: '0.75rem', fontWeight: '700' }}>
+                          {day}<br />
+                          <span style={{ fontSize: '0.55rem' }}>{idx < 6 ? '✓' : '☐'}</span>
+                        </div>
+                      ))}
+                    </div>
+                    <div style={{ fontSize: '0.7rem', color: 'var(--text-secondary)', marginTop: '0.75rem', textAlign: 'center' }}>
+                      Login tomorrow to keep your streak and earn a <strong>Streak Shield</strong>
+                    </div>
+                  </div>
+
+                  {/* P8. Weekly Profile Report Card */}
+                  <div className="glass-card" style={{ padding: '1.5rem', background: 'linear-gradient(135deg, rgba(204, 92, 109, 0.02) 0%, rgba(15, 23, 42, 0.02) 100%)' }}>
+                    <h3 className="chart-header" style={{ marginBottom: '1rem', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                      <i className="ti ti-chart-bar" style={{ color: '#cc5c6d' }}></i> Weekly report card
+                    </h3>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.65rem', fontSize: '0.8rem' }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                        <span style={{ color: 'var(--text-secondary)' }}>Opportunities Explored:</span>
+                        <strong style={{ color: 'var(--text-primary)' }}>24 (+8)</strong>
+                      </div>
+                      <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                        <span style={{ color: 'var(--text-secondary)' }}>Saves & Pins:</span>
+                        <strong style={{ color: 'var(--text-primary)' }}>{stats.saved_applications}</strong>
+                      </div>
+                      <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                        <span style={{ color: 'var(--text-secondary)' }}>Applications Filed:</span>
+                        <strong style={{ color: 'var(--text-primary)' }}>{stats.applied_applications}</strong>
+                      </div>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', borderTop: '1px solid #d0d0cc', paddingTop: '0.5rem', marginTop: '0.25rem' }}>
+                        <span style={{ color: 'var(--text-secondary)' }}>Top Match This Week:</span>
+                        <strong style={{ color: '#cc5c6d' }}>Google PhD Fellowship (98%)</strong>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* P10. Peer Comparison */}
+                  <div className="glass-card" style={{ padding: '1.5rem' }}>
+                    <h3 className="chart-header" style={{ marginBottom: '1rem', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                      <i className="ti ti-users" style={{ color: '#cc5c6d' }}></i> Peer Benchmarking
+                    </h3>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', fontSize: '0.75rem' }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                        <span style={{ color: 'var(--text-secondary)' }}>Profile Health:</span>
+                        <span>You: <strong>{profileCompleteness}%</strong> | Avg: 68% <span style={{ color: profileCompleteness >= 68 ? '#22c55e' : '#ef4444' }}>{profileCompleteness >= 68 ? '▲' : '▼'}</span></span>
+                      </div>
+                      <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                        <span style={{ color: 'var(--text-secondary)' }}>Opportunities Saved:</span>
+                        <span>You: <strong>{stats.saved_applications}</strong> | Avg: 8 <span style={{ color: '#22c55e' }}>▲</span></span>
+                      </div>
+                      <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                        <span style={{ color: 'var(--text-secondary)' }}>Applications Sent:</span>
+                        <span>You: <strong>{stats.applied_applications}</strong> | Avg: 4 <span style={{ color: '#ef4444' }}>▼</span></span>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* P6. Achievement Badges */}
+                  <div className="glass-card" style={{ padding: '1.5rem' }}>
+                    <h3 className="chart-header" style={{ marginBottom: '1rem', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                      <i className="ti ti-trophy" style={{ color: '#cc5c6d' }}></i> Earned Achievements
+                    </h3>
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '0.75rem', textAlign: 'center' }}>
+                      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+                        <span style={{ fontSize: '1.5rem', display: 'inline-flex', alignItems: 'center', height: '2.25rem' }}><i className="ti ti-rocket" style={{ color: '#cc5c6d' }}></i></span>
+                        <span style={{ fontSize: '0.55rem', fontWeight: '700', marginTop: '0.2rem' }}>Pioneer</span>
+                      </div>
+                      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+                        <span style={{ fontSize: '1.5rem', display: 'inline-flex', alignItems: 'center', height: '2.25rem' }}><i className="ti ti-certificate" style={{ color: '#cc5c6d' }}></i></span>
+                        <span style={{ fontSize: '0.55rem', fontWeight: '700', marginTop: '0.2rem' }}>100% Info</span>
+                      </div>
+                      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+                        <span style={{ fontSize: '1.5rem', display: 'inline-flex', alignItems: 'center', height: '2.25rem' }}><i className="ti ti-flame" style={{ color: '#cc5c6d' }}></i></span>
+                        <span style={{ fontSize: '0.55rem', fontWeight: '700', marginTop: '0.2rem' }}>Active</span>
+                      </div>
+                      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', filter: 'grayscale(1)', opacity: 0.5 }}>
+                        <span style={{ fontSize: '1.5rem', display: 'inline-flex', alignItems: 'center', height: '2.25rem' }}><i className="ti ti-award" style={{ color: 'var(--text-muted)' }}></i></span>
+                        <span style={{ fontSize: '0.55rem', fontWeight: '700', marginTop: '0.2rem' }}>Accepted</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
               </div>
 
-              {/* Deadline alert & tracker health */}
-              <div className="glass-card" style={{ display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
-                <div>
-                  <div className="chart-header">Pipeline Alerts</div>
-                  <p style={{ color: 'var(--text-secondary)', fontSize: '0.85rem', marginBottom: '1.5rem', lineHeight: '1.6' }}>
-                    You have <strong style={{ color: 'var(--text-primary)' }}>{stats.upcoming_deadlines_count} active deadlines</strong> for pinned applications within the next 14 days. Review these dates in your timeline calendar.
-                  </p>
-                </div>
-                <button className="btn btn-secondary" onClick={() => setActiveTab('calendar')} style={{ width: '100%' }}>
-                  Open Timeline Calendar
-                </button>
-              </div>
             </div>
           </div>
         )}
@@ -1293,7 +1640,7 @@ export default function App() {
                             <h4 className="tracker-card-title">{app.opportunity.title}</h4>
                             <select
                               className="chat-filter-select"
-                              style={{ padding: '0.1rem 0.2rem', fontSize: '0.6rem', border: '1px solid var(--border-primary)', background: 'var(--bg-input)', cursor: 'pointer', borderRadius: '4px' }}
+                              style={{ padding: '0.1rem 0.2rem', fontSize: '0.6rem', border: '1px solid #d0d0cc', background: '#f4f4f2', cursor: 'pointer', borderRadius: '4px' }}
                               value={app.status}
                               onClick={(e) => e.stopPropagation()}
                               onChange={(e) => {
@@ -1333,358 +1680,21 @@ export default function App() {
           </div>
         )}
 
-        {/* 5. SCRAPER PANEL CONTROL VIEW */}
         {activeTab === 'scraper' && (
-          <div className="scraper-view">
-            <div className="scraper-grid">
-              {/* Monitored sources info */}
-              <div className="glass-card">
-                <div className="chart-header">Registered Crawlers</div>
-                <p style={{ color: 'var(--text-secondary)', fontSize: '0.8rem', marginBottom: '1.5rem', lineHeight: '1.5' }}>
-                  Nexora monitors these web portals and indices continuously to isolate newly announced career fellowships.
-                </p>
-                <div className="sources-list" style={{ marginBottom: '1.5rem' }}>
-                  {scraperSources.map(src => (
-                    <div className="source-item" key={src.id}>
-                      <div className="source-details">
-                        <div className="src-name">{src.name}</div>
-                        <div className="src-url">{src.url}</div>
-                      </div>
-                      <span className="card-category-badge" style={{ color: src.status === 'Success' ? 'var(--color-green)' : src.status === 'Failed' ? 'var(--color-red)' : 'var(--text-muted)' }}>
-                        {src.status}
-                      </span>
-                    </div>
-                  ))}
-                </div>
-                
-                <button 
-                  className="btn" 
-                  onClick={handleTriggerScraper} 
-                  disabled={scraperRunning}
-                  style={{ width: '100%', justifyContent: 'center' }}
-                >
-                  {scraperRunning ? 'Scraping Workers Active...' : 'Trigger Daily Scrapes'}
-                </button>
-              </div>
-
-              {/* Console log outputs terminal */}
-              <div className="console-wrapper">
-                <div className="console-header">
-                  <span>CRAWLER SYSTEM PROCESS DIAGNOSTIC PANEL</span>
-                  <span>{scraperRunning ? '● ACTIVE' : '○ STANDBY'}</span>
-                </div>
-                <div className="console-log-lines">
-                  {scraperLogs.length === 0 ? (
-                    <div style={{ color: 'var(--text-muted)', fontStyle: 'italic', padding: '1rem' }}>
-                      Terminal standby. Trigger scrapers above to inspect live chromium page crawls, beautiful-soup markdown cleaning, and generative AI structuring processes.
-                    </div>
-                  ) : (
-                    scraperLogs.map((log, idx) => (
-                      <div className={`log-line ${log.status}`} key={idx}>
-                        {`> [${new Date().toLocaleTimeString()}] ${log.message}`}
-                      </div>
-                    ))
-                  )}
-                  <div ref={logEndRef} />
-                </div>
-              </div>
-            </div>
-          </div>
+          <ScraperConsole
+            scraperSources={scraperSources}
+            handleTriggerScraper={handleTriggerScraper}
+            scraperRunning={scraperRunning}
+            scraperLogs={scraperLogs}
+          />
         )}
 
-        {/* 6. USER PROFILE HUB BENTO GRID */}
         {activeTab === 'profile' && profile && (
-          <div className="profile-view-container">
-            {/* Bento Grid layout */}
-            <div className="bento-grid">
-              
-              {/* Box 1: Identity & Bio (Bento Col 8) */}
-              <div className="glass-card bento-col-8">
-                <div className="bento-card-header">
-                  <User size={18} className="bento-icon text-purple" />
-                  <span>Identity & Personal Details</span>
-                </div>
-                
-                {/* Profile completeness bar */}
-                <div className="completeness-container">
-                  <div className="completeness-info">
-                    <span className="completeness-label">Profile Strength</span>
-                    <span className="completeness-pct">{calculateCompleteness()}%</span>
-                  </div>
-                  <div className="completeness-bar-track">
-                    <div className="completeness-bar-fill" style={{ width: `${calculateCompleteness()}%` }}></div>
-                  </div>
-                </div>
-
-                <div className="profile-form-group">
-                  <label className="profile-input-label">Full Name</label>
-                  <input 
-                    type="text" 
-                    className="profile-input-field" 
-                    value={profile.name || ''} 
-                    onChange={(e) => setProfile({ ...profile, name: e.target.value })}
-                    placeholder="e.g. Dr. Julian Sterling"
-                  />
-                </div>
-
-                <div className="profile-form-group" style={{ marginTop: '1rem' }}>
-                  <label className="profile-input-label">Email Address</label>
-                  <input 
-                    type="email" 
-                    className="profile-input-field" 
-                    value={profile.email || ''} 
-                    onChange={(e) => setProfile({ ...profile, email: e.target.value })}
-                    placeholder="e.g. julian.sterling@ethz.ch"
-                  />
-                </div>
-
-                <div className="profile-form-group" style={{ marginTop: '1rem' }}>
-                  <label className="profile-input-label">Professional Biography</label>
-                  <textarea 
-                    className="profile-textarea-field" 
-                    rows={4}
-                    value={profile.bio || ''} 
-                    onChange={(e) => setProfile({ ...profile, bio: e.target.value })}
-                    placeholder="Brief summary of your academic or professional background, research directions, and scholarly focus..."
-                  />
-                </div>
-              </div>
-
-              {/* Box 2: Academic Matrix (Bento Col 4) */}
-              <div className="glass-card bento-col-4">
-                <div className="bento-card-header">
-                  <GraduationCap size={18} className="bento-icon text-cyan" />
-                  <span>Academic Credentials Matrix</span>
-                </div>
-
-                <div className="profile-form-group">
-                  <label className="profile-input-label">Academic Status</label>
-                  <select 
-                    className="profile-select-field" 
-                    value={profile.academic_status || ''} 
-                    onChange={(e) => setProfile({ ...profile, academic_status: e.target.value })}
-                  >
-                    <option value="">Select status...</option>
-                    <option value="Undergraduate Student">Undergraduate Student</option>
-                    <option value="Graduate / Master Student">Graduate / Master Student</option>
-                    <option value="PhD Candidate">PhD Candidate</option>
-                    <option value="Postdoc / Researcher">Postdoc / Researcher</option>
-                    <option value="Faculty / Professor">Faculty / Professor</option>
-                    <option value="Independent Entrepreneur">Independent Entrepreneur</option>
-                  </select>
-                </div>
-
-                <div className="profile-form-group" style={{ marginTop: '1.25rem' }}>
-                  <label className="profile-input-label">Affiliated Institution</label>
-                  <div className="input-with-icon-wrapper">
-                    <Building size={14} className="input-inner-icon text-muted" />
-                    <input 
-                      type="text" 
-                      className="profile-input-field padding-left-icon" 
-                      value={profile.university || ''} 
-                      onChange={(e) => setProfile({ ...profile, university: e.target.value })}
-                      placeholder="e.g. ETH Zürich"
-                    />
-                  </div>
-                </div>
-
-                <div className="profile-form-group" style={{ marginTop: '1.25rem' }}>
-                  <label className="profile-input-label">Verified Academic ID</label>
-                  <div className="input-with-verification">
-                    <input 
-                      type="text" 
-                      className="profile-input-field" 
-                      value={profile.verified_academic_id || ''} 
-                      onChange={(e) => setProfile({ ...profile, verified_academic_id: e.target.value })}
-                      placeholder="e.g. ETH-8849-STERLING"
-                    />
-                    {profile.verified_academic_id && (
-                      <span className="academic-verified-badge" title="Academic ID Verified in Database">
-                        <CheckCircle2 size={12} style={{ marginRight: '3px' }} />
-                        Verified
-                      </span>
-                    )}
-                  </div>
-                </div>
-              </div>
-
-              {/* Box 3: Skills & Research Interests Tags (Bento Col 6) */}
-              <div className="glass-card bento-col-6">
-                <div className="bento-card-header">
-                  <Briefcase size={18} className="bento-icon text-indigo" />
-                  <span>Research Interests & Skills</span>
-                </div>
-                
-                <p style={{ color: 'var(--text-secondary)', fontSize: '0.8rem', marginBottom: '1rem' }}>
-                  Define scholarly interest tags used by the matching engine to run hybrid vector intersections.
-                </p>
-
-                <div className="profile-tags-wrapper">
-                  {(profile.research_interests || []).map((interest, idx) => (
-                    <span className="profile-tag-pill" key={idx}>
-                      {interest}
-                      <button 
-                        type="button" 
-                        className="profile-tag-close"
-                        onClick={() => {
-                          const updated = (profile.research_interests || []).filter((_, i) => i !== idx);
-                          setProfile({ ...profile, research_interests: updated });
-                        }}
-                      >
-                        <X size={10} />
-                      </button>
-                    </span>
-                  ))}
-                </div>
-
-                <div className="profile-tag-adder" style={{ marginTop: '1rem' }}>
-                  <input 
-                    type="text" 
-                    className="profile-input-field tag-input"
-                    value={newInterestInput}
-                    onChange={(e) => setNewInterestInput(e.target.value)}
-                    placeholder="Add interest tag (e.g. Quantum Computing)"
-                    onKeyDown={(e) => {
-                      if (e.key === 'Enter') {
-                        e.preventDefault();
-                        if (newInterestInput.trim()) {
-                          const updated = [...(profile.research_interests || []), newInterestInput.trim()];
-                          setProfile({ ...profile, research_interests: updated });
-                          setNewInterestInput('');
-                        }
-                      }
-                    }}
-                  />
-                  <button 
-                    type="button" 
-                    className="btn btn-secondary tag-add-btn"
-                    onClick={() => {
-                      if (newInterestInput.trim()) {
-                        const updated = [...(profile.research_interests || []), newInterestInput.trim()];
-                        setProfile({ ...profile, research_interests: updated });
-                        setNewInterestInput('');
-                      }
-                    }}
-                  >
-                    <Plus size={14} />
-                  </button>
-                </div>
-              </div>
-
-              {/* Box 4: Geographic Reach & Relocation willing (Bento Col 6) */}
-              <div className="glass-card bento-col-6">
-                <div className="bento-card-header">
-                  <Globe size={18} className="bento-icon text-cyan" />
-                  <span>Geographic Reach & Relocation</span>
-                </div>
-
-                <div className="profile-form-group">
-                  <label className="profile-input-label">Base City</label>
-                  <input 
-                    type="text" 
-                    className="profile-input-field" 
-                    value={profile.base_city || ''} 
-                    onChange={(e) => setProfile({ ...profile, base_city: e.target.value })}
-                    placeholder="e.g. Zürich"
-                  />
-                </div>
-
-                <div className="profile-form-group" style={{ marginTop: '1rem' }}>
-                  <label className="profile-input-label">Willing to Relocate?</label>
-                  <div className="relocation-radio-group">
-                    <label className="relocation-radio-label">
-                      <input 
-                        type="radio" 
-                        name="willing_to_relocate" 
-                        value="Yes"
-                        checked={profile.willing_to_relocate === 'Yes'}
-                        onChange={(e) => setProfile({ ...profile, willing_to_relocate: e.target.value })}
-                      />
-                      <span>Yes, globally willing</span>
-                    </label>
-                    <label className="relocation-radio-label" style={{ marginLeft: '1.5rem' }}>
-                      <input 
-                        type="radio" 
-                        name="willing_to_relocate" 
-                        value="No"
-                        checked={profile.willing_to_relocate === 'No'}
-                        onChange={(e) => setProfile({ ...profile, willing_to_relocate: e.target.value })}
-                      />
-                      <span>No, local opportunities only</span>
-                    </label>
-                  </div>
-                </div>
-
-                <div className="profile-form-group" style={{ marginTop: '1rem' }}>
-                  <label className="profile-input-label">Preferred Countries / Regions</label>
-                  
-                  <div className="profile-tags-wrapper" style={{ marginTop: '0.5rem' }}>
-                    {(profile.preferred_regions || []).map((region, idx) => (
-                      <span className="profile-tag-pill region-pill" key={idx}>
-                        {region}
-                        <button 
-                          type="button" 
-                          className="profile-tag-close"
-                          onClick={() => {
-                            const updated = (profile.preferred_regions || []).filter((_, i) => i !== idx);
-                            setProfile({ ...profile, preferred_regions: updated });
-                          }}
-                        >
-                          <X size={10} />
-                        </button>
-                      </span>
-                    ))}
-                  </div>
-
-                  <div className="profile-tag-adder" style={{ marginTop: '1rem' }}>
-                    <input 
-                      type="text" 
-                      className="profile-input-field tag-input"
-                      value={newRegionInput}
-                      onChange={(e) => setNewRegionInput(e.target.value)}
-                      placeholder="Add region (e.g. Switzerland, Europe)"
-                      onKeyDown={(e) => {
-                        if (e.key === 'Enter') {
-                          e.preventDefault();
-                          if (newRegionInput.trim()) {
-                            const updated = [...(profile.preferred_regions || []), newRegionInput.trim()];
-                            setProfile({ ...profile, preferred_regions: updated });
-                            setNewRegionInput('');
-                          }
-                        }
-                      }}
-                    />
-                    <button 
-                      type="button" 
-                      className="btn btn-secondary tag-add-btn"
-                      onClick={() => {
-                        if (newRegionInput.trim()) {
-                          const updated = [...(profile.preferred_regions || []), newRegionInput.trim()];
-                          setProfile({ ...profile, preferred_regions: updated });
-                          setNewRegionInput('');
-                        }
-                      }}
-                    >
-                      <Plus size={14} />
-                    </button>
-                  </div>
-                </div>
-              </div>
-
-            </div>
-
-            {/* Glowing Pulse save button */}
-            <div className="profile-save-bar">
-              <button 
-                type="button" 
-                className="btn btn-save-profile-glow"
-                onClick={() => saveUserProfile(profile)}
-              >
-                <Save size={16} style={{ marginRight: '6px' }} />
-                Save & Recalculate AI Match Scores
-              </button>
-            </div>
-          </div>
+          <ProfileSettings
+            profile={profile}
+            setProfile={setProfile}
+            saveUserProfile={saveUserProfile}
+          />
         )}
           </>
         )}
@@ -1713,7 +1723,7 @@ export default function App() {
                       key={phase} 
                       type="button"
                       className="btn btn-secondary" 
-                      style={{ padding: '0.35rem 0.65rem', fontSize: '0.7rem', background: activeApplication.status === phase ? 'var(--text-primary)' : 'var(--bg-card)', borderColor: activeApplication.status === phase ? 'var(--text-primary)' : 'var(--border-primary)', color: activeApplication.status === phase ? 'var(--bg-darkest)' : 'var(--text-primary)' }}
+                      style={{ padding: '0.35rem 0.65rem', fontSize: '0.7rem', background: activeApplication.status === phase ? 'var(--text-primary)' : '#ffffff', borderColor: activeApplication.status === phase ? 'var(--text-primary)' : '#d0d0cc', color: activeApplication.status === phase ? '#F7F7F7' : 'var(--text-primary)' }}
                       onClick={() => setActiveApplication({...activeApplication, status: phase})}
                     >
                       {phase}
@@ -1732,9 +1742,9 @@ export default function App() {
                     value={activeApplication.priority}
                     onChange={(e) => setActiveApplication({...activeApplication, priority: e.target.value})}
                   >
-                    <option value="High">🔴 High Priority</option>
-                    <option value="Medium">🟡 Medium Priority</option>
-                    <option value="Low">🔵 Low Priority</option>
+                    <option value="High">High Priority</option>
+                    <option value="Medium">Medium Priority</option>
+                    <option value="Low">Low Priority</option>
                   </select>
                 </div>
                 <div>
@@ -1761,7 +1771,7 @@ export default function App() {
                 />
               </div>
 
-              <div style={{ display: 'flex', gap: '0.5rem', borderTop: '1px solid var(--border-primary)', paddingTop: '1rem', marginTop: '0.5rem' }}>
+              <div style={{ display: 'flex', gap: '0.5rem', borderTop: '1px solid #d0d0cc', paddingTop: '1rem', marginTop: '0.5rem' }}>
                 <button type="submit" className="btn" style={{ flexGrow: 1, borderRadius: '4px' }}>
                   Save Track Card
                 </button>
@@ -1777,6 +1787,44 @@ export default function App() {
             </form>
           </div>
         </div>
+      )}
+
+      {/* AI COPILOT SIDEBAR DRAWER */}
+      {showCopilot && (
+        <aside className="copilot-sidebar">
+          <div className="copilot-header">
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <span style={{ fontSize: '1.25rem', display: 'flex', alignItems: 'center' }}><i className="ti ti-robot"></i></span>
+              <h3 style={{ fontSize: '1.1rem', fontWeight: '700', margin: 0, fontFamily: 'Sora, sans-serif' }}>Nexora Copilot</h3>
+            </div>
+            <button className="copilot-close-btn" onClick={() => setShowCopilot(false)}>×</button>
+          </div>
+          
+          <div className="copilot-messages">
+            {copilotMessages.map((m, idx) => (
+              <div key={idx} className={`copilot-message ${m.sender}`}>
+                <p style={{ margin: 0, fontSize: '0.85rem', whiteSpace: 'pre-line' }}>{m.text}</p>
+              </div>
+            ))}
+            {copilotSending && (
+              <div className="copilot-message ai">
+                <span style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>Thinking...</span>
+              </div>
+            )}
+          </div>
+          
+          <form className="copilot-input-form" onSubmit={handleCopilotSend}>
+            <input 
+              type="text" 
+              className="chat-input-field" 
+              style={{ padding: '0.55rem 1rem', fontSize: '0.85rem', border: '1px solid #d0d0cc', borderRadius: '20px', width: '82%', height: '38px' }} 
+              placeholder="Ask Copilot..." 
+              value={copilotInput}
+              onChange={(e) => setCopilotInput(e.target.value)}
+            />
+            <button type="submit" className="copilot-send-btn" style={{ background: '#cc5c6d', width: '38px', height: '38px', display: 'grid', placeItems: 'center' }}>➔</button>
+          </form>
+        </aside>
       )}
     </div>
   );

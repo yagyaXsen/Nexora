@@ -1,7 +1,18 @@
 from pydantic import BaseModel, HttpUrl, Field
-from typing import List, Optional
+from typing import List, Optional, Dict, Any
 from datetime import date, datetime
 from uuid import UUID
+
+# Reminder Schema
+class Reminder(BaseModel):
+    id: UUID
+    opportunity_id: UUID
+    title: str
+    organization: str
+    deadline: date
+    days_until_deadline: int
+    priority: str
+    status: str
 
 # Opportunity Schemas
 class OpportunityBase(BaseModel):
@@ -38,6 +49,11 @@ class Opportunity(OpportunityBase):
 
     class Config:
         from_attributes = True
+
+
+class OpportunityWithMatch(Opportunity):
+    match_score: int
+
 
 class OpportunityPaginatedResponse(BaseModel):
     total: int
@@ -125,6 +141,8 @@ class UserProfileBase(BaseModel):
     base_city: Optional[str] = None
     willing_to_relocate: str = "Yes"
     preferred_regions: List[str] = Field(default_factory=list)
+    # Add reminder preferences
+    reminder_preferences: Optional[Dict[str, Any]] = None
 
 class UserProfileCreate(UserProfileBase):
     pass
@@ -139,5 +157,12 @@ class UserProfile(UserProfileBase):
         from_attributes = True
 
 
-class OpportunityWithMatch(Opportunity):
-    match_score: int
+class Reminder(BaseModel):
+    id: UUID
+    opportunity_id: UUID
+    title: str
+    organization: str
+    deadline: date
+    days_until_deadline: int
+    priority: str
+    status: str
