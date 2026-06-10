@@ -380,17 +380,18 @@ export default function App() {
   };
 
   // Execute NLP/AI Search
-  const handleSearchSubmit = async (e) => {
+  const handleSearchSubmit = async (e, queryOverride) => {
     if (e) e.preventDefault();
-    if (!searchQuery.trim()) {
+    const queryToSearch = queryOverride !== undefined ? queryOverride : searchQuery;
+    if (!queryToSearch.trim()) {
       fetchData();
       return;
     }
     setSearchHistory(prev => {
-      const filtered = prev.filter(h => h !== searchQuery.trim());
-      return [searchQuery.trim(), ...filtered].slice(0, 5);
+      const filtered = prev.filter(h => h !== queryToSearch.trim());
+      return [queryToSearch.trim(), ...filtered].slice(0, 5);
     });
-    await triggerDirectSearch(searchQuery);
+    await triggerDirectSearch(queryToSearch);
   };
 
   const handleVoiceSearch = () => {
