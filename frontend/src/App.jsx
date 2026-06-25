@@ -8,6 +8,10 @@ import ProtectedRoute from './components/layout/ProtectedRoute'
 import Home from './pages/marketing/Home'
 import ComingSoon from './pages/ComingSoon'
 
+import Login from './pages/auth/Login'
+import Signup from './pages/auth/Signup'
+import ForgotPassword from './pages/auth/ForgotPassword'
+
 /* ─────────────────────────────────────────────
    App — the full route tree.
 
@@ -37,9 +41,9 @@ export default function App() {
       </Route>
 
       {/* ── Zone 2 · Auth & onboarding ── */}
-      <Route path="/login" element={<ComingSoon title="Log in" phase="Phase 1" />} />
-      <Route path="/signup" element={<ComingSoon title="Sign up" phase="Phase 1" />} />
-      <Route path="/forgot-password" element={<ComingSoon title="Reset password" phase="Phase 1" />} />
+      <Route path="/login" element={<Login />} />
+      <Route path="/signup" element={<Signup />} />
+      <Route path="/forgot-password" element={<ForgotPassword />} />
       <Route
         path="/onboarding"
         element={
