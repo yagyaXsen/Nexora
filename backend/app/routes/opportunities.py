@@ -226,3 +226,64 @@ def read_opportunity(opportunity_id: UUID, db: Session = Depends(get_db)):
         raise HTTPException(status_code=404, detail="Opportunity not found")
     return db_opportunity
 
+
+from ..ai_service import AIService
+
+ai_service = AIService()
+
+@router.post("/{opportunity_id}/draft", response_model=schemas.ApplicationDraftResponse)
+def generate_draft(
+    opportunity_id: UUID,
+    draft_req: schemas.ApplicationDraftRequest,
+    db: Session = Depends(get_db)
+):
+    """Generate a tailored application draft (SOP, Cover Letter, or Email) based on active profile and opportunity details."""
+    db_opportunity = crud.get_opportunity(db, opportunity_id=opportunity_id)
+    if db_opportunity is None:
+        raise HTTPException(status_code=404, detail="Opportunity not found")
+        
+    profile = crud.get_user_profile(db)
+    if not profile:
+        # Create default profile to generate draft
+        default_profile = schemas.UserProfileCreate(
+            name="Dr. Julian Sterling",
+            email="julian.sterling@ethz.ch",
+            bio="Post-doctoral researcher in Quantum Computing & Artificial Intelligence at ETH Zürich. Focused on scalable quantum algorithms and neural network architectures.",
+            academic_status="Postdoc / Researcher",
+            university="ETH Zürich",
+            verified_academic_id="ETH-8849-STERLING",
+            research_interests=["Quantum Computing", "AI", "Machine Learning", "Physics", "Computer Science"],
+            base_city="Zürich",
+            willing_to_relocate="Yes",
+            preferred_regions=["Europe", "Switzerland", "North America", "United Kingdom"]
+        )
+        profile = crud.create_user_profile(db, default_profile)
+
+    # Convert SQLAlchemy model to Dict
+    opp_dict = {
+        "title": db_opportunity.title,
+        "organization": db_opportunity.organization,
+        "description": db_opportunity.description,
+        "funding": db_opportunity.funding,
+        "deadline": str(db_opportunity.deadline) if db_opportunity.deadline else None,
+        "country": db_opportunity.country,
+        "category": db_opportunity.category,
+        "tags": db_opportunity.tags or [],
+        "eligibility": db_opportunity.eligibility
+    }
+    
+    profile_dict = {
+        "name": profile.name,
+        "email": profile.email,
+        "bio": profile.bio,
+        "academic_status": profile.academic_status,
+        "university": profile.university,
+        "research_interests": profile.research_interests or [],
+        "base_city": profile.base_city,
+        "willing_to_relocate": profile.willing_to_relocate,
+        "preferred_regions": profile.preferred_regions or []
+    }
+    
+    draft_text = ai_service.generate_application_draft(profile_dict, opp_dict, draft_req.draft_type)
+    return schemas.ApplicationDraftResponse(draft_text=draft_text)
+

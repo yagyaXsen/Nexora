@@ -1,27 +1,83 @@
-/* Nexora base styles — defers to App.css design system */
+/* ── CSS Variables ── */
+:root {
+  --cream:       #f5f0e8;
+  --cream-light: #faf7f2;
+  --yellow-pale: #f5f2bc;
+  --maroon:      #3d1020;
+  --maroon-mid:  #5a1a30;
+  --maroon-btn:  #4a1428;
+  --rust:        #8b3a3a;
+  --dark:        #111111;
+  --dark-card:   #1a1a1a;
+  --dark-mid:    #222222;
+  --white:       #ffffff;
+  --grey-light:  #f0ece4;
+  --grey-text:   #888888;
+  --grey-border: #ddd8d0;
+  --text-primary:#1a1a1a;
+  --text-muted:  #666666;
 
-* {
-  box-sizing: border-box;
-  margin: 0;
-  padding: 0;
+  --ff-serif: 'Playfair Display', Georgia, serif;
+  --ff-sans:  'Inter', system-ui, sans-serif;
+
+  --radius-sm: 8px;
+  --radius-md: 16px;
+  --radius-lg: 24px;
+  --radius-xl: 32px;
 }
+
+/* ── Reset ── */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+html { scroll-behavior: smooth; }
 
 body {
-  font-family: 'Be Vietnam Pro', system-ui, -apple-system, sans-serif;
-  background-color: #F5F0F2; /* Warm pinkish tint matching landing page */
-  color: #111111;
-  min-height: 100vh;
-  overflow-x: hidden;
+  font-family: var(--ff-sans);
+  background: var(--cream);
+  color: var(--text-primary);
+  line-height: 1.6;
   -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
 }
 
-#root {
+img { display: block; max-width: 100%; }
+
+a { text-decoration: none; color: inherit; }
+
+button { cursor: pointer; font-family: inherit; border: none; outline: none; }
+
+/* ── Utilities ── */
+.container {
   width: 100%;
-  max-width: 100%;
-  margin: 0;
-  text-align: left;
-  min-height: 100svh;
-  display: flex;
-  flex-direction: column;
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 0 32px;
 }
+
+.section-label {
+  font-family: var(--ff-sans);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--grey-text);
+}
+
+.section-label--rust { color: var(--rust); }
+.section-label--light { color: rgba(255,255,255,0.5); }
+
+.badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  border-radius: 100px;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+/* ── Scrollbar ── */
+::-webkit-scrollbar { width: 6px; }
+::-webkit-scrollbar-track { background: var(--cream); }
+::-webkit-scrollbar-thumb { background: var(--grey-border); border-radius: 3px; }

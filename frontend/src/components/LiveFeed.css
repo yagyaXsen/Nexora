@@ -1,0 +1,139 @@
+.livefeed {
+  padding: 100px 0;
+  background: var(--dark);
+}
+
+.livefeed__header {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  margin-bottom: 48px;
+}
+
+.livefeed__title {
+  font-family: var(--ff-serif);
+  font-size: clamp(36px, 4vw, 56px);
+  font-weight: 700;
+  color: var(--white);
+  letter-spacing: -0.02em;
+  margin-top: 8px;
+}
+
+.livefeed__nav {
+  display: flex;
+  gap: 8px;
+}
+
+.livefeed__nav-btn {
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  background: rgba(255,255,255,0.08);
+  border: 1px solid rgba(255,255,255,0.12);
+  color: var(--white);
+  font-size: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.2s;
+}
+
+.livefeed__nav-btn:hover {
+  background: rgba(255,255,255,0.16);
+}
+
+/* Cards */
+.livefeed__cards {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 20px;
+}
+
+.livefeed__card {
+  background: #1e1e1e;
+  border-radius: var(--radius-xl);
+  padding: 28px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  border: 1px solid rgba(255,255,255,0.06);
+  transition: border-color 0.2s;
+}
+
+.livefeed__card:hover {
+  border-color: rgba(255,255,255,0.12);
+}
+
+.livefeed__card-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.livefeed__category {
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: rgba(255,255,255,0.5);
+  background: rgba(255,255,255,0.08);
+  padding: 4px 10px;
+  border-radius: 100px;
+}
+
+.livefeed__match {
+  font-family: var(--ff-serif);
+  font-size: 24px;
+  font-weight: 700;
+  font-style: italic;
+  color: rgba(255,255,255,0.6);
+}
+
+.livefeed__card-title {
+  font-family: var(--ff-serif);
+  font-size: 22px;
+  font-weight: 600;
+  color: var(--white);
+  line-height: 1.2;
+}
+
+.livefeed__card-desc {
+  font-size: 13px;
+  line-height: 1.6;
+  color: rgba(255,255,255,0.5);
+  flex: 1;
+}
+
+.livefeed__card-meta {
+  display: flex;
+  gap: 16px;
+  font-size: 12px;
+  color: rgba(255,255,255,0.45);
+}
+
+.livefeed__card-cta {
+  width: 100%;
+  padding: 13px;
+  border-radius: 12px;
+  font-size: 14px;
+  font-weight: 600;
+  text-align: center;
+  transition: opacity 0.2s, transform 0.15s;
+  margin-top: 4px;
+}
+
+.livefeed__card-cta:hover {
+  opacity: 0.85;
+  transform: translateY(-1px);
+}
+
+.livefeed__card-cta--dark {
+  background: var(--white);
+  color: var(--dark);
+}
+
+.livefeed__card-cta--outline {
+  background: transparent;
+  color: var(--white);
+  border: 1px solid rgba(255,255,255,0.25);
+}

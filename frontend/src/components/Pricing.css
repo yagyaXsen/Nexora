@@ -1,0 +1,235 @@
+.pricing {
+  padding: 100px 0;
+  background: var(--cream);
+}
+
+.pricing__header {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 60px;
+  text-align: center;
+}
+
+.pricing__title {
+  font-family: var(--ff-serif);
+  font-size: clamp(36px, 4vw, 52px);
+  font-weight: 700;
+  color: var(--text-primary);
+  letter-spacing: -0.02em;
+}
+
+.pricing__cards {
+  display: grid;
+  grid-template-columns: 2fr 1fr;
+  gap: 20px;
+  align-items: start;
+}
+
+/* ── Pro Card ── */
+.pricing__card--pro {
+  background: var(--maroon);
+  border-radius: var(--radius-xl);
+  padding: 40px;
+  position: relative;
+  overflow: hidden;
+}
+
+.pricing__card-inner {
+  display: flex;
+  justify-content: space-between;
+  gap: 40px;
+  position: relative;
+  z-index: 1;
+}
+
+.pricing__recommended {
+  display: inline-block;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  background: rgba(255,255,255,0.12);
+  color: rgba(255,255,255,0.7);
+  padding: 4px 10px;
+  border-radius: 100px;
+  margin-bottom: 16px;
+}
+
+.pricing__plan-name {
+  font-family: var(--ff-serif);
+  font-size: 36px;
+  font-weight: 700;
+  color: var(--white);
+  margin-bottom: 8px;
+}
+
+.pricing__plan-desc {
+  font-size: 14px;
+  color: rgba(255,255,255,0.6);
+  line-height: 1.6;
+  max-width: 320px;
+  margin-bottom: 24px;
+}
+
+.pricing__features {
+  list-style: none;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px 20px;
+}
+
+.pricing__feature {
+  font-size: 14px;
+  color: rgba(255,255,255,0.8);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.pricing__check {
+  color: rgba(255,255,255,0.5);
+  font-weight: 700;
+}
+
+/* Pro right */
+.pricing__pro-right {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  min-width: 200px;
+}
+
+.pricing__price {
+  display: flex;
+  align-items: flex-start;
+  gap: 2px;
+  color: var(--white);
+}
+
+.pricing__currency {
+  font-size: 24px;
+  font-weight: 700;
+  margin-top: 8px;
+}
+
+.pricing__amount {
+  font-family: var(--ff-serif);
+  font-size: 64px;
+  font-weight: 700;
+  line-height: 1;
+}
+
+.pricing__period {
+  font-size: 18px;
+  color: rgba(255,255,255,0.5);
+  align-self: flex-end;
+  margin-bottom: 8px;
+}
+
+.pricing__cta {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  padding: 14px 28px;
+  border-radius: 100px;
+  font-size: 15px;
+  font-weight: 700;
+  transition: opacity 0.2s, transform 0.15s;
+}
+
+.pricing__cta:hover {
+  opacity: 0.85;
+  transform: translateY(-1px);
+}
+
+.pricing__cta--pro {
+  background: var(--white);
+  color: var(--maroon);
+}
+
+.pricing__billing {
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: rgba(255,255,255,0.35);
+  text-align: center;
+}
+
+/* Decorative */
+.pricing__deco {
+  position: absolute;
+  border-radius: 50%;
+  background: rgba(255,255,255,0.04);
+  pointer-events: none;
+}
+
+.pricing__deco--1 {
+  width: 200px;
+  height: 200px;
+  top: -60px;
+  right: 200px;
+}
+
+.pricing__deco--2 {
+  width: 160px;
+  height: 160px;
+  bottom: -40px;
+  right: 60px;
+}
+
+/* ── Free Card ── */
+.pricing__card--free {
+  background: var(--white);
+  border-radius: var(--radius-xl);
+  padding: 36px;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  border: 1px solid var(--grey-border);
+}
+
+.pricing__plan-name--dark { color: var(--text-primary); }
+.pricing__plan-desc--dark { color: var(--text-muted); }
+.pricing__features--dark  { grid-template-columns: 1fr; }
+
+.pricing__feature--dark {
+  color: var(--text-primary);
+  font-size: 14px;
+}
+
+.pricing__check--dark { color: var(--text-primary); }
+
+.pricing__feature--disabled {
+  color: var(--grey-text);
+  text-decoration: line-through;
+  font-size: 14px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.pricing__check--disabled { color: var(--grey-text); }
+
+.pricing__cta--free {
+  background: transparent;
+  color: var(--text-primary);
+  border: 1.5px solid var(--text-primary);
+  width: 100%;
+  padding: 14px;
+  border-radius: 100px;
+  font-size: 15px;
+  font-weight: 700;
+  text-align: center;
+  transition: background 0.2s, color 0.2s;
+}
+
+.pricing__cta--free:hover {
+  background: var(--dark);
+  color: var(--white);
+}

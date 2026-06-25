@@ -4,7 +4,7 @@ from sqlalchemy.orm import Session
 from datetime import date, datetime
 from .database import engine, Base, get_db
 from .config import settings
-from .routes import opportunities, applications, scraper, profile, reminders
+from .routes import opportunities, applications, scraper, profile, reminders, community, auth
 from . import crud, schemas, models
 
 # 1. Initialize Database Tables
@@ -30,11 +30,13 @@ app.add_middleware(
 )
 
 # 4. Register API Routers
+app.include_router(auth.router, prefix="/api")
 app.include_router(opportunities.router, prefix="/api")
 app.include_router(applications.router, prefix="/api")
 app.include_router(scraper.router, prefix="/api")
 app.include_router(profile.router, prefix="/api")
 app.include_router(reminders.router, prefix="/api")
+app.include_router(community.router, prefix="/api")
 
 # 5. Core Health Check Endpoint
 @app.get("/")

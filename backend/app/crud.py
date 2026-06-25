@@ -185,6 +185,28 @@ def delete_application(db: Session, application_id: UUID) -> bool:
     return True
 
 
+# ==================== USER (AUTH) CRUD ====================
+
+def get_user_by_email(db: Session, email: str) -> Optional[models.User]:
+    # Emails are stored/compared case-insensitively (normalized to lower).
+    return db.query(models.User).filter(models.User.email == email.lower().strip()).first()
+
+def get_user_by_id(db: Session, user_id: int) -> Optional[models.User]:
+    return db.query(models.User).filter(models.User.id == user_id).first()
+
+def create_user(db: Session, email: str, full_name: str, password_hash: str) -> models.User:
+    db_user = models.User(
+        email=email.lower().strip(),
+        full_name=full_name.strip() if full_name else None,
+        password_hash=password_hash,
+        is_active="Yes",
+    )
+    db.add(db_user)
+    db.commit()
+    db.refresh(db_user)
+    return db_user
+
+
 # ==================== USER PROFILE CRUD ====================
 
 def get_user_profile(db: Session) -> Optional[models.UserProfile]:

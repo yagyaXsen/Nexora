@@ -1,0 +1,207 @@
+/* ============================================================
+   Nexora — Auth pages (Login, Signup, Onboarding)
+   Split-screen shell: maroon brand panel + form panel.
+   ============================================================ */
+
+.auth {
+  display: grid;
+  grid-template-columns: 1.1fr 1fr;
+  min-height: 100vh;
+  background: var(--cream);
+}
+
+/* ── Brand panel ── */
+.auth__brand {
+  position: relative;
+  overflow: hidden;
+  background: var(--maroon);
+  color: var(--white);
+  padding: 48px 56px;
+  display: flex;
+  flex-direction: column;
+  gap: 32px;
+}
+.auth__brand::after {
+  content: '';
+  position: absolute;
+  bottom: -120px; right: -120px;
+  width: 360px; height: 360px; border-radius: 50%;
+  background: rgba(255, 255, 255, 0.04);
+  pointer-events: none;
+}
+.auth__brand-logo {
+  display: inline-flex; align-items: center; gap: 10px;
+  font-size: 20px; font-weight: 700; letter-spacing: -0.02em;
+  color: var(--white);
+  position: relative; z-index: 1;
+  width: max-content;
+}
+.auth__brand-logo-ico {
+  width: 34px; height: 34px; border-radius: var(--radius-sm);
+  background: var(--white); color: var(--maroon);
+  display: inline-flex; align-items: center; justify-content: center;
+  font-size: 17px;
+}
+.auth__brand-body { margin-top: auto; position: relative; z-index: 1; }
+.auth__brand-eyebrow {
+  font-size: 11px; font-weight: 600; letter-spacing: 0.14em; text-transform: uppercase;
+  color: rgba(255, 255, 255, 0.5); margin-bottom: 16px;
+}
+.auth__brand-headline {
+  font-family: var(--ff-serif);
+  font-size: clamp(32px, 3.2vw, 46px); font-weight: 700; line-height: 1.1;
+  letter-spacing: -0.02em; margin-bottom: 16px;
+}
+.auth__brand-headline em { font-style: italic; color: var(--yellow-pale); }
+.auth__brand-sub {
+  font-size: 15px; line-height: 1.7; color: rgba(255, 255, 255, 0.7); max-width: 420px;
+}
+.auth__brand-proof {
+  display: flex; align-items: center; gap: 12px; margin-top: 28px;
+  position: relative; z-index: 1;
+}
+.auth__brand-avatars { display: flex; }
+.auth__brand-avatar {
+  width: 32px; height: 32px; border-radius: 50%;
+  border: 2px solid var(--maroon); margin-left: -8px;
+}
+.auth__brand-avatars .auth__brand-avatar:first-child { margin-left: 0; }
+.auth__brand-proof-txt { font-size: 13px; color: rgba(255, 255, 255, 0.6); }
+
+/* ── Form panel ── */
+.auth__panel {
+  display: flex; flex-direction: column;
+  justify-content: center; align-items: center;
+  padding: 48px 32px;
+}
+.auth__card {
+  width: 100%; max-width: 420px;
+  display: flex; flex-direction: column; gap: 24px;
+}
+.auth__head { display: flex; flex-direction: column; gap: 8px; }
+.auth__title {
+  font-family: var(--ff-serif);
+  font-size: 30px; font-weight: 700; letter-spacing: -0.02em; color: var(--text-primary);
+}
+.auth__subtitle { font-size: 14px; color: var(--text-muted); }
+.auth__form { display: flex; flex-direction: column; gap: 18px; }
+.auth__row { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+
+.auth__error {
+  display: flex; align-items: center; gap: 10px;
+  padding: 12px 14px; border-radius: var(--radius-sm);
+  background: var(--danger-bg); color: var(--danger);
+  font-size: 13px; font-weight: 500;
+  border: 1px solid color-mix(in srgb, var(--danger) 25%, transparent);
+}
+
+.auth__meta {
+  display: flex; align-items: center; justify-content: space-between;
+  font-size: 13px;
+}
+.auth__link { color: var(--maroon); font-weight: 600; }
+.auth__link:hover { text-decoration: underline; }
+.auth__foot {
+  text-align: center; font-size: 14px; color: var(--text-muted);
+  padding-top: 4px;
+}
+.auth__legal {
+  font-size: 12px; color: var(--grey-text); line-height: 1.6; text-align: center;
+}
+.auth__legal a { color: var(--text-muted); text-decoration: underline; }
+
+/* ── Password strength meter ── */
+.auth__strength { display: flex; flex-direction: column; gap: 6px; margin-top: -6px; }
+.auth__strength-bars { display: flex; gap: 6px; }
+.auth__strength-bar {
+  flex: 1; height: 4px; border-radius: 2px; background: var(--grey-border);
+  transition: background 0.2s var(--ease);
+}
+.auth__strength-bar.is-on--weak { background: var(--danger); }
+.auth__strength-bar.is-on--ok { background: var(--warning); }
+.auth__strength-bar.is-on--strong { background: var(--success); }
+.auth__strength-label { font-size: 11px; color: var(--text-muted); }
+
+/* ============================================================
+   ONBOARDING — full-screen wizard
+   ============================================================ */
+.onb {
+  min-height: 100vh; background: var(--cream-light);
+  display: flex; flex-direction: column; align-items: center;
+  padding: 40px 24px 64px;
+}
+.onb__shell { width: 100%; max-width: 680px; }
+.onb__top {
+  display: flex; align-items: center; justify-content: space-between;
+  margin-bottom: 28px;
+}
+.onb__logo { display: inline-flex; align-items: center; gap: 8px; font-weight: 700; font-size: 17px; color: var(--text-primary); }
+.onb__logo-ico {
+  width: 28px; height: 28px; border-radius: 7px; background: var(--dark); color: var(--white);
+  display: inline-flex; align-items: center; justify-content: center; font-size: 14px;
+}
+.onb__skip { font-size: 13px; color: var(--text-muted); font-weight: 500; }
+.onb__skip:hover { color: var(--text-primary); }
+
+.onb__progress { margin-bottom: 32px; }
+.onb__progress-track {
+  height: 6px; border-radius: var(--radius-pill); background: var(--grey-border); overflow: hidden;
+}
+.onb__progress-fill {
+  height: 100%; border-radius: var(--radius-pill);
+  background: var(--maroon); transition: width 0.35s var(--ease);
+}
+.onb__progress-meta {
+  display: flex; align-items: center; justify-content: space-between;
+  margin-top: 10px; font-size: 12px; color: var(--text-muted);
+}
+.onb__progress-step { font-weight: 600; letter-spacing: 0.04em; text-transform: uppercase; }
+
+.onb__card {
+  background: var(--white); border: 1px solid var(--grey-border);
+  border-radius: var(--radius-lg); padding: 36px;
+  box-shadow: var(--shadow-md);
+}
+.onb__step-eyebrow {
+  font-size: 11px; font-weight: 600; letter-spacing: 0.12em; text-transform: uppercase;
+  color: var(--rust); margin-bottom: 8px;
+}
+.onb__step-title {
+  font-family: var(--ff-serif); font-size: 26px; font-weight: 700;
+  letter-spacing: -0.02em; color: var(--text-primary); margin-bottom: 6px;
+}
+.onb__step-desc { font-size: 14px; color: var(--text-muted); margin-bottom: 28px; line-height: 1.6; }
+.onb__fields { display: flex; flex-direction: column; gap: 18px; }
+
+/* selectable chips */
+.onb__chips { display: flex; flex-wrap: wrap; gap: 10px; }
+.onb__chip {
+  padding: 9px 16px; border-radius: var(--radius-pill);
+  border: 1.5px solid var(--grey-border); background: var(--white);
+  font-size: 13px; font-weight: 500; color: var(--text-primary);
+  cursor: pointer; transition: all 0.15s var(--ease);
+  user-select: none;
+}
+.onb__chip:hover { border-color: var(--maroon); }
+.onb__chip.is-selected {
+  background: var(--maroon); border-color: var(--maroon); color: var(--white);
+}
+.onb__chip-add {
+  display: inline-flex; align-items: center; gap: 6px;
+  border-style: dashed; color: var(--text-muted);
+}
+
+.onb__actions {
+  display: flex; align-items: center; justify-content: space-between;
+  margin-top: 32px;
+}
+
+/* ── Responsive ── */
+@media (max-width: 860px) {
+  .auth { grid-template-columns: 1fr; }
+  .auth__brand { display: none; }
+  .auth__panel { padding: 40px 24px; }
+}
+@media (max-width: 460px) {
+  .auth__row { grid-template-columns: 1fr; }
+}
