@@ -1,0 +1,88 @@
+/* ==========================================================================
+   Nexora Organization Hub — Swiss Design System DNA
+   ========================================================================== */
+
+.org-swiss-container {
+  background-color: #FAFAF8;
+  color: #1A1110;
+  min-height: 100vh;
+  padding: calc(var(--nav-height) + var(--s-6)) 0 var(--s-12) 0;
+  font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+}
+
+.org-swiss-cover {
+  width: 100%;
+  height: 220px;
+  background: #1A1110;
+  position: relative;
+  overflow: hidden;
+  border-bottom: 2px solid #1A1110;
+}
+
+.org-swiss-cover-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  opacity: 0.85;
+}
+
+.org-swiss-hero-card {
+  background: #FAFAF8;
+  border: 2px solid #1A1110;
+  padding: var(--s-6);
+  margin-top: -60px;
+  position: relative;
+  z-index: 10;
+  box-shadow: 0 12px 40px rgba(26, 17, 16, 0.08);
+}
+
+.org-swiss-logo {
+  width: 80px;
+  height: 80px;
+  background: #1A1110;
+  color: #FAFAF8;
+  border: 2px solid #960018;
+  display: grid;
+  place-items: center;
+  font-family: ui-monospace, SFMono-Regular, monospace;
+  font-size: 1.75rem;
+  font-weight: 800;
+  margin-top: -50px;
+  margin-bottom: 16px;
+}
+
+.org-swiss-title {
+  font-size: clamp(2rem, 3.5vw, 2.75rem);
+  font-weight: 800;
+  letter-spacing: -0.025em;
+  color: #1A1110;
+  line-height: 1.15;
+}
+
+/* 7:5 Asymmetric Grid */
+.org-layout-grid {
+  display: grid;
+  grid-template-columns: 1fr 340px;
+  gap: var(--s-6);
+  align-items: start;
+  margin-top: var(--s-6);
+}
+
+.org-swiss-box {
+  background: #FAFAF8;
+  border: 2px solid #1A1110;
+  padding: var(--s-5);
+}
+
+.org-ai-summary-box {
+  background: #FAFAF8;
+  border: 2px solid #960018;
+  padding: var(--s-5);
+  margin-bottom: var(--s-6);
+}
+
+@media (max-width: 1024px) {
+  .org-layout-grid {
+    grid-template-columns: 1fr;
+  }
+}

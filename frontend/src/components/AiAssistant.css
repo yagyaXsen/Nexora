@@ -1,0 +1,115 @@
+/* ==========================================================================
+   Nexora Universal AI Assistant Co-Pilot — Swiss Design System DNA
+   ========================================================================== */
+
+.ai-copilot-trigger {
+  position: fixed;
+  bottom: 20px;
+  right: 20px;
+  z-index: 100;
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
+  background: #0A0A0A;
+  color: #FFFFFF;
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  cursor: pointer;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.25);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.ai-copilot-trigger:hover {
+  transform: translateY(-2px) scale(1.08);
+  background: #4F46E5;
+  border-color: #6366F1;
+  box-shadow: 0 8px 20px rgba(79, 70, 229, 0.4);
+}
+
+/* Slide-Over Drawer Container */
+.ai-copilot-drawer {
+  position: fixed;
+  bottom: 84px;
+  right: 24px;
+  z-index: 101;
+  width: 420px;
+  max-width: calc(100vw - 32px);
+  height: 580px;
+  max-height: calc(100vh - 120px);
+  background: #FAFAF8;
+  border: 2px solid #1A1110;
+  box-shadow: 0 16px 40px rgba(26, 17, 16, 0.15);
+  display: flex;
+  flex-direction: column;
+}
+
+.ai-copilot-header {
+  background: #1A1110;
+  color: #FAFAF8;
+  padding: 14px 16px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border-bottom: 2px solid #960018;
+}
+
+.ai-copilot-messages {
+  flex: 1;
+  padding: 16px;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.ai-msg-bubble {
+  padding: 12px 14px;
+  font-size: 0.75rem;
+  line-height: 1.6;
+  max-width: 88%;
+}
+
+.ai-msg-assistant {
+  background: #F0F0EA;
+  border: 1px solid #1A1110/20;
+  color: #1A1110;
+  align-self: flex-start;
+  font-family: 'IBM Plex Serif', Georgia, serif;
+}
+
+.ai-msg-user {
+  background: #960018;
+  color: #FAFAF8;
+  align-self: flex-end;
+  font-family: 'Plus Jakarta Sans', sans-serif;
+  font-weight: 600;
+}
+
+.ai-copilot-input-box {
+  padding: 12px;
+  background: #FAFAF8;
+  border-top: 1px solid #E2E2DC;
+  display: flex;
+  gap: 8px;
+}
+
+.ai-copilot-input {
+  flex: 1;
+  background: #F0F0EA;
+  border: 1px solid #1A1110;
+  padding: 8px 12px;
+  font-family: 'Plus Jakarta Sans', sans-serif;
+  font-size: 0.75rem;
+  color: #1A1110;
+  outline: none;
+}
+
+@media (max-width: 640px) {
+  .ai-copilot-drawer {
+    right: 16px;
+    left: 16px;
+    width: auto;
+  }
+}

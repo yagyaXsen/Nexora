@@ -1,0 +1,1302 @@
+<style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=IBM+Plex+Mono:wght@400;500;600&display=swap');
+  @import url('https://cdn.jsdelivr.net/npm/@tabler/icons-webfont/tabler-icons.min.css');
+
+  :root {
+    --color-bg: #FFFFFF;
+    --color-surface: #FAFAFA;
+    --color-text: #0A0A0A;
+    --color-slate: #4B5563;
+    --color-platinum: #E5E7EB;
+    --color-accent: #4338CA;
+    --color-accent-hover: #4F46E5;
+    --color-accent-soft: #EEF2FF;
+  }
+
+  body {
+    margin: 0;
+    padding: 0;
+    background-color: var(--color-bg);
+    color: var(--color-text);
+    font-family: 'Inter', sans-serif;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  .font-mono { font-family: 'IBM Plex Mono', monospace; }
+
+  .glass {
+    background: rgba(255, 255, 255, 0.7);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border: 1px solid var(--color-platinum);
+  }
+
+  @keyframes float {
+    0%, 100% { transform: translateY(0) rotate(-2deg); }
+    50% { transform: translateY(-15px) rotate(0deg); }
+  }
+  .animate-float { animation: float 6s ease-in-out infinite; }
+
+  .grid-bg {
+    background-image: radial-gradient(var(--color-platinum) 1px, transparent 1px);
+    background-size: 40px 40px;
+  }
+
+  .grid-bg-tight {
+    background-image: radial-gradient(var(--color-platinum) 1.5px, transparent 1.5px);
+    background-size: 20px 20px;
+  }
+
+  .noise {
+    position: relative;
+  }
+  .noise::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    z-index: 10;
+    opacity: 0.03;
+    pointer-events: none;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)'/%3E%3C/svg%3E");
+  }
+
+  details > summary { list-style: none; }
+  details > summary::-webkit-details-marker { display: none; }
+
+  .cta-sheen {
+    position: relative;
+    overflow: hidden;
+  }
+  .cta-sheen::after {
+    content: '';
+    position: absolute;
+    top: -50%;
+    left: -50%;
+    width: 200%;
+    height: 200%;
+    background: linear-gradient(45deg, transparent, rgba(255,255,255,0.1), transparent);
+    transform: rotate(45deg);
+    animation: sheen 3s infinite;
+  }
+  @keyframes sheen {
+    0% { transform: translateX(-100%) rotate(45deg); }
+    100% { transform: translateX(100%) rotate(45deg); }
+  }
+
+  .bento-card {
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    border: 1px solid var(--color-platinum);
+  }
+  .bento-card:hover {
+    border-color: var(--color-accent);
+    transform: translateY(-4px);
+  }
+
+  /* Prism contrast pass: deepen reading text, sharpen display rhythm, and reserve indigo for signal. */
+  .prism-contrast {
+    color: var(--color-text);
+  }
+  .prism-contrast h1 {
+    letter-spacing: -0.045em;
+    line-height: 0.98;
+  }
+  .prism-contrast h2 {
+    letter-spacing: -0.032em;
+    line-height: 1.08;
+  }
+  .prism-contrast h3,
+  .prism-contrast h4 {
+    letter-spacing: -0.018em;
+  }
+  .prism-contrast p {
+    line-height: 1.62;
+  }
+  .prism-contrast .text-\[\#666\],
+  .prism-contrast .text-slate-600,
+  .prism-contrast .text-slate-500 {
+    color: var(--color-slate) !important;
+  }
+  .prism-contrast .text-slate-400 {
+    color: #5B6472 !important;
+  }
+  .prism-contrast .text-indigo-600,
+  .prism-contrast .text-indigo-500 {
+    color: var(--color-accent) !important;
+  }
+  .prism-contrast .bg-indigo-50 {
+    background-color: var(--color-accent-soft) !important;
+  }
+  .prism-contrast .border-platinum {
+    border-color: var(--color-platinum) !important;
+  }
+  .prism-contrast .font-mono {
+    letter-spacing: 0.025em;
+  }
+  .prism-contrast .font-mono.text-\[10px\],
+  .prism-contrast .font-mono.text-\[11px\] {
+    font-weight: 600;
+  }
+  .prism-contrast .tracking-tighter {
+    letter-spacing: -0.035em;
+  }
+  .prism-contrast .tracking-widest {
+    letter-spacing: 0.12em;
+  }
+  .prism-contrast .text-indigo-600.bg-indigo-50,
+  .prism-contrast .bg-indigo-50.text-indigo-600 {
+    color: #3730A3 !important;
+  }
+  .prism-contrast .text-slate-400.bg-slate-50,
+  .prism-contrast .bg-slate-50 .text-slate-400 {
+    color: #4B5563 !important;
+  }
+</style>
+<div class="prism-contrast relative w-full overflow-x-hidden selection:bg-indigo-100 selection:text-indigo-900" data-kid="1" data-name="page layout container with contrast styles">
+    <!-- ==================== NAVIGATION ==================== -->
+    <nav class="absolute top-8 left-1/2 -translate-x-1/2 z-50 w-full max-w-4xl px-4" data-kid="1-1" data-name="main navigation bar">
+        <div class="glass rounded-full px-6 py-3 flex items-center justify-between shadow-sm" data-kid="1-1-1" data-name="glass navigation container">
+            <div class="flex items-center gap-3" data-kid="1-1-1-1" data-name="brand logo and name group">
+                <div class="w-8 h-8 bg-[#0A0A0A] rounded-lg flex items-center justify-center text-white font-bold text-lg" data-kid="1-1-1-1-1" data-name="brand icon">
+                    N
+                </div>
+                <div class="flex flex-col" data-kid="1-1-1-1-2" data-name="brand name and subtitle group">
+                    <span class="text-xs font-extrabold tracking-tighter" data-kid="1-1-1-1-2-1" data-name="brand name">
+                        NEXORA
+                    </span>
+                    <span class="font-mono text-[9px] text-[#666] leading-none" data-kid="1-1-1-1-2-2" data-name="brand subtitle">
+                        SWISS ED.
+                    </span>
+                </div>
+            </div>
+            <div class="hidden md:flex items-center gap-8 text-[13px] font-medium text-[#666]" data-kid="1-1-1-2" data-name="main navigation links container">
+                <a class="hover:text-[#0A0A0A] transition-colors" data-kid="1-1-1-2-1" data-name="navigation link" href="#discover">
+                    Discover
+                </a>
+                <a class="hover:text-[#0A0A0A] transition-colors" data-kid="1-1-1-2-2" data-name="navigation link" href="#intelligence">
+                    Intelligence
+                </a>
+                <a class="hover:text-[#0A0A0A] transition-colors" data-kid="1-1-1-2-3" data-name="navigation link" href="#teams">
+                    For Teams
+                </a>
+                <a class="hover:text-[#0A0A0A] transition-colors" data-kid="1-1-1-2-4" data-name="navigation link" href="#journal">
+                    Journal
+                </a>
+            </div>
+            <div class="flex items-center gap-4" data-kid="1-1-1-3" data-name="login and cta container">
+                <a class="text-[13px] font-medium text-[#666] hover:text-[#0A0A0A] transition-colors" data-kid="1-1-1-3-1" data-name="login link" href="#">
+                    Log in
+                </a>
+                <button class="bg-[#0A0A0A] text-white px-5 py-2 rounded-full text-[13px] font-semibold hover:bg-[#222] transition-colors shadow-lg" data-kid="1-1-1-3-2" data-name="request access button">
+                    Request access
+                </button>
+            </div>
+        </div>
+    </nav>
+    <!-- ==================== HERO SECTION ==================== -->
+    <section class="relative min-h-[900px] flex items-center pt-24 noise grid-bg overflow-hidden border-b border-platinum" data-kid="1-2" data-name="hero section">
+        <div class="max-w-[1400px] mx-auto w-full px-10 grid grid-cols-12 gap-12 items-center" data-kid="1-2-1" data-name="hero content grid">
+            <!-- Left: Headline (7 cols) -->
+            <div class="col-span-12 lg:col-span-7 space-y-10" data-kid="1-2-1-1" data-name="headline and call-to-action area">
+                <div class="inline-flex items-center gap-2.5 px-3 py-1.5 rounded-full bg-white border border-platinum shadow-xs" data-kid="1-2-1-1-1" data-name="version announcement badge">
+                    <span class="flex h-2 w-2 relative" data-kid="1-2-1-1-1-1" data-name="pulse animation container">
+                        <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-indigo-400 opacity-75" data-kid="1-2-1-1-1-1-1" data-name="ping animation dot">
+                        </span>
+                        <span class="relative inline-flex rounded-full h-2 w-2 bg-indigo-500" data-kid="1-2-1-1-1-1-2" data-name="solid inner dot">
+                        </span>
+                    </span>
+                    <span class="font-mono text-[11px] font-semibold tracking-tight uppercase text-slate-600" data-kid="1-2-1-1-1-2" data-name="version label text">
+                        Opportunity Intelligence / v2.06
+                    </span>
+                </div>
+                <h1 class="text-[72px] lg:text-[88px] font-black leading-[0.92] tracking-tighter text-[#0A0A0A] max-w-4xl" data-kid="1-2-1-1-2" data-name="hero headline">
+                    The future belongs to people who
+                    <span class="text-indigo-600" data-kid="1-2-1-1-2-1" data-name="highlighted headline text">
+                        never miss
+                    </span>
+                    opportunities.
+                </h1>
+                <p class="text-[20px] lg:text-[22px] text-[#666] leading-relaxed max-w-2xl" data-kid="1-2-1-1-3" data-name="hero subheadline description">
+                    Nexora turns the open web into a quiet, personal signal—the programs, people, and deadlines that deserve your attention next.
+                </p>
+                <div class="flex flex-wrap items-center gap-6 pt-4" data-kid="1-2-1-1-4" data-name="hero cta button group">
+                    <button class="cta-sheen bg-[#0A0A0A] text-white px-10 py-5 rounded-2xl font-bold text-lg flex items-center gap-3 group transition-all hover:shadow-[0_20px_40px_rgba(79,70,229,0.2)]" data-kid="1-2-1-1-4-1" data-name="start exploring cta button">
+                        Start exploring
+                        <i class="ti ti-arrow-right text-xl group-hover:translate-x-1 transition-transform" data-kid="1-2-1-1-4-1-1" data-name="right arrow icon">
+                        </i>
+                    </button>
+                    <button class="text-[#0A0A0A] font-bold text-lg flex items-center gap-2 group underline decoration-platinum underline-offset-8 hover:decoration-indigo-600 transition-all" data-kid="1-2-1-1-4-2" data-name="search feature cta link">
+                        A clearer way to search
+                        <i class="ti ti-arrow-up-right text-xl opacity-0 group-hover:opacity-100 transition-opacity" data-kid="1-2-1-1-4-2-1" data-name="up-right arrow icon">
+                        </i>
+                    </button>
+                </div>
+                <div class="pt-10 flex items-center gap-6" data-kid="1-2-1-1-5" data-name="trusted labs section">
+                    <span class="font-mono text-[10px] uppercase tracking-widest text-slate-400 font-bold" data-kid="1-2-1-1-5-1" data-name="trust section label">
+                        Trusted by Signal Intelligence Labs:
+                    </span>
+                    <div class="flex gap-8 text-[#0A0A0A] font-bold text-xs tracking-tighter opacity-80" data-kid="1-2-1-1-5-2" data-name="trusted labs logo names container">
+                        <span data-kid="1-2-1-1-5-2-1" data-name="lab name">
+                            CERN LABS
+                        </span>
+                        <span data-kid="1-2-1-1-5-2-2" data-name="lab name">
+                            MIT MEDIA
+                        </span>
+                        <span data-kid="1-2-1-1-5-2-3" data-name="lab name">
+                            ETH ZURICH
+                        </span>
+                        <span data-kid="1-2-1-1-5-2-4" data-name="lab name">
+                            OPENAI RES.
+                        </span>
+                    </div>
+                </div>
+            </div>
+            <!-- Right: Product Preview (5 cols) -->
+            <div class="col-span-12 lg:col-span-5 relative" data-kid="1-2-1-2" data-name="product preview container">
+                <div class="absolute -z-10 top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-indigo-500/10 blur-[120px] rounded-full" data-kid="1-2-1-2-1" data-name="background light glow">
+                </div>
+                <div class="relative space-y-6 animate-float" data-kid="1-2-1-2-2" data-name="product ui card stack container">
+                    <!-- Filter Card -->
+                    <div class="glass p-5 rounded-2xl shadow-xl -rotate-2 transform translate-x-4" data-kid="1-2-1-2-2-1" data-name="filter card">
+                        <div class="flex items-center justify-between mb-4" data-kid="1-2-1-2-2-1-1" data-name="filter card header">
+                            <span class="font-mono text-[10px] text-[#666] uppercase tracking-wider" data-kid="1-2-1-2-2-1-1-1" data-name="filter label text">
+                                Live Signal Filter
+                            </span>
+                            <span class="flex items-center gap-1 text-[10px] text-indigo-600 font-bold" data-kid="1-2-1-2-2-1-1-2" data-name="live status indicator">
+                                <span class="w-1.5 h-1.5 rounded-full bg-indigo-500" data-kid="1-2-1-2-2-1-1-2-1" data-name="active status dot">
+                                </span>
+                                ACTIVE
+                            </span>
+                        </div>
+                        <div class="flex flex-wrap gap-2" data-kid="1-2-1-2-2-1-2" data-name="filter tag list container">
+                            <span class="px-3 py-1.5 bg-[#0A0A0A] text-white text-xs rounded-lg font-medium" data-kid="1-2-1-2-2-1-2-1" data-name="filter tag">
+                                All Opportunities
+                            </span>
+                            <span class="px-3 py-1.5 bg-white border border-platinum text-[#666] text-xs rounded-lg font-medium" data-kid="1-2-1-2-2-1-2-2" data-name="filter tag">
+                                AI Research
+                            </span>
+                            <span class="px-3 py-1.5 bg-white border border-platinum text-[#666] text-xs rounded-lg font-medium" data-kid="1-2-1-2-2-1-2-3" data-name="filter tag">
+                                Closing Soon
+                            </span>
+                        </div>
+                    </div>
+                    <!-- Opportunity Rows Card -->
+                    <div class="bg-white border border-platinum rounded-2xl shadow-2xl overflow-hidden translate-x-10 scale-105" data-kid="1-2-1-2-2-2" data-name="opportunity rows card">
+                        <div class="divide-y divide-platinum" data-kid="1-2-1-2-2-2-1" data-name="opportunity list">
+                            <div class="p-5 flex items-center justify-between hover:bg-slate-50 transition-colors cursor-pointer group" data-kid="1-2-1-2-2-2-1-1" data-name="opportunity row">
+                                <div class="flex items-center gap-4" data-kid="1-2-1-2-2-2-1-1-1" data-name="row icon container">
+                                    <div class="w-10 h-10 bg-indigo-50 rounded-xl flex items-center justify-center text-indigo-600" data-kid="1-2-1-2-2-2-1-1-1-1" data-name="rocket icon">
+                                        <i class="ti ti-rocket text-xl" data-kid="1-2-1-2-2-2-1-1-1-1-1">
+                                        </i>
+                                    </div>
+                                    <div data-kid="1-2-1-2-2-2-1-1-1-2">
+                                        <h4 class="font-bold text-[#0A0A0A]" data-kid="1-2-1-2-2-2-1-1-1-2-1">
+                                            ETH AI Center
+                                        </h4>
+                                        <p class="text-xs text-[#666] font-mono" data-kid="1-2-1-2-2-2-1-1-1-2-2">
+                                            ZURICH · FELLOWSHIP
+                                        </p>
+                                    </div>
+                                </div>
+                                <div class="text-right" data-kid="1-2-1-2-2-2-1-1-2" data-name="row title and subtitle group">
+                                    <span class="block font-bold text-indigo-600 text-sm" data-kid="1-2-1-2-2-2-1-1-2-1" data-name="row title">
+                                        98% match
+                                    </span>
+                                    <span class="block text-[10px] text-[#666] uppercase" data-kid="1-2-1-2-2-2-1-1-2-2" data-name="row subtitle">
+                                        Closes May 14
+                                    </span>
+                                </div>
+                            </div>
+                            <div class="p-5 flex items-center justify-between hover:bg-slate-50 transition-colors cursor-pointer group" data-kid="1-2-1-2-2-2-1-2" data-name="opportunity row">
+                                <div class="flex items-center gap-4" data-kid="1-2-1-2-2-2-1-2-1" data-name="row icon container">
+                                    <div class="w-10 h-10 bg-slate-50 rounded-xl flex items-center justify-center text-slate-400" data-kid="1-2-1-2-2-2-1-2-1-1" data-name="openai icon">
+                                        <i class="ti ti-brand-openai text-xl" data-kid="1-2-1-2-2-2-1-2-1-1-1">
+                                        </i>
+                                    </div>
+                                    <div data-kid="1-2-1-2-2-2-1-2-1-2" data-name="row title and subtitle group">
+                                        <h4 class="font-bold text-[#0A0A0A]" data-kid="1-2-1-2-2-2-1-2-1-2-1" data-name="row title">
+                                            OpenAI Residency
+                                        </h4>
+                                        <p class="text-xs text-[#666] font-mono" data-kid="1-2-1-2-2-2-1-2-1-2-2" data-name="row subtitle">
+                                            USA · RESIDENCY
+                                        </p>
+                                    </div>
+                                </div>
+                                <div class="text-right" data-kid="1-2-1-2-2-2-1-2-2" data-name="row metadata column">
+                                    <span class="block font-bold text-[#0A0A0A] text-sm" data-kid="1-2-1-2-2-2-1-2-2-1" data-name="match percentage">
+                                        95% match
+                                    </span>
+                                    <span class="block text-[10px] text-[#666] uppercase" data-kid="1-2-1-2-2-2-1-2-2-2" data-name="closing date text">
+                                        Closes Aug 01
+                                    </span>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="bg-slate-50 p-4 border-t border-platinum flex items-center justify-between" data-kid="1-2-1-2-2-2-2" data-name="card footer">
+                            <span class="text-[11px] font-mono text-slate-500 uppercase" data-kid="1-2-1-2-2-2-2-1" data-name="indexed count text">
+                                47,200+ signals indexed today
+                            </span>
+                            <i class="ti ti-refresh text-slate-400 text-sm animate-spin-slow" data-kid="1-2-1-2-2-2-2-2" data-name="refresh spinner icon">
+                            </i>
+                        </div>
+                    </div>
+                    <!-- Analysis Callout (Relocated to prevent overlap) -->
+                    <div class="absolute -bottom-16 right-0 w-80 bg-[#0A0A0A] text-white p-6 rounded-2xl shadow-2xl border border-white/10 animate-pulse-slow z-20" data-kid="1-2-1-2-2-3" data-name="analysis callout card">
+                        <div class="flex items-center gap-2 mb-3" data-kid="1-2-1-2-2-3-1" data-name="callout icon header">
+                            <i class="ti ti-target-arrow text-indigo-400 text-sm" data-kid="1-2-1-2-2-3-1-1" data-name="target icon">
+                            </i>
+                            <span class="font-mono text-[10px] font-bold text-indigo-400 uppercase tracking-widest" data-kid="1-2-1-2-2-3-1-2" data-name="callout title">
+                                Precision Insight
+                            </span>
+                        </div>
+                        <p class="text-[14px] leading-relaxed font-medium italic" data-kid="1-2-1-2-2-3-2" data-name="callout text message">
+                            “Signal detected direct alignment with your CERN publications and current AI research trajectory.”
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+    <!-- ==================== PROOF SECTION ==================== -->
+    <section class="min-h-[600px] border-b border-platinum grid grid-cols-12" data-kid="1-3" data-name="proof statistics section">
+        <!-- Left: Rail (4 cols) -->
+        <div class="col-span-12 lg:col-span-4 border-r border-platinum p-16 bg-surface flex flex-col justify-between" data-kid="1-3-1" data-name="left rail statistic section">
+            <div class="space-y-4" data-kid="1-3-1-1" data-name="proof section header">
+                <span class="font-mono text-[11px] font-bold text-indigo-600 uppercase tracking-widest" data-kid="1-3-1-1-1" data-name="proof label">
+                    Global Reach
+                </span>
+                <h2 class="text-[44px] font-bold tracking-tight leading-tight" data-kid="1-3-1-1-2" data-name="proof headline">
+                    The internet is wide. Your attention is not.
+                </h2>
+            </div>
+            <div class="grid grid-cols-2 lg:grid-cols-1 gap-12" data-kid="1-3-1-2" data-name="statistics grid container">
+                <div class="border-l-2 border-platinum pl-6" data-kid="1-3-1-2-1" data-name="stat card">
+                    <div class="text-5xl font-extrabold text-[#0A0A0A] tracking-tighter" data-kid="1-3-1-2-1-1" data-name="stat number">
+                        150+
+                    </div>
+                    <div class="text-[#666] text-xs mt-1 font-mono uppercase font-bold" data-kid="1-3-1-2-1-2" data-name="stat description">
+                        Countries Indexed
+                    </div>
+                </div>
+                <div class="border-l-2 border-platinum pl-6" data-kid="1-3-1-2-2" data-name="stat card">
+                    <div class="text-5xl font-extrabold text-[#0A0A0A] tracking-tighter" data-kid="1-3-1-2-2-1" data-name="stat number">
+                        32
+                    </div>
+                    <div class="text-[#666] text-xs mt-1 font-mono uppercase font-bold" data-kid="1-3-1-2-2-2" data-name="stat description">
+                        Opportunity Types
+                    </div>
+                </div>
+                <div class="border-l-2 border-indigo-600 pl-6" data-kid="1-3-1-2-3" data-name="stat card">
+                    <div class="text-5xl font-extrabold text-indigo-600 tracking-tighter" data-kid="1-3-1-2-3-1" data-name="stat number">
+                        47.2k
+                    </div>
+                    <div class="text-indigo-600/60 text-xs mt-1 font-mono uppercase font-bold" data-kid="1-3-1-2-3-2" data-name="stat description">
+                        Live Signals
+                    </div>
+                </div>
+            </div>
+        </div>
+        <!-- Right: Case Study (8 cols) -->
+        <div class="col-span-12 lg:col-span-8 p-16 flex flex-col justify-center bg-white relative" data-kid="1-3-2" data-name="right case study section">
+            <div class="max-w-3xl space-y-12" data-kid="1-3-2-1" data-name="case study content container">
+                <div class="space-y-6" data-kid="1-3-2-1-1" data-name="testimonial text container">
+                    <p class="text-2xl text-[#666] leading-relaxed italic" data-kid="1-3-2-1-1-1" data-name="testimonial quote">
+                        "Thousands of high-impact fellowships, undisclosed startup grants, and specialized academic residencies sit buried in fragmented University portals and PDF newsletters. Nexora continuously structures these signals into a singular precision feed."
+                    </p>
+                </div>
+                <div class="flex items-start gap-8 p-10 bg-surface border border-platinum rounded-3xl relative overflow-hidden group" data-kid="1-3-2-1-2" data-name="featured quote card">
+                    <div class="absolute top-0 right-0 p-6 opacity-5 group-hover:opacity-10 transition-opacity" data-kid="1-3-2-1-2-1" data-name="quote icon background container">
+                        <i class="ti ti-quote text-9xl" data-kid="1-3-2-1-2-1-1" data-name="quote icon">
+                        </i>
+                    </div>
+                    <div class="relative z-10 w-20 h-20 bg-[#0A0A0A] rounded-2xl flex items-center justify-center text-white font-mono text-2xl font-bold shrink-0" data-kid="1-3-2-1-2-2" data-name="initials badge">
+                        AK
+                    </div>
+                    <div class="space-y-4 relative z-10" data-kid="1-3-2-1-2-3" data-name="testimonial details container">
+                        <div data-kid="1-3-2-1-2-3-1" data-name="author name and role header">
+                            <h4 class="text-xl font-bold text-[#0A0A0A]" data-kid="1-3-2-1-2-3-1-1" data-name="author name">
+                                Ari K.
+                            </h4>
+                            <p class="text-[#666] font-mono text-xs uppercase" data-kid="1-3-2-1-2-3-1-2" data-name="author job role">
+                                Research Fellow @ CERN / Geneva
+                            </p>
+                        </div>
+                        <p class="text-lg text-[#0A0A0A] leading-relaxed" data-kid="1-3-2-1-2-3-2" data-name="author testimonial text">
+                            “Ari K. secured a funded fellowship at CERN after one saved search on Nexora — 3 weeks before it appeared on standard job boards.”
+                        </p>
+                        <div class="inline-flex items-center gap-2 px-3 py-1 bg-green-50 border border-green-100 rounded-full" data-kid="1-3-2-1-2-3-3" data-name="verification badge container">
+                            <i class="ti ti-check text-green-600 text-xs" data-kid="1-3-2-1-2-3-3-1" data-name="checkmark icon">
+                            </i>
+                            <span class="text-[11px] font-bold text-green-700 font-mono" data-kid="1-3-2-1-2-3-3-2" data-name="verification label">
+                                VERIFIED OUTCOME / CASE 084
+                            </span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+    <!-- ==================== BENTO GRID: OPPORTUNITIES ==================== -->
+    <section class="min-h-[900px] py-32 px-10 bg-surface" data-kid="1-4" data-name="bento grid opportunities section" id="discover">
+        <div class="max-w-[1400px] mx-auto space-y-16" data-kid="1-4-1" data-name="bento grid layout wrapper">
+            <div class="flex flex-col lg:flex-row lg:items-end justify-between gap-8" data-kid="1-4-1-1" data-name="bento header">
+                <div class="space-y-4" data-kid="1-4-1-1-1" data-name="bento section label container">
+                    <span class="font-mono text-[11px] font-bold text-indigo-600 uppercase tracking-widest" data-kid="1-4-1-1-1-1" data-name="bento label">
+                        Global Programs
+                    </span>
+                    <h2 class="text-5xl font-bold tracking-tight text-[#0A0A0A]" data-kid="1-4-1-1-1-2" data-name="bento section title">
+                        A field guide to what is possible.
+                    </h2>
+                </div>
+                <div class="flex items-center gap-4 text-sm font-mono text-[#666]" data-kid="1-4-1-1-2" data-name="live indexing status container">
+                    <span class="flex items-center gap-1.5" data-kid="1-4-1-1-2-1" data-name="status label">
+                        <span class="w-2 h-2 rounded-full bg-indigo-500" data-kid="1-4-1-1-2-1-1" data-name="status dot">
+                        </span>
+                        Live indexing
+                    </span>
+                    <span class="w-px h-4 bg-platinum mx-2" data-kid="1-4-1-1-2-2" data-name="separator">
+                    </span>
+                    <span data-kid="1-4-1-1-2-3" data-name="update time label">
+                        Last update: 12m ago
+                    </span>
+                </div>
+            </div>
+            <div class="grid grid-cols-12 gap-8" data-kid="1-4-1-2" data-name="bento cards container">
+                <!-- Card 1: ETH AI Center -->
+                <div class="col-span-12 lg:col-span-4 bento-card bg-white p-8 rounded-[24px] flex flex-col justify-between min-h-[400px]" data-kid="1-4-1-2-1" data-name="card 1">
+                    <div class="space-y-6" data-kid="1-4-1-2-1-1" data-name="card top header">
+                        <div class="flex items-center justify-between" data-kid="1-4-1-2-1-1-1" data-name="category tag">
+                            <span class="px-3 py-1 bg-indigo-50 text-indigo-600 font-mono text-[10px] font-bold rounded-full uppercase" data-kid="1-4-1-2-1-1-1-1" data-name="category label">
+                                Fellowship
+                            </span>
+                            <span class="text-[#666] font-mono text-[11px]" data-kid="1-4-1-2-1-1-1-2" data-name="stipend label">
+                                CHF 6,000 / mo
+                            </span>
+                        </div>
+                        <div class="space-y-2" data-kid="1-4-1-2-1-1-2" data-name="card title group">
+                            <h3 class="text-2xl font-bold" data-kid="1-4-1-2-1-1-2-1" data-name="card title">
+                                ETH AI Center
+                            </h3>
+                            <p class="text-[#666] text-sm font-mono" data-kid="1-4-1-2-1-1-2-2" data-name="card subtitle">
+                                ZURICH, SWITZERLAND · CHE
+                            </p>
+                        </div>
+                        <p class="text-[#666] leading-relaxed" data-kid="1-4-1-2-1-1-3" data-name="card description">
+                            Full-time research residency focused on trustworthy AI, foundation models, and embodied intelligence with ETH faculty.
+                        </p>
+                    </div>
+                    <div class="pt-8 border-t border-platinum flex items-center justify-between" data-kid="1-4-1-2-1-2" data-name="card footer">
+                        <span class="text-xs font-bold text-red-500 font-mono uppercase" data-kid="1-4-1-2-1-2-1" data-name="closing date">
+                            Closes May 14
+                        </span>
+                        <button class="w-10 h-10 rounded-full border border-platinum flex items-center justify-center hover:bg-[#0A0A0A] hover:text-white transition-colors" data-kid="1-4-1-2-1-2-2" data-name="arrow link button">
+                            <i class="ti ti-arrow-up-right" data-kid="1-4-1-2-1-2-2-1" data-name="arrow icon">
+                            </i>
+                        </button>
+                    </div>
+                </div>
+                <!-- Card 2: OpenAI Residency -->
+                <div class="col-span-12 lg:col-span-5 bento-card bg-[#0A0A0A] text-white p-8 rounded-[24px] flex flex-col justify-between min-h-[400px] shadow-2xl" data-kid="1-4-1-2-2" data-name="card 2">
+                    <div class="space-y-6" data-kid="1-4-1-2-2-1" data-name="card top header">
+                        <div class="flex items-center justify-between" data-kid="1-4-1-2-2-1-1" data-name="category tag">
+                            <span class="px-3 py-1 bg-white/10 text-white font-mono text-[10px] font-bold rounded-full uppercase" data-kid="1-4-1-2-2-1-1-1" data-name="category label">
+                                Residency
+                            </span>
+                            <span class="text-white/60 font-mono text-[11px]" data-kid="1-4-1-2-2-1-1-2" data-name="stipend label">
+                                $20K STIPEND / mo
+                            </span>
+                        </div>
+                        <div class="space-y-2" data-kid="1-4-1-2-2-1-2" data-name="card title group">
+                            <h3 class="text-3xl font-bold" data-kid="1-4-1-2-2-1-2-1" data-name="card title">
+                                OpenAI Residency
+                            </h3>
+                            <p class="text-white/40 text-sm font-mono" data-kid="1-4-1-2-2-1-2-2" data-name="card subtitle">
+                                SAN FRANCISCO, USA · USA
+                            </p>
+                        </div>
+                        <p class="text-white/70 text-lg leading-relaxed" data-kid="1-4-1-2-2-1-3" data-name="card description">
+                            6-month intensive pathway for researchers transitioning into frontier AI safety, alignment, and scaling systems.
+                        </p>
+                    </div>
+                    <div class="pt-8 border-t border-white/10 flex items-center justify-between" data-kid="1-4-1-2-2-2" data-name="card footer">
+                        <span class="text-xs font-bold text-indigo-400 font-mono uppercase" data-kid="1-4-1-2-2-2-1" data-name="closing date">
+                            Closes Aug 01
+                        </span>
+                        <button class="w-12 h-12 rounded-full bg-white text-[#0A0A0A] flex items-center justify-center hover:scale-110 transition-transform" data-kid="1-4-1-2-2-2-2" data-name="arrow link button">
+                            <i class="ti ti-arrow-right text-xl" data-kid="1-4-1-2-2-2-2-1" data-name="arrow icon">
+                            </i>
+                        </button>
+                    </div>
+                </div>
+                <!-- Card 3: UNESCO Youth Forum -->
+                <div class="col-span-12 lg:col-span-3 bento-card bg-white p-8 rounded-[24px] flex flex-col justify-between min-h-[400px]" data-kid="1-4-1-2-3" data-name="card 3">
+                    <div class="space-y-6" data-kid="1-4-1-2-3-1" data-name="card top header">
+                        <div class="flex items-center justify-between" data-kid="1-4-1-2-3-1-1" data-name="category tag">
+                            <span class="px-3 py-1 bg-slate-100 text-slate-600 font-mono text-[10px] font-bold rounded-full uppercase" data-kid="1-4-1-2-3-1-1-1" data-name="category label">
+                                Conference
+                            </span>
+                            <span class="text-[#666] font-mono text-[11px]" data-kid="1-4-1-2-3-1-1-2" data-name="travel benefit label">
+                                FULL TRAVEL
+                            </span>
+                        </div>
+                        <div class="space-y-2" data-kid="1-4-1-2-3-1-2" data-name="card title group">
+                            <h3 class="text-2xl font-bold" data-kid="1-4-1-2-3-1-2-1" data-name="card title">
+                                UNESCO Youth Forum
+                            </h3>
+                            <p class="text-[#666] text-sm font-mono" data-kid="1-4-1-2-3-1-2-2" data-name="card subtitle">
+                                PARIS, FRANCE · FRA
+                            </p>
+                        </div>
+                        <p class="text-[#666] text-sm leading-relaxed" data-kid="1-4-1-2-3-1-3" data-name="card description">
+                            Global policy summit bringing 120 young policy creators to deliberate on digital ethics and climate.
+                        </p>
+                    </div>
+                    <div class="pt-8 border-t border-platinum flex items-center justify-between" data-kid="1-4-1-2-3-2" data-name="card footer">
+                        <span class="text-xs font-bold text-[#666] font-mono uppercase" data-kid="1-4-1-2-3-2-1" data-name="closing date">
+                            Closes Jun 18
+                        </span>
+                        <button class="w-10 h-10 rounded-full border border-platinum flex items-center justify-center hover:bg-[#0A0A0A] hover:text-white transition-colors" data-kid="1-4-1-2-3-2-2" data-name="arrow link button">
+                            <i class="ti ti-arrow-up-right" data-kid="1-4-1-2-3-2-2-1" data-name="arrow icon">
+                            </i>
+                        </button>
+                    </div>
+                </div>
+                <!-- Card 4: Nordic Research Council -->
+                <div class="col-span-12 lg:col-span-8 bento-card bg-white p-12 rounded-[24px] flex flex-col lg:flex-row gap-12 min-h-[300px]" data-kid="1-4-1-2-4" data-name="card 4">
+                    <div class="flex-1 space-y-6" data-kid="1-4-1-2-4-1" data-name="card text content area">
+                        <div class="flex items-center gap-3" data-kid="1-4-1-2-4-1-1" data-name="category tag group">
+                            <span class="px-3 py-1 bg-green-50 text-green-600 font-mono text-[10px] font-bold rounded-full uppercase" data-kid="1-4-1-2-4-1-1-1" data-name="category label">
+                                Grant
+                            </span>
+                            <span class="text-[#666] font-mono text-[11px]" data-kid="1-4-1-2-4-1-1-2" data-name="grant label">
+                                €8,000 SEED FUNDING
+                            </span>
+                        </div>
+                        <h3 class="text-3xl font-bold" data-kid="1-4-1-2-4-1-2" data-name="card title">
+                            Nordic Research Council
+                        </h3>
+                        <p class="text-[#666] text-lg leading-relaxed" data-kid="1-4-1-2-4-1-3" data-name="card description">
+                            Micro-grants for early-stage open science initiatives, climate data collection, and Arctic oceanography projects.
+                        </p>
+                    </div>
+                    <div class="w-full lg:w-px bg-platinum" data-kid="1-4-1-2-4-2" data-name="separator">
+                    </div>
+                    <div class="lg:w-64 flex flex-col justify-center gap-6" data-kid="1-4-1-2-4-3" data-name="card meta details">
+                        <div class="space-y-1" data-kid="1-4-1-2-4-3-1" data-name="location field">
+                            <div class="text-[10px] font-mono text-[#666] uppercase" data-kid="1-4-1-2-4-3-1-1" data-name="location label">
+                                Location
+                            </div>
+                            <div class="font-bold text-[#0A0A0A]" data-kid="1-4-1-2-4-3-1-2" data-name="location value">
+                                Helsinki, Finland
+                            </div>
+                        </div>
+                        <div class="space-y-1" data-kid="1-4-1-2-4-3-2" data-name="deadline field">
+                            <div class="text-[10px] font-mono text-[#666] uppercase" data-kid="1-4-1-2-4-3-2-1" data-name="deadline label">
+                                Deadline
+                            </div>
+                            <div class="font-bold text-indigo-600" data-kid="1-4-1-2-4-3-2-2" data-name="deadline value">
+                                Sep 10, 2026
+                            </div>
+                        </div>
+                        <button class="w-full bg-[#0A0A0A] text-white py-4 rounded-xl font-bold text-sm hover:bg-[#222] transition-colors" data-kid="1-4-1-2-4-3-3" data-name="details button">
+                            View Details
+                        </button>
+                    </div>
+                </div>
+                <!-- Functional Action Card -->
+                <div class="col-span-12 lg:col-span-4 bento-card bg-indigo-600 p-10 rounded-[24px] flex flex-col justify-between text-white relative overflow-hidden group" data-kid="1-4-1-2-5" data-name="action card">
+                    <div class="absolute -right-8 -top-8 w-32 h-32 bg-white/10 rounded-full blur-2xl group-hover:scale-150 transition-transform duration-700" data-kid="1-4-1-2-5-1" data-name="glow decorative circle">
+                    </div>
+                    <div class="space-y-4 relative z-10" data-kid="1-4-1-2-5-2" data-name="card text content">
+                        <div class="w-12 h-12 bg-white/20 rounded-xl flex items-center justify-center backdrop-blur-md" data-kid="1-4-1-2-5-2-1" data-name="icon container">
+                            <i class="ti ti-database-import text-2xl" data-kid="1-4-1-2-5-2-1-1" data-name="database icon">
+                            </i>
+                        </div>
+                        <h3 class="text-2xl font-bold" data-kid="1-4-1-2-5-2-2" data-name="card title">
+                            Custom Indexing
+                        </h3>
+                        <p class="text-white/80 text-sm leading-relaxed" data-kid="1-4-1-2-5-2-3" data-name="card description">
+                            Don't see a specialized program? Our autonomous agents can scrape and index university portals or private directories on demand for enterprise teams.
+                        </p>
+                    </div>
+                    <button class="relative z-10 w-full bg-white text-indigo-600 py-4 rounded-xl font-bold text-sm hover:bg-indigo-50 transition-colors shadow-lg" data-kid="1-4-1-2-5-3" data-name="request button">
+                        Submit Index Request
+                    </button>
+                </div>
+            </div>
+        </div>
+    </section>
+    <!-- ==================== WORKFLOW: KANBAN ==================== -->
+    <section class="py-32 bg-white px-10 border-b border-platinum" data-kid="1-5" data-name="workflow section">
+        <div class="max-w-[1400px] mx-auto text-center space-y-24" data-kid="1-5-1" data-name="workflow content container">
+            <div class="max-w-4xl mx-auto space-y-12" data-kid="1-5-1-1" data-name="workflow intro area">
+                <span class="font-mono text-[11px] font-bold text-indigo-600 uppercase tracking-widest" data-kid="1-5-1-1-1" data-name="workflow section label">
+                    Application Workflow
+                </span>
+                <h2 class="text-[48px] font-bold tracking-tight" data-kid="1-5-1-1-2" data-name="workflow headline">
+                    Never drop the ball on what matters.
+                </h2>
+                <blockquote class="text-4xl font-medium tracking-tight text-[#0A0A0A] italic border-l-4 border-indigo-600 pl-12 text-left py-4 mx-auto max-w-3xl" data-kid="1-5-1-1-3" data-name="quote block">
+                    “Momentum is easier to keep when the next step is visible.”
+                </blockquote>
+                <p class="text-[#666] text-xl max-w-2xl mx-auto" data-kid="1-5-1-1-4" data-name="workflow subheadline">
+                    Track every application cycle from initial match to final offer. Nexora organizes deadlines and checklists automatically.
+                </p>
+            </div>
+            <!-- Kanban UI -->
+            <div class="bg-surface border border-platinum p-12 rounded-[32px] shadow-xs text-left grid-bg-tight" data-kid="1-5-1-2" data-name="kanban board container">
+                <div class="flex items-center justify-between mb-12 pb-8 border-b border-platinum" data-kid="1-5-1-2-1" data-name="kanban header">
+                    <div class="flex items-center gap-4" data-kid="1-5-1-2-1-1" data-name="kanban board title container">
+                        <i class="ti ti-layout-kanban text-indigo-600 text-2xl" data-kid="1-5-1-2-1-1-1" data-name="kanban icon">
+                        </i>
+                        <h4 class="font-bold text-xl" data-kid="1-5-1-2-1-1-2" data-name="kanban title">
+                            Opportunity Pipeline
+                        </h4>
+                    </div>
+                    <div class="flex items-center gap-6" data-kid="1-5-1-2-1-2" data-name="kanban header controls">
+                        <span class="text-sm font-mono text-[#666]" data-kid="1-5-1-2-1-2-1" data-name="active pipelines count label">
+                            3 ACTIVE PIPELINES
+                        </span>
+                        <button class="bg-[#0A0A0A] text-white px-6 py-2.5 rounded-full text-sm font-bold flex items-center gap-2" data-kid="1-5-1-2-1-2-2" data-name="add opportunity button">
+                            <i class="ti ti-plus" data-kid="1-5-1-2-1-2-2-1" data-name="plus icon">
+                            </i>
+                            Add Opportunity
+                        </button>
+                    </div>
+                </div>
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-8" data-kid="1-5-1-2-2" data-name="kanban columns">
+                    <!-- Saved -->
+                    <div class="space-y-8" data-kid="1-5-1-2-2-1" data-name="column saved">
+                        <div class="flex items-center justify-between font-mono text-[11px] font-bold text-[#0A0A0A] uppercase tracking-widest border-b border-platinum pb-4" data-kid="1-5-1-2-2-1-1" data-name="column header">
+                            <span class="flex items-center gap-2" data-kid="1-5-1-2-2-1-1-1" data-name="saved section label container">
+                                <i class="ti ti-bookmark" data-kid="1-5-1-2-2-1-1-1-1" data-name="bookmark icon">
+                                </i>
+                                Saved (02)
+                            </span>
+                            <span class="text-[#666] font-bold" data-kid="1-5-1-2-2-1-1-2" data-name="coordinate text">
+                                47.3°N
+                            </span>
+                        </div>
+                        <div class="bg-white border border-platinum p-8 rounded-2xl shadow-sm space-y-4 hover:border-indigo-600 transition-all cursor-pointer group hover:-translate-y-1" data-kid="1-5-1-2-2-1-2" data-name="card in column">
+                            <div class="flex justify-between items-start" data-kid="1-5-1-2-2-1-2-1" data-name="card header">
+                                <span class="font-bold text-[#0A0A0A]" data-kid="1-5-1-2-2-1-2-1-1" data-name="card title">
+                                    Horizon Europe
+                                </span>
+                                <span class="font-mono text-[10px] text-red-500 font-bold bg-red-50 px-2 py-0.5 rounded" data-kid="1-5-1-2-2-1-2-1-2" data-name="card date tag">
+                                    JUL 20
+                                </span>
+                            </div>
+                            <p class="text-[13px] text-[#666] leading-relaxed" data-kid="1-5-1-2-2-1-2-2" data-name="card description">
+                                Consortium research proposal draft pending. Checklist items incomplete.
+                            </p>
+                            <div class="flex items-center gap-2 pt-2" data-kid="1-5-1-2-2-1-2-3" data-name="card progress tag container">
+                                <span class="px-2 py-1 bg-slate-100 rounded text-[9px] font-mono font-bold text-[#666]" data-kid="1-5-1-2-2-1-2-3-1" data-name="progress tag">
+                                    0/4 ASSETS READY
+                                </span>
+                            </div>
+                        </div>
+                        <div class="bg-white/60 border border-platinum p-8 rounded-2xl space-y-4" data-kid="1-5-1-2-2-1-3" data-name="inactive card">
+                            <div class="flex justify-between items-start" data-kid="1-5-1-2-2-1-3-1" data-name="card header">
+                                <span class="font-bold text-[#0A0A0A] opacity-60" data-kid="1-5-1-2-2-1-3-1-1" data-name="card title">
+                                    UNESCO Youth
+                                </span>
+                                <span class="font-mono text-[10px] text-[#666]" data-kid="1-5-1-2-2-1-3-1-2" data-name="card date tag">
+                                    JUN 18
+                                </span>
+                            </div>
+                            <p class="text-[13px] text-[#666] opacity-60" data-kid="1-5-1-2-2-1-3-2" data-name="card description">
+                                Policy essay submission required.
+                            </p>
+                        </div>
+                    </div>
+                    <!-- Applied -->
+                    <div class="space-y-6" data-kid="1-5-1-2-2-2" data-name="column applied">
+                        <div class="flex items-center justify-between font-mono text-[10px] font-bold text-[#666] uppercase tracking-widest border-b border-platinum pb-3" data-kid="1-5-1-2-2-2-1" data-name="column header">
+                            <span data-kid="1-5-1-2-2-2-1-1" data-name="applied section label">
+                                Applied (01)
+                            </span>
+                            <span class="w-1.5 h-1.5 rounded-full bg-indigo-500 animate-pulse" data-kid="1-5-1-2-2-2-1-2" data-name="status pulse dot">
+                            </span>
+                        </div>
+                        <div class="bg-white border-2 border-indigo-600 p-6 rounded-2xl shadow-lg space-y-4" data-kid="1-5-1-2-2-2-2" data-name="card in column">
+                            <div class="flex justify-between items-start" data-kid="1-5-1-2-2-2-2-1" data-name="card header">
+                                <span class="font-bold text-[#0A0A0A]" data-kid="1-5-1-2-2-2-2-1-1" data-name="card title">
+                                    ETH AI Center
+                                </span>
+                                <span class="font-mono text-[10px] text-indigo-600 font-bold" data-kid="1-5-1-2-2-2-2-1-2" data-name="status tag">
+                                    SUBMITTED
+                                </span>
+                            </div>
+                            <p class="text-xs text-[#0A0A0A] font-medium" data-kid="1-5-1-2-2-2-2-2" data-name="card description">
+                                Application ID #CHE-8821. Under review by selection committee.
+                            </p>
+                            <div class="flex items-center gap-2" data-kid="1-5-1-2-2-2-2-3" data-name="verification tag container">
+                                <span class="px-2 py-0.5 bg-green-50 text-green-600 border border-green-100 rounded text-[9px] font-mono font-bold" data-kid="1-5-1-2-2-2-2-3-1" data-name="verification tag">
+                                    REF 1 VERIFIED
+                                </span>
+                            </div>
+                        </div>
+                    </div>
+                    <!-- In Motion -->
+                    <div class="space-y-6" data-kid="1-5-1-2-2-3" data-name="column in motion">
+                        <div class="flex items-center justify-between font-mono text-[10px] font-bold text-[#666] uppercase tracking-widest border-b border-platinum pb-3" data-kid="1-5-1-2-2-3-1" data-name="column header">
+                            <span data-kid="1-5-1-2-2-3-1-1" data-name="in motion section label">
+                                In Motion (01)
+                            </span>
+                            <span class="w-1.5 h-1.5 rounded-full bg-violet-600" data-kid="1-5-1-2-2-3-1-2" data-name="status dot">
+                            </span>
+                        </div>
+                        <div class="bg-[#0A0A0A] p-6 rounded-2xl shadow-xl space-y-4" data-kid="1-5-1-2-2-3-2" data-name="card in column">
+                            <div class="flex justify-between items-start" data-kid="1-5-1-2-2-3-2-1" data-name="card header">
+                                <span class="font-bold text-white" data-kid="1-5-1-2-2-3-2-1-1" data-name="card title">
+                                    OpenAI Residency
+                                </span>
+                                <span class="font-mono text-[10px] text-indigo-400 font-bold" data-kid="1-5-1-2-2-3-2-1-2" data-name="status tag">
+                                    INTERVIEW
+                                </span>
+                            </div>
+                            <p class="text-xs text-white/70" data-kid="1-5-1-2-2-3-2-2" data-name="card description">
+                                Technical Screen scheduled for Tuesday at 14:00 PST.
+                            </p>
+                            <div class="flex items-center gap-2" data-kid="1-5-1-2-2-3-2-3" data-name="next step tag container">
+                                <span class="px-2 py-0.5 bg-white/10 text-white rounded text-[9px] font-mono" data-kid="1-5-1-2-2-3-2-3-1" data-name="next step tag">
+                                    NEXT: CODE REVIEW
+                                </span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+    <!-- ==================== SYSTEM INTELLIGENCE ==================== -->
+    <section class="py-32 px-10 bg-white" data-kid="1-6" data-name="intelligence section" id="intelligence">
+        <div class="max-w-[1400px] mx-auto grid grid-cols-1 lg:grid-cols-2 gap-24 items-center" data-kid="1-6-1" data-name="intelligence layout">
+            <!-- Left: Annotated UI Mock -->
+            <div class="relative group" data-kid="1-6-1-1" data-name="annotated ui container">
+                <div class="absolute -inset-10 bg-indigo-500/5 blur-[100px] rounded-full" data-kid="1-6-1-1-1" data-name="decorative blur glow">
+                </div>
+                <div class="relative bg-white border border-platinum rounded-[32px] shadow-2xl overflow-hidden p-8 space-y-6" data-kid="1-6-1-1-2" data-name="ui card">
+                    <div class="flex items-center justify-between border-b border-platinum pb-6" data-kid="1-6-1-1-2-1" data-name="card header">
+                        <div class="flex items-center gap-3" data-kid="1-6-1-1-2-1-1" data-name="card title group">
+                            <i class="ti ti-target text-indigo-600 text-xl" data-kid="1-6-1-1-2-1-1-1" data-name="target icon">
+                            </i>
+                            <span class="font-bold text-lg uppercase tracking-tight" data-kid="1-6-1-1-2-1-1-2" data-name="card title">
+                                Your Signal Feed
+                            </span>
+                        </div>
+                        <span class="font-mono text-[10px] text-[#666]" data-kid="1-6-1-1-2-1-2" data-name="card label">
+                            QUERY: AI + DEEPTECH
+                        </span>
+                    </div>
+                    <div class="space-y-4 relative" data-kid="1-6-1-1-2-2" data-name="signal list">
+                        <!-- Item 1 -->
+                        <div class="relative p-6 bg-surface rounded-2xl border border-platinum" data-kid="1-6-1-1-2-2-1" data-name="signal row 1">
+                            <div class="flex justify-between items-center mb-1" data-kid="1-6-1-1-2-2-1-1" data-name="row header">
+                                <h5 class="font-bold" data-kid="1-6-1-1-2-2-1-1-1" data-name="row title">
+                                    Max Planck Institute Research Grant
+                                </h5>
+                                <span class="text-xs font-bold text-indigo-600 font-mono" data-kid="1-6-1-1-2-2-1-1-2" data-name="match label">
+                                    97% MATCH
+                                </span>
+                            </div>
+                            <p class="text-xs text-[#666]" data-kid="1-6-1-1-2-2-1-2" data-name="row subtitle">
+                                Munich, Germany · €4,500/mo stipend
+                            </p>
+                            <div class="absolute -right-3 -top-3 w-8 h-8 bg-indigo-600 text-white rounded-full flex items-center justify-center font-mono text-xs font-bold shadow-lg" data-kid="1-6-1-1-2-2-1-3" data-name="number badge">
+                                01
+                            </div>
+                        </div>
+                        <!-- Item 2 -->
+                        <div class="relative p-6 bg-surface rounded-2xl border border-platinum" data-kid="1-6-1-1-2-2-2" data-name="signal row 2">
+                            <div class="flex justify-between items-center mb-1" data-kid="1-6-1-1-2-2-2-1" data-name="row header">
+                                <h5 class="font-bold opacity-70" data-kid="1-6-1-1-2-2-2-1-1" data-name="row title">
+                                    Y Combinator Summer Batch '26
+                                </h5>
+                                <span class="text-xs font-bold text-[#0A0A0A] font-mono opacity-70" data-kid="1-6-1-1-2-2-2-1-2" data-name="match label">
+                                    9 DAYS LEFT
+                                </span>
+                            </div>
+                            <p class="text-xs text-[#666] opacity-60" data-kid="1-6-1-1-2-2-2-2" data-name="row subtitle">
+                                $500k standard deal
+                            </p>
+                            <div class="absolute -right-3 -top-3 w-8 h-8 bg-[#0A0A0A] text-white rounded-full flex items-center justify-center font-mono text-xs font-bold shadow-lg" data-kid="1-6-1-1-2-2-2-3" data-name="number badge">
+                                02
+                            </div>
+                        </div>
+                        <!-- Item 3 -->
+                        <div class="relative p-6 bg-surface rounded-2xl border border-platinum" data-kid="1-6-1-1-2-2-3" data-name="signal row 3">
+                            <div class="flex justify-between items-center mb-1" data-kid="1-6-1-1-2-2-3-1" data-name="row header">
+                                <h5 class="font-bold opacity-70" data-kid="1-6-1-1-2-2-3-1-1" data-name="row title">
+                                    Quantum & Robotics Collection
+                                </h5>
+                                <span class="text-xs font-bold text-[#666] font-mono opacity-70" data-kid="1-6-1-1-2-2-3-1-2" data-name="match label">
+                                    14 ACTIVE
+                                </span>
+                            </div>
+                            <p class="text-xs text-[#666] opacity-60" data-kid="1-6-1-1-2-2-3-2" data-name="row subtitle">
+                                Auto-synced from 12 portals
+                            </p>
+                            <div class="absolute -right-3 -top-3 w-8 h-8 bg-[#0A0A0A] text-white rounded-full flex items-center justify-center font-mono text-xs font-bold shadow-lg" data-kid="1-6-1-1-2-2-3-3" data-name="number badge">
+                                03
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <!-- Right: Content -->
+            <div class="space-y-12" data-kid="1-6-1-2" data-name="intelligence features content">
+                <div class="space-y-4" data-kid="1-6-1-2-1" data-name="section header">
+                    <span class="font-mono text-[11px] font-bold text-indigo-600 uppercase tracking-widest" data-kid="1-6-1-2-1-1" data-name="section label">
+                        Core Intelligence
+                    </span>
+                    <h2 class="text-5xl font-bold tracking-tight" data-kid="1-6-1-2-1-2" data-name="section title">
+                        How Nexora turns noise into clarity.
+                    </h2>
+                </div>
+                <div class="grid grid-cols-1 gap-12" data-kid="1-6-1-2-2" data-name="feature grid">
+                    <div class="flex gap-8 group" data-kid="1-6-1-2-2-1" data-name="feature 1">
+                        <div class="space-y-4" data-kid="1-6-1-2-2-1-1" data-name="feature header group">
+                            <div class="flex items-center gap-4" data-kid="1-6-1-2-2-1-1-1" data-name="feature label">
+                                <span class="font-mono text-[10px] font-bold text-indigo-600 bg-indigo-50 px-2 py-1 rounded" data-kid="1-6-1-2-2-1-1-1-1" data-name="tag">
+                                    MATCHING ENGINE
+                                </span>
+                                <div class="h-px bg-indigo-100 flex-1" data-kid="1-6-1-2-2-1-1-1-2" data-name="line separator">
+                                </div>
+                            </div>
+                            <h4 class="text-2xl font-bold text-[#0A0A0A]" data-kid="1-6-1-2-2-1-1-2" data-name="feature title">
+                                01. Match Reasoning
+                            </h4>
+                            <p class="text-[#666] text-lg leading-relaxed" data-kid="1-6-1-2-2-1-1-3" data-name="feature description">
+                                Nexora breaks down why every opportunity is surfaced, matching your past publications and career trajectory against actual criteria.
+                            </p>
+                        </div>
+                    </div>
+                    <div class="flex gap-8 group" data-kid="1-6-1-2-2-2" data-name="feature 2">
+                        <div class="space-y-4" data-kid="1-6-1-2-2-2-1" data-name="feature header group">
+                            <div class="flex items-center gap-4" data-kid="1-6-1-2-2-2-1-1" data-name="feature label">
+                                <span class="font-mono text-[10px] font-bold text-slate-500 bg-slate-100 px-2 py-1 rounded" data-kid="1-6-1-2-2-2-1-1-1" data-name="tag">
+                                    TIMELINE LOGIC
+                                </span>
+                                <div class="h-px bg-slate-100 flex-1" data-kid="1-6-1-2-2-2-1-1-2" data-name="line separator">
+                                </div>
+                            </div>
+                            <h4 class="text-2xl font-bold text-[#0A0A0A]" data-kid="1-6-1-2-2-2-1-2" data-name="feature title">
+                                02. Deadline Intelligence
+                            </h4>
+                            <p class="text-[#666] text-lg leading-relaxed" data-kid="1-6-1-2-2-2-1-3" data-name="feature description">
+                                Get notified with exact preparation lead times based on essay length, recommendation letter requirements, and visa timelines.
+                            </p>
+                        </div>
+                    </div>
+                    <div class="flex gap-8 group" data-kid="1-6-1-2-2-3" data-name="feature 3">
+                        <div class="space-y-4" data-kid="1-6-1-2-2-3-1" data-name="feature header group">
+                            <div class="flex items-center gap-4" data-kid="1-6-1-2-2-3-1-1" data-name="feature label">
+                                <span class="font-mono text-[10px] font-bold text-slate-500 bg-slate-100 px-2 py-1 rounded" data-kid="1-6-1-2-2-3-1-1-1" data-name="tag">
+                                    DATA PERSISTENCE
+                                </span>
+                                <div class="h-px bg-slate-100 flex-1" data-kid="1-6-1-2-2-3-1-1-2" data-name="line separator">
+                                </div>
+                            </div>
+                            <h4 class="text-2xl font-bold text-[#0A0A0A]" data-kid="1-6-1-2-2-3-1-2" data-name="feature title">
+                                03. Saved Collections
+                            </h4>
+                            <p class="text-[#666] text-lg leading-relaxed" data-kid="1-6-1-2-2-3-1-3" data-name="feature description">
+                                Organize grants and fellowships by discipline or location. Export formatted lists directly to your advisors or co-founders.
+                            </p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+    <!-- ==================== ALERTS: ZIGZAG STACK ==================== -->
+    <section class="py-32 px-10 bg-surface border-y border-platinum" data-kid="1-7" data-name="alerts section">
+        <div class="max-w-4xl mx-auto space-y-20" data-kid="1-7-1" data-name="alerts content container">
+            <div class="text-center space-y-6" data-kid="1-7-1-1" data-name="alerts intro">
+                <span class="font-mono text-[11px] font-bold text-indigo-600 uppercase tracking-widest" data-kid="1-7-1-1-1" data-name="alert label">
+                    Real-time Signal
+                </span>
+                <h2 class="text-5xl font-bold tracking-tight" data-kid="1-7-1-1-2" data-name="alert title">
+                    The right nudge, at the right distance.
+                </h2>
+                <p class="text-[#666] text-xl max-w-2xl mx-auto" data-kid="1-7-1-1-3" data-name="alert description">
+                    No spam. Only calm, prioritized updates when a relevant program opens or a deadline approaches.
+                </p>
+            </div>
+            <div class="relative space-y-6" data-kid="1-7-1-2" data-name="notifications stack">
+                <!-- Notification 1 -->
+                <div class="max-w-xl mr-auto glass p-6 rounded-3xl shadow-xl flex items-center gap-6 border-l-4 border-l-indigo-600 group hover:translate-x-2 transition-transform" data-kid="1-7-1-2-1" data-name="notification 1">
+                    <div class="w-14 h-14 bg-indigo-50 rounded-2xl flex items-center justify-center text-indigo-600 shrink-0" data-kid="1-7-1-2-1-1" data-name="icon container">
+                        <i class="ti ti-bell-filled text-2xl" data-kid="1-7-1-2-1-1-1" data-name="bell icon">
+                        </i>
+                    </div>
+                    <div class="flex-1" data-kid="1-7-1-2-1-2" data-name="message content">
+                        <div class="flex justify-between items-center mb-1" data-kid="1-7-1-2-1-2-1" data-name="message header">
+                            <span class="font-bold text-[#0A0A0A]" data-kid="1-7-1-2-1-2-1-1" data-name="message title">
+                                17 new opportunities curated
+                            </span>
+                            <span class="font-mono text-[10px] text-[#666]" data-kid="1-7-1-2-1-2-1-2" data-name="time ago">
+                                10M AGO
+                            </span>
+                        </div>
+                        <p class="text-sm text-[#666]" data-kid="1-7-1-2-1-2-2" data-name="message body">
+                            Includes 4 fully funded doctoral fellowships in Zurich & Cambridge.
+                        </p>
+                    </div>
+                </div>
+                <!-- Notification 2 -->
+                <div class="max-w-xl ml-auto glass p-6 rounded-3xl shadow-xl flex items-center gap-6 border-l-4 border-l-amber-500 group hover:-translate-x-2 transition-transform translate-y-4" data-kid="1-7-1-2-2" data-name="notification 2">
+                    <div class="w-14 h-14 bg-amber-50 rounded-2xl flex items-center justify-center text-amber-600 shrink-0" data-kid="1-7-1-2-2-1" data-name="icon container">
+                        <i class="ti ti-clock text-2xl" data-kid="1-7-1-2-2-1-1" data-name="clock icon">
+                        </i>
+                    </div>
+                    <div class="flex-1" data-kid="1-7-1-2-2-2" data-name="message content">
+                        <div class="flex justify-between items-center mb-1" data-kid="1-7-1-2-2-2-1" data-name="message header">
+                            <span class="font-bold text-[#0A0A0A]" data-kid="1-7-1-2-2-2-1-1" data-name="message title">
+                                Deadline in 4 days · ETH AI
+                            </span>
+                            <span class="font-mono text-[10px] text-[#666]" data-kid="1-7-1-2-2-2-1-2" data-name="time ago">
+                                2H AGO
+                            </span>
+                        </div>
+                        <p class="text-sm text-[#666]" data-kid="1-7-1-2-2-2-2" data-name="message body">
+                            Your application checklist is 80% complete. 1 recommendation letter missing.
+                        </p>
+                    </div>
+                </div>
+                <!-- Notification 3 -->
+                <div class="max-w-xl mx-auto glass p-6 rounded-3xl shadow-xl flex items-center gap-6 border-l-4 border-l-[#0A0A0A] group hover:scale-[1.02] transition-transform translate-y-8" data-kid="1-7-1-2-3" data-name="notification 3">
+                    <div class="w-14 h-14 bg-slate-100 rounded-2xl flex items-center justify-center text-[#0A0A0A] shrink-0" data-kid="1-7-1-2-3-1" data-name="icon container">
+                        <i class="ti ti-sparkles text-2xl" data-kid="1-7-1-2-3-1-1" data-name="sparkle icon">
+                        </i>
+                    </div>
+                    <div class="flex-1" data-kid="1-7-1-2-3-2" data-name="message content">
+                        <div class="flex justify-between items-center mb-1" data-kid="1-7-1-2-3-2-1" data-name="message header">
+                            <span class="font-bold text-[#0A0A0A]" data-kid="1-7-1-2-3-2-1-1" data-name="message title">
+                                Research Match: DeepMind
+                            </span>
+                            <span class="font-mono text-[10px] text-[#666]" data-kid="1-7-1-2-3-2-1-2" data-name="time ago">
+                                1D AGO
+                            </span>
+                        </div>
+                        <p class="text-sm text-[#666]" data-kid="1-7-1-2-3-2-2" data-name="message body">
+                            New Academic Fellowship just announced $50k research awards.
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+    <!-- ==================== FAQ ACCORDION ==================== -->
+    <section class="py-32 px-10 bg-white" data-kid="1-8" data-name="faq section">
+        <div class="max-w-4xl mx-auto grid grid-cols-1 lg:grid-cols-12 gap-16" data-kid="1-8-1" data-name="faq layout">
+            <div class="lg:col-span-5 space-y-6" data-kid="1-8-1-1" data-name="faq intro content">
+                <span class="font-mono text-[11px] font-bold text-indigo-600 uppercase tracking-widest" data-kid="1-8-1-1-1" data-name="faq label">
+                    Common Inquiries
+                </span>
+                <h2 class="text-4xl font-bold tracking-tight" data-kid="1-8-1-1-2" data-name="faq title">
+                    Everything you need to know.
+                </h2>
+                <p class="text-[#666] leading-relaxed" data-kid="1-8-1-1-3" data-name="faq description">
+                    Can't find what you're looking for? Contact our editorial desk directly.
+                </p>
+                <button class="flex items-center gap-2 text-indigo-600 font-bold hover:gap-4 transition-all" data-kid="1-8-1-1-4" data-name="contact desk button">
+                    Contact Editorial Desk
+                    <i class="ti ti-arrow-right" data-kid="1-8-1-1-4-1" data-name="arrow icon">
+                    </i>
+                </button>
+            </div>
+            <div class="lg:col-span-7 space-y-4" data-kid="1-8-1-2" data-name="accordion container">
+                <details class="group border-b border-platinum pb-6" data-kid="1-8-1-2-1" data-name="faq item 1" open="">
+                    <summary class="flex items-center justify-between cursor-pointer list-none py-4" data-kid="1-8-1-2-1-1" data-name="question summary">
+                        <span class="text-lg font-bold text-[#0A0A0A]" data-kid="1-8-1-2-1-1-1" data-name="question text">
+                            How does Nexora structure private data?
+                        </span>
+                        <span class="w-8 h-8 rounded-full border border-platinum flex items-center justify-center group-open:rotate-180 transition-transform" data-kid="1-8-1-2-1-1-2" data-name="toggle arrow container">
+                            <i class="ti ti-chevron-down" data-kid="1-8-1-2-1-1-2-1" data-name="chevron icon">
+                            </i>
+                        </span>
+                    </summary>
+                    <div class="pt-2 text-[#666] leading-relaxed" data-kid="1-8-1-2-1-2" data-name="answer text">
+                        Our autonomous agents ingest public and semi-public university portals, structuring unstructured text into defined schemas including eligibility, funding, and deadlines.
+                    </div>
+                </details>
+                <details class="group border-b border-platinum pb-6" data-kid="1-8-1-2-2" data-name="faq item 2">
+                    <summary class="flex items-center justify-between cursor-pointer list-none py-4" data-kid="1-8-1-2-2-1" data-name="question summary">
+                        <span class="text-lg font-bold text-[#0A0A0A]" data-kid="1-8-1-2-2-1-1" data-name="question text">
+                            Can I track institutional teams?
+                        </span>
+                        <span class="w-8 h-8 rounded-full border border-platinum flex items-center justify-center group-open:rotate-180 transition-transform" data-kid="1-8-1-2-2-1-2" data-name="toggle arrow container">
+                            <i class="ti ti-chevron-down" data-kid="1-8-1-2-2-1-2-1" data-name="chevron icon">
+                            </i>
+                        </span>
+                    </summary>
+                    <div class="pt-2 text-[#666] leading-relaxed" data-kid="1-8-1-2-2-2" data-name="answer text">
+                        Yes, Nexora for Teams allows labs and research groups to share curated signals and track application statuses across entire departments.
+                    </div>
+                </details>
+                <details class="group border-b border-platinum pb-6" data-kid="1-8-1-2-3" data-name="faq item 3">
+                    <summary class="flex items-center justify-between cursor-pointer list-none py-4" data-kid="1-8-1-2-3-1" data-name="question summary">
+                        <span class="text-lg font-bold text-[#0A0A0A]" data-kid="1-8-1-2-3-1-1" data-name="question text">
+                            Is my search data private?
+                        </span>
+                        <span class="w-8 h-8 rounded-full border border-platinum flex items-center justify-center group-open:rotate-180 transition-transform" data-kid="1-8-1-2-3-1-2" data-name="toggle arrow container">
+                            <i class="ti ti-chevron-down" data-kid="1-8-1-2-3-1-2-1" data-name="chevron icon">
+                            </i>
+                        </span>
+                    </summary>
+                    <div class="pt-2 text-[#666] leading-relaxed" data-kid="1-8-1-2-3-2" data-name="answer text">
+                        All user queries and profile indexing are end-to-end encrypted. We never share your research trajectory with third-party listing providers.
+                    </div>
+                </details>
+            </div>
+        </div>
+    </section>
+    <!-- ==================== CONVERSION: COMPARISON ==================== -->
+    <section class="py-32 bg-surface px-10 relative overflow-hidden" data-kid="1-9" data-name="conversion section" id="request-access">
+        <div class="max-w-[1200px] mx-auto relative z-10" data-kid="1-9-1" data-name="comparison grid container">
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-0 border border-platinum rounded-[40px] overflow-hidden shadow-2xl bg-white" data-kid="1-9-1-1" data-name="comparison board">
+                <!-- Old Way -->
+                <div class="p-16 lg:pr-32 space-y-12 bg-slate-50 relative overflow-hidden" data-kid="1-9-1-1-1" data-name="the old way column">
+                    <div class="space-y-4" data-kid="1-9-1-1-1-1" data-name="section label group">
+                        <span class="font-mono text-[11px] font-bold text-slate-400 uppercase tracking-widest" data-kid="1-9-1-1-1-1-1" data-name="label text">
+                            The status quo
+                        </span>
+                        <h3 class="text-[32px] font-bold text-slate-600 tracking-tight" data-kid="1-9-1-1-1-1-2" data-name="section title">
+                            Reactionary & Fragmented
+                        </h3>
+                    </div>
+                    <ul class="space-y-8" data-kid="1-9-1-1-1-2" data-name="problems list">
+                        <li class="flex items-start gap-4 text-slate-400" data-kid="1-9-1-1-1-2-1" data-name="problem item 1">
+                            <i class="ti ti-x text-red-400 text-2xl mt-0.5" data-kid="1-9-1-1-1-2-1-1" data-name="cross icon">
+                            </i>
+                            <span class="line-through decoration-slate-300 leading-relaxed font-medium" data-kid="1-9-1-1-1-2-1-2" data-name="problem text">
+                                47 open browser tabs across bookmark bars
+                            </span>
+                        </li>
+                        <li class="flex items-start gap-4 text-slate-400" data-kid="1-9-1-1-1-2-2" data-name="problem item 2">
+                            <i class="ti ti-x text-red-400 text-2xl mt-0.5" data-kid="1-9-1-1-1-2-2-1" data-name="cross icon">
+                            </i>
+                            <span class="line-through decoration-slate-300 leading-relaxed font-medium" data-kid="1-9-1-1-1-2-2-2" data-name="problem text">
+                                Scattered deadlines on sticky notes
+                            </span>
+                        </li>
+                        <li class="flex items-start gap-4 text-slate-400" data-kid="1-9-1-1-1-2-3" data-name="problem item 3">
+                            <i class="ti ti-x text-red-400 text-2xl mt-0.5" data-kid="1-9-1-1-1-2-3-1" data-name="cross icon">
+                            </i>
+                            <span class="line-through decoration-slate-300 leading-relaxed font-medium" data-kid="1-9-1-1-1-2-3-2" data-name="problem text">
+                                Constant anxiety: "Did I miss a fellowship?"
+                            </span>
+                        </li>
+                    </ul>
+                </div>
+                <!-- Nexora Way -->
+                <div class="p-16 lg:pl-32 space-y-12 relative overflow-hidden bg-white border-l border-platinum" data-kid="1-9-1-1-2" data-name="the new way column">
+                    <div class="space-y-4" data-kid="1-9-1-1-2-1" data-name="section label group">
+                        <span class="font-mono text-[11px] font-bold text-indigo-600 uppercase tracking-widest" data-kid="1-9-1-1-2-1-1" data-name="label text">
+                            The Nexora Way
+                        </span>
+                        <h3 class="text-[32px] font-bold text-[#0A0A0A] tracking-tight" data-kid="1-9-1-1-2-1-2" data-name="section title">
+                            Proactive & Accelerated
+                        </h3>
+                    </div>
+                    <ul class="space-y-8" data-kid="1-9-1-1-2-2" data-name="benefits list">
+                        <li class="flex items-start gap-4 text-[#0A0A0A] font-bold" data-kid="1-9-1-1-2-2-1" data-name="benefit item 1">
+                            <i class="ti ti-check text-indigo-600 text-2xl mt-0.5" data-kid="1-9-1-1-2-2-1-1" data-name="checkmark icon">
+                            </i>
+                            <span class="leading-relaxed" data-kid="1-9-1-1-2-2-1-2" data-name="benefit text">
+                                One quiet signal tailored specifically to your work
+                            </span>
+                        </li>
+                        <li class="flex items-start gap-4 text-[#0A0A0A] font-bold" data-kid="1-9-1-1-2-2-2" data-name="benefit item 2">
+                            <i class="ti ti-check text-indigo-600 text-2xl mt-0.5" data-kid="1-9-1-1-2-2-2-1" data-name="checkmark icon">
+                            </i>
+                            <span class="leading-relaxed" data-kid="1-9-1-1-2-2-2-2" data-name="benefit text">
+                                A clearer next step with preparation lead times
+                            </span>
+                        </li>
+                        <li class="flex items-start gap-4 text-[#0A0A0A] font-bold" data-kid="1-9-1-1-2-2-3" data-name="benefit item 3">
+                            <i class="ti ti-check text-indigo-600 text-2xl mt-0.5" data-kid="1-9-1-1-2-2-3-1" data-name="checkmark icon">
+                            </i>
+                            <span class="leading-relaxed" data-kid="1-9-1-1-2-2-3-2" data-name="benefit text">
+                                More time to act, create, and submit excellent work
+                            </span>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+            <div class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-20" data-kid="1-9-1-2" data-name="floating cta container">
+                <button class="cta-sheen bg-[#0A0A0A] text-white px-14 py-7 rounded-2xl font-black text-2xl shadow-[0_30px_60px_rgba(0,0,0,0.4)] hover:scale-105 transition-all border-[6px] border-white active:scale-95" data-kid="1-9-1-2-1" data-name="big request access button">
+                    Request Access Now
+                </button>
+            </div>
+        </div>
+    </section>
+    <!-- ==================== FOOTER ==================== -->
+    <footer class="bg-white border-t border-platinum pt-24 pb-12 px-10" data-kid="1-10" data-name="footer section">
+        <div class="max-w-[1400px] mx-auto space-y-24" data-kid="1-10-1" data-name="footer grid container">
+            <!-- Newsletter Bar -->
+            <div class="bg-surface border border-platinum p-8 rounded-3xl flex flex-col lg:flex-row items-center justify-between gap-8" data-kid="1-10-1-1" data-name="newsletter form bar">
+                <div class="flex items-center gap-4" data-kid="1-10-1-1-1" data-name="icon and text group">
+                    <div class="w-12 h-12 bg-indigo-600 rounded-xl flex items-center justify-center text-white" data-kid="1-10-1-1-1-1" data-name="mail icon container">
+                        <i class="ti ti-mail text-2xl" data-kid="1-10-1-1-1-1-1" data-name="mail icon">
+                        </i>
+                    </div>
+                    <div data-kid="1-10-1-1-1-2" data-name="newsletter labels group">
+                        <h4 class="font-bold text-lg" data-kid="1-10-1-1-1-2-1" data-name="newsletter title">
+                            Weekly Signal
+                        </h4>
+                        <p class="text-[#666] text-sm" data-kid="1-10-1-1-1-2-2" data-name="newsletter subtitle">
+                            One concise opportunity digest, every Monday morning.
+                        </p>
+                    </div>
+                </div>
+                <div class="flex w-full lg:w-auto gap-3" data-kid="1-10-1-1-2" data-name="form inputs">
+                    <input class="flex-1 lg:w-80 px-5 py-3 rounded-xl border border-platinum focus:border-indigo-600 focus:outline-none transition-colors text-sm" data-kid="1-10-1-1-2-1" data-name="email input field" placeholder="Enter your institutional email" type="email"/>
+                    <button class="bg-[#0A0A0A] text-white px-8 py-3 rounded-xl font-bold text-sm hover:bg-[#222] transition-colors" data-kid="1-10-1-1-2-2" data-name="subscribe button">
+                        Subscribe
+                    </button>
+                </div>
+            </div>
+            <!-- Sitemap -->
+            <div class="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-12" data-kid="1-10-1-2" data-name="sitemap links grid">
+                <div class="col-span-2 space-y-6" data-kid="1-10-1-2-1" data-name="sitemap brand column">
+                    <div class="flex items-center gap-3" data-kid="1-10-1-2-1-1" data-name="brand identity group">
+                        <div class="w-8 h-8 bg-[#0A0A0A] rounded-lg flex items-center justify-center text-white font-bold text-lg" data-kid="1-10-1-2-1-1-1" data-name="brand icon">
+                            N
+                        </div>
+                        <span class="text-xl font-extrabold tracking-tighter" data-kid="1-10-1-2-1-1-2" data-name="brand name">
+                            NEXORA
+                        </span>
+                    </div>
+                    <p class="text-[#666] text-sm leading-relaxed max-w-xs" data-kid="1-10-1-2-1-2" data-name="brand description">
+                        The world's first opportunity intelligence engine for researchers, founders, and creators.
+                    </p>
+                    <div class="flex gap-4" data-kid="1-10-1-2-1-3" data-name="social media links">
+                        <a class="w-10 h-10 border border-platinum rounded-lg flex items-center justify-center hover:bg-slate-50 transition-colors" data-kid="1-10-1-2-1-3-1" data-name="x link" href="#">
+                            <i class="ti ti-brand-x" data-kid="1-10-1-2-1-3-1-1" data-name="x icon">
+                            </i>
+                        </a>
+                        <a class="w-10 h-10 border border-platinum rounded-lg flex items-center justify-center hover:bg-slate-50 transition-colors" data-kid="1-10-1-2-1-3-2" data-name="linkedin link" href="#">
+                            <i class="ti ti-brand-linkedin" data-kid="1-10-1-2-1-3-2-1" data-name="linkedin icon">
+                            </i>
+                        </a>
+                        <a class="w-10 h-10 border border-platinum rounded-lg flex items-center justify-center hover:bg-slate-50 transition-colors" data-kid="1-10-1-2-1-3-3" data-name="github link" href="#">
+                            <i class="ti ti-brand-github" data-kid="1-10-1-2-1-3-3-1" data-name="github icon">
+                            </i>
+                        </a>
+                    </div>
+                </div>
+                <div class="space-y-6" data-kid="1-10-1-2-2" data-name="product sitemap">
+                    <h5 class="font-mono text-[10px] font-bold text-indigo-600 uppercase tracking-widest" data-kid="1-10-1-2-2-1" data-name="product title">
+                        Product
+                    </h5>
+                    <ul class="space-y-3 text-sm font-medium text-[#666]" data-kid="1-10-1-2-2-2" data-name="product link list">
+                        <li data-kid="1-10-1-2-2-2-1" data-name="link">
+                            <a class="hover:text-[#0A0A0A] transition-colors" data-kid="1-10-1-2-2-2-1-1" data-name="link label" href="#">
+                                Discover
+                            </a>
+                        </li>
+                        <li data-kid="1-10-1-2-2-2-2" data-name="link">
+                            <a class="hover:text-[#0A0A0A] transition-colors" data-kid="1-10-1-2-2-2-2-1" data-name="link label" href="#">
+                                Intelligence
+                            </a>
+                        </li>
+                        <li data-kid="1-10-1-2-2-2-3" data-name="link">
+                            <a class="hover:text-[#0A0A0A] transition-colors" data-kid="1-10-1-2-2-2-3-1" data-name="link label" href="#">
+                                For Teams
+                            </a>
+                        </li>
+                        <li data-kid="1-10-1-2-2-2-4" data-name="link">
+                            <a class="hover:text-[#0A0A0A] transition-colors" data-kid="1-10-1-2-2-2-4-1" data-name="link label" href="#">
+                                Pricing
+                            </a>
+                        </li>
+                    </ul>
+                </div>
+                <div class="space-y-6" data-kid="1-10-1-2-3" data-name="resources sitemap">
+                    <h5 class="font-mono text-[10px] font-bold text-indigo-600 uppercase tracking-widest" data-kid="1-10-1-2-3-1" data-name="resources title">
+                        Resources
+                    </h5>
+                    <ul class="space-y-3 text-sm font-medium text-[#666]" data-kid="1-10-1-2-3-2" data-name="resources link list">
+                        <li data-kid="1-10-1-2-3-2-1" data-name="link">
+                            <a class="hover:text-[#0A0A0A] transition-colors" data-kid="1-10-1-2-3-2-1-1" data-name="link label" href="#">
+                                Journal
+                            </a>
+                        </li>
+                        <li data-kid="1-10-1-2-3-2-2" data-name="link">
+                            <a class="hover:text-[#0A0A0A] transition-colors" data-kid="1-10-1-2-3-2-2-1" data-name="link label" href="#">
+                                Case Studies
+                            </a>
+                        </li>
+                        <li data-kid="1-10-1-2-3-2-3" data-name="link">
+                            <a class="hover:text-[#0A0A0A] transition-colors" data-kid="1-10-1-2-3-2-3-1" data-name="link label" href="#">
+                                Grant Database
+                            </a>
+                        </li>
+                        <li data-kid="1-10-1-2-3-2-4" data-name="link">
+                            <a class="hover:text-[#0A0A0A] transition-colors" data-kid="1-10-1-2-3-2-4-1" data-name="link label" href="#">
+                                Help Center
+                            </a>
+                        </li>
+                    </ul>
+                </div>
+                <div class="space-y-6" data-kid="1-10-1-2-4" data-name="company sitemap">
+                    <h5 class="font-mono text-[10px] font-bold text-indigo-600 uppercase tracking-widest" data-kid="1-10-1-2-4-1" data-name="company title">
+                        Company
+                    </h5>
+                    <ul class="space-y-3 text-sm font-medium text-[#666]" data-kid="1-10-1-2-4-2" data-name="company link list">
+                        <li data-kid="1-10-1-2-4-2-1" data-name="link">
+                            <a class="hover:text-[#0A0A0A] transition-colors" data-kid="1-10-1-2-4-2-1-1" data-name="link label" href="#">
+                                About
+                            </a>
+                        </li>
+                        <li data-kid="1-10-1-2-4-2-2" data-name="link">
+                            <a class="hover:text-[#0A0A0A] transition-colors" data-kid="1-10-1-2-4-2-2-1" data-name="link label" href="#">
+                                Careers
+                            </a>
+                        </li>
+                        <li data-kid="1-10-1-2-4-2-3" data-name="link">
+                            <a class="hover:text-[#0A0A0A] transition-colors" data-kid="1-10-1-2-4-2-3-1" data-name="link label" href="#">
+                                Privacy
+                            </a>
+                        </li>
+                        <li data-kid="1-10-1-2-4-2-4" data-name="link">
+                            <a class="hover:text-[#0A0A0A] transition-colors" data-kid="1-10-1-2-4-2-4-1" data-name="link label" href="#">
+                                Terms
+                            </a>
+                        </li>
+                    </ul>
+                </div>
+                <div class="space-y-6" data-kid="1-10-1-2-5" data-name="status indicator block">
+                    <h5 class="font-mono text-[10px] font-bold text-indigo-600 uppercase tracking-widest" data-kid="1-10-1-2-5-1" data-name="status title">
+                        Status
+                    </h5>
+                    <div class="flex items-center gap-2" data-kid="1-10-1-2-5-2" data-name="system status group">
+                        <span class="w-2 h-2 rounded-full bg-green-500 animate-pulse" data-kid="1-10-1-2-5-2-1" data-name="operational pulse dot">
+                        </span>
+                        <span class="text-xs font-bold" data-kid="1-10-1-2-5-2-2" data-name="status label">
+                            Systems Operational
+                        </span>
+                    </div>
+                </div>
+            </div>
+            <div class="pt-12 border-t border-platinum flex flex-col md:flex-row justify-between items-center gap-6" data-kid="1-10-1-3" data-name="footer bottom bar">
+                <p class="text-[#666] text-[11px] font-mono font-bold uppercase tracking-widest" data-kid="1-10-1-3-1" data-name="copyright notice">
+                    © 2026 NEXORA AG. ZURICH · SWITZERLAND
+                </p>
+                <div class="flex items-center gap-8 text-[11px] font-mono font-bold text-slate-400" data-kid="1-10-1-3-2" data-name="footer policy links">
+                    <a class="hover:text-indigo-600 transition-colors" data-kid="1-10-1-3-2-1" data-name="policy link" href="#">
+                        SECURITY
+                    </a>
+                    <a class="hover:text-indigo-600 transition-colors" data-kid="1-10-1-3-2-2" data-name="policy link" href="#">
+                        TERMS
+                    </a>
+                    <a class="hover:text-indigo-600 transition-colors" data-kid="1-10-1-3-2-3" data-name="policy link" href="#">
+                        PRIVACY
+                    </a>
+                </div>
+            </div>
+        </div>
+    </footer>
+</div>

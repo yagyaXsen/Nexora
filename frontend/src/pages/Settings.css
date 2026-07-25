@@ -1,0 +1,16 @@
+/* ==========================================================================
+   Nexora Prism Signal Design System — Settings Component Styles
+   ========================================================================== */
+
+.prism-settings {
+  background-color: #FFFFFF;
+  color: #0F172A;
+  font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+}
+
+/* Form element transitions */
+.prism-settings button,
+.prism-settings input,
+.prism-settings select {
+  transition: all 0.2s ease;
+}

@@ -1,0 +1,79 @@
+/* ==========================================================================
+   Nexora Opportunity Details Engine — Swiss Design System DNA
+   ========================================================================== */
+
+.detail-swiss-container {
+  background-color: #FAFAF8;
+  color: #1A1110;
+  min-height: 100vh;
+  padding: calc(var(--nav-height) + var(--s-6)) 0 var(--s-12) 0;
+  font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+}
+
+.detail-swiss-breadcrumb {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-family: ui-monospace, SFMono-Regular, monospace;
+  font-size: 0.75rem;
+  color: rgba(26, 17, 16, 0.6);
+  margin-bottom: var(--s-4);
+  padding-bottom: var(--s-2);
+  border-bottom: 1px solid #E2E2DC;
+}
+
+.detail-swiss-breadcrumb a {
+  color: #960018;
+  font-weight: 700;
+  text-decoration: none;
+}
+
+.detail-swiss-layout {
+  display: grid;
+  grid-template-columns: 1fr 360px;
+  gap: var(--s-8);
+  align-items: start;
+}
+
+.detail-swiss-title {
+  font-size: clamp(2rem, 3.5vw, 2.75rem);
+  font-weight: 800;
+  letter-spacing: -0.025em;
+  color: #1A1110;
+  line-height: 1.15;
+  margin-bottom: 8px;
+}
+
+.detail-swiss-org {
+  font-family: 'IBM Plex Serif', Georgia, serif;
+  font-size: 1.1rem;
+  color: rgba(26, 17, 16, 0.7);
+  margin-bottom: var(--s-5);
+}
+
+.detail-swiss-card-side {
+  background: #FAFAF8;
+  border: 2px solid #1A1110;
+  padding: var(--s-5);
+}
+
+/* AI Match Reasoning Box */
+.detail-ai-reason-box {
+  background: #FAFAF8;
+  border: 2px solid #960018;
+  padding: var(--s-5);
+  margin-bottom: var(--s-6);
+}
+
+/* Co-Pilot Widget */
+.detail-copilot-box {
+  background: #F0F0EA;
+  border: 1px solid #1A1110/20;
+  padding: var(--s-4);
+}
+
+@media (max-width: 1024px) {
+  .detail-swiss-layout {
+    grid-template-columns: 1fr;
+  }
+}

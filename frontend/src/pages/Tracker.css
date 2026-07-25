@@ -1,0 +1,160 @@
+/* ==========================================================================
+   Nexora Opportunity Tracker CRM — Swiss Design System DNA
+   ========================================================================== */
+
+.trk-swiss-container {
+  background-color: #FAFAF8;
+  color: #1A1110;
+  min-height: 100vh;
+  padding: calc(var(--nav-height) + var(--s-6)) 0 var(--s-12) 0;
+  font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+}
+
+.trk-swiss-head {
+  border-bottom: 1px solid #E2E2DC;
+  padding-bottom: var(--s-4);
+  margin-bottom: var(--s-6);
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+  flex-wrap: wrap;
+  gap: var(--s-3);
+}
+
+.trk-swiss-title {
+  font-size: clamp(2rem, 4vw, 2.75rem);
+  font-weight: 800;
+  letter-spacing: -0.025em;
+  color: #1A1110;
+}
+
+.trk-metrics-row {
+  display: grid;
+  grid-template-columns: repeat(6, 1fr);
+  gap: var(--s-3);
+  margin-bottom: var(--s-6);
+}
+
+.trk-metric-card {
+  background: #FAFAF8;
+  border: 1px solid #E2E2DC;
+  padding: var(--s-3);
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+}
+
+.trk-metric-val {
+  font-size: 1.75rem;
+  font-weight: 800;
+  color: #1A1110;
+  letter-spacing: -0.02em;
+}
+
+.trk-metric-lbl {
+  font-family: ui-monospace, SFMono-Regular, monospace;
+  font-size: 0.65rem;
+  color: rgba(26, 17, 16, 0.6);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin-top: 4px;
+}
+
+.trk-swiss-board {
+  display: grid;
+  grid-template-columns: repeat(6, 1fr);
+  gap: var(--s-3);
+  align-items: start;
+  overflow-x: auto;
+  padding-bottom: 16px;
+}
+
+.trk-swiss-col {
+  background: #F0F0EA;
+  border: 1px solid #E2E2DC;
+  padding: var(--s-3);
+  min-height: 480px;
+  min-width: 220px;
+}
+
+.trk-swiss-col-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border-bottom: 1px solid #E2E2DC;
+  padding-bottom: var(--s-2);
+  margin-bottom: var(--s-3);
+}
+
+.trk-swiss-col-title {
+  font-family: ui-monospace, SFMono-Regular, monospace;
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #1A1110;
+}
+
+.trk-swiss-card {
+  background: #FAFAF8;
+  border: 1px solid #1A1110;
+  padding: var(--s-3);
+  margin-bottom: var(--s-2);
+  cursor: pointer;
+  transition: transform var(--dur-fast), border-color var(--dur-fast);
+}
+
+.trk-swiss-card:hover {
+  transform: translateY(-2px);
+  border-color: #960018;
+}
+
+.trk-swiss-card-title {
+  font-size: var(--text-sm);
+  font-weight: 700;
+  color: #1A1110;
+  margin-bottom: 4px;
+}
+
+.trk-swiss-card-org {
+  font-family: 'IBM Plex Serif', Georgia, serif;
+  font-size: var(--text-xs);
+  color: rgba(26, 17, 16, 0.7);
+  margin-bottom: 8px;
+}
+
+/* Slide-Over Drawer */
+.trk-drawer-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(26, 17, 16, 0.6);
+  backdrop-filter: blur(2px);
+  z-index: 200;
+  display: flex;
+  justify-content: flex-end;
+}
+
+.trk-drawer-box {
+  background: #FAFAF8;
+  border-left: 2px solid #1A1110;
+  width: 100%;
+  max-width: 540px;
+  height: 100vh;
+  padding: 24px;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+}
+
+@media (max-width: 1024px) {
+  .trk-metrics-row {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}
+
+@media (max-width: 640px) {
+  .trk-metrics-row {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}

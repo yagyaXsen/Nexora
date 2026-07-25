@@ -1,0 +1,8 @@
+/* ==========================================================================
+   Nexora Global Navigation Bar — Swiss Design System DNA
+   ========================================================================== */
+
+/* Clean glassmorphic navbar overrides */
+header.sticky {
+  font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+}

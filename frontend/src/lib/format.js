@@ -1,0 +1,74 @@
+export function formatDate(iso) {
+  if (!iso) return null
+  return new Date(iso).toLocaleDateString('en-US', {
+    month: 'short',
+    day: 'numeric',
+    year: 'numeric',
+  })
+}
+
+export function daysLeft(iso) {
+  if (!iso) return null
+  const ms = new Date(iso) - new Date()
+  return Math.ceil(ms / 86_400_000)
+}
+
+/** { text, tone } tone: green | amber | red | gray */
+export function deadlineInfo(iso, status) {
+  if (status === 'expired') return { text: 'Expired', tone: 'gray' }
+  if (status === 'dead_link') return { text: 'Link unavailable', tone: 'gray' }
+  if (!iso) return { text: 'Rolling deadline', tone: 'green' }
+  const d = daysLeft(iso)
+  if (d < 0) return { text: 'Expired', tone: 'gray' }
+  if (d === 0) return { text: 'Closes today', tone: 'red' }
+  if (d === 1) return { text: '1 day left', tone: 'red' }
+  if (d <= 7) return { text: `${d} days left`, tone: 'amber' }
+  return { text: `${d} days left`, tone: 'green' }
+}
+
+/** Some scraped titles arrive with a "Title: " prefix — strip it for display. */
+export function cleanTitle(title) {
+  return (title ?? '').replace(/^title:\s*/i, '')
+}
+
+export function orgSlug(organizer) {
+  if (!organizer) return 'eth-zurich-ai-center'
+  return (
+    organizer
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, '-')
+      .replace(/(^-|-$)/g, '') || 'eth-zurich-ai-center'
+  )
+}
+
+const CATEGORY_LABELS = {
+  scholarship: 'Scholarship',
+  fellowship: 'Fellowship',
+  accelerator: 'Accelerator',
+  grant: 'Grant',
+  competition: 'Competition',
+  conference: 'Conference',
+  exchange: 'Exchange Program',
+  travel: 'Travel Program',
+  gov_scheme: 'Government Scheme',
+  giveaway: 'Giveaway',
+}
+
+export function categoryLabel(cat) {
+  return CATEGORY_LABELS[cat] ?? cat
+}
+
+export const ALL_CATEGORIES = Object.keys(CATEGORY_LABELS)
+
+const STATUS_LABELS = {
+  saved: 'Saved',
+  planning: 'Planning',
+  applied: 'Applied',
+  interview: 'Interview',
+  accepted: 'Accepted',
+  rejected: 'Rejected',
+}
+
+export function statusLabel(status) {
+  return STATUS_LABELS[status] ?? status
+}

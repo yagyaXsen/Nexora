@@ -1,11 +1,12 @@
 import hashlib
 import json
 import logging
+import re
 from datetime import datetime, timedelta, timezone
 from typing import Dict, Any, Optional
 
 from app.config import settings
-from app.schemas import OpportunityExtract
+from app.schemas import OpportunityExtract, SearchIntent
 from app.models import OpportunityCategory
 
 logger = logging.getLogger(__name__)
@@ -92,6 +93,112 @@ Text Content:
             description=lines[1][:250] if len(lines) > 1 else f"Discovered opportunity from {source_name}. Applications are open for eligible candidates worldwide.",
             tags=[cat.value, "innovation", "funding", "global"],
             confidence=0.88 + (hash_val % 10) / 100.0,
+        )
+
+    # --- AI-powered search query parsing ---
+
+    CATEGORY_SYNONYMS = {
+        "scholarship": "scholarship", "scholarships": "scholarship",
+        "fellowship": "fellowship", "fellowships": "fellowship",
+        "grant": "grant", "grants": "grant",
+        "accelerator": "accelerator", "accelerators": "accelerator", "incubator": "accelerator",
+        "competition": "competition", "competitions": "competition",
+        "hackathon": "competition", "hackathons": "competition", "contest": "competition",
+        "conference": "conference", "conferences": "conference", "summit": "conference",
+        "exchange": "exchange", "exchanges": "exchange",
+        "travel": "travel",
+        "scheme": "gov_scheme", "schemes": "gov_scheme", "government": "gov_scheme",
+        "giveaway": "giveaway", "giveaways": "giveaway", "credits": "giveaway",
+    }
+
+    COUNTRY_HINTS = {
+        "india": "India", "indian": "India", "indians": "India",
+        "usa": "United States", "us": "United States", "america": "United States",
+        "american": "United States", "americans": "United States", "states": "United States",
+        "uk": "United Kingdom", "britain": "United Kingdom", "british": "United Kingdom",
+        "germany": "Germany", "german": "Germany",
+        "canada": "Canada", "canadian": "Canada",
+        "australia": "Australia", "australian": "Australia",
+        "europe": "Europe", "european": "Europe",
+        "africa": "Africa", "african": "Africa",
+        "asia": "Asia", "asian": "Asia",
+        "global": "Global", "international": "Global", "worldwide": "Global",
+    }
+
+    FUNDING_WORDS = ("paid", "funded", "funding", "stipend", "fully", "sponsored")
+
+    STOPWORDS = {
+        "a", "an", "the", "for", "in", "on", "at", "of", "to", "with", "and", "or",
+        "is", "are", "any", "all", "me", "my", "i", "want", "looking", "find",
+        "show", "give", "get", "need", "best", "top", "new", "opportunities", "opportunity",
+    }
+
+    def parse_search_query(self, query: str) -> SearchIntent:
+        if self.use_mock or not self.client:
+            return self._mock_parse_search(query)
+
+        categories = [c.value for c in OpportunityCategory]
+        prompt = f"""
+You are a search intent parser for an opportunity discovery platform.
+Convert the user's natural language query into a structured JSON filter.
+
+Output strictly a valid JSON object with these fields:
+- category: one of {json.dumps(categories)} or null if no clear category
+- country: eligible country or region name (e.g. "India", "United States", "Global") or null
+- tags: list of topic tag strings (e.g. ["AI", "developer"])
+- keywords: list of 1-4 significant search terms from the query
+- funding_required: true if the user wants paid/funded/stipend opportunities, else false
+
+User query: "{query}"
+"""
+        try:
+            chat_completion = self.client.chat.completions.create(
+                messages=[
+                    {"role": "system", "content": "You output JSON matching the required search intent schema."},
+                    {"role": "user", "content": prompt}
+                ],
+                model="llama-3.3-70b-versatile",
+                response_format={"type": "json_object"},
+                temperature=0.1,
+            )
+            content = chat_completion.choices[0].message.content
+            parsed = json.loads(content)
+            return SearchIntent(**parsed)
+        except Exception as e:
+            logger.error(f"Groq search parsing failed: {e}. Falling back to mock parser.")
+            return self._mock_parse_search(query)
+
+    def _mock_parse_search(self, query: str) -> SearchIntent:
+        tokens = re.findall(r"[a-z0-9]+", query.lower())
+
+        category = None
+        country = None
+        matched = set()
+
+        for token in tokens:
+            if category is None and token in self.CATEGORY_SYNONYMS:
+                category = self.CATEGORY_SYNONYMS[token]
+                matched.add(token)
+            if country is None and token in self.COUNTRY_HINTS:
+                country = self.COUNTRY_HINTS[token]
+                matched.add(token)
+
+        funding_required = any(token in self.FUNDING_WORDS for token in tokens)
+        matched.update(t for t in tokens if t in self.FUNDING_WORDS)
+
+        keywords = []
+        for token in tokens:
+            if token not in matched and token not in self.STOPWORDS and len(token) > 2:
+                keywords.append(token)
+            if len(keywords) >= 4:
+                break
+
+        return SearchIntent(
+            category=category,
+            country=country,
+            tags=keywords[:2],
+            keywords=keywords,
+            funding_required=funding_required,
         )
 
 ai_service = AIService()

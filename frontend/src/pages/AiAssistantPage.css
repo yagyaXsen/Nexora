@@ -1,0 +1,20 @@
+/* ==========================================================================
+   Nexora Prism Signal Design System — AI Assistant Page Stylesheet
+   ========================================================================== */
+
+.prism-assistant {
+  background-color: #FFFFFF;
+  color: #0F172A;
+  font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+}
+
+/* Chat bubble styling overrides */
+.prism-assistant .markdown-body {
+  font-size: 0.85rem;
+  line-height: 1.6;
+}
+
+/* Hover effects */
+.prism-assistant button {
+  transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+}

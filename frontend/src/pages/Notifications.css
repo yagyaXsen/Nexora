@@ -1,0 +1,98 @@
+/* ==========================================================================
+   Nexora Notification Intelligence Center — Swiss Design System DNA
+   ========================================================================== */
+
+.notif-swiss-container {
+  background-color: #FAFAF8;
+  color: #1A1110;
+  min-height: 100vh;
+  padding: calc(var(--nav-height) + var(--s-6)) 0 var(--s-12) 0;
+  font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+}
+
+.notif-header-box {
+  border-bottom: 2px solid #1A1110;
+  padding-bottom: var(--s-5);
+  margin-bottom: var(--s-6);
+}
+
+.notif-title {
+  font-size: clamp(2rem, 3.5vw, 2.75rem);
+  font-weight: 800;
+  letter-spacing: -0.025em;
+  color: #1A1110;
+  line-height: 1.15;
+}
+
+/* 4-Stat Summary Metric Row */
+.notif-stats-row {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: var(--s-4);
+  margin-bottom: var(--s-6);
+}
+
+.notif-stat-card {
+  background: #FAFAF8;
+  border: 2px solid #1A1110;
+  padding: var(--s-4);
+  box-shadow: 0 4px 16px rgba(26, 17, 16, 0.04);
+}
+
+.notif-stat-val {
+  font-family: 'Plus Jakarta Sans', sans-serif;
+  font-size: 1.75rem;
+  font-weight: 800;
+  color: #1A1110;
+  line-height: 1;
+  display: block;
+}
+
+.notif-stat-lbl {
+  font-family: ui-monospace, SFMono-Regular, monospace;
+  font-size: 0.7rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  color: #1A1110/60;
+  margin-top: 6px;
+  display: block;
+}
+
+/* Notification Feed Items */
+.notif-feed-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-3);
+}
+
+.notif-card-item {
+  background: #FAFAF8;
+  border: 2px solid #1A1110;
+  padding: var(--s-4);
+  transition: transform var(--dur-fast), border-color var(--dur-fast);
+}
+
+.notif-card-item.unread {
+  border-left: 6px solid #960018;
+  background: #FAFAF8;
+}
+
+.notif-card-item.critical {
+  border-color: #960018;
+}
+
+.notif-card-item:hover {
+  transform: translateY(-2px);
+}
+
+@media (max-width: 900px) {
+  .notif-stats-row {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (max-width: 600px) {
+  .notif-stats-row {
+    grid-template-columns: 1fr;
+  }
+}

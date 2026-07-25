@@ -1,0 +1,8 @@
+/* ==========================================================================
+   Nexora Opportunity Card — Prism Signal Design System
+   ========================================================================== */
+
+/* Clean glassmorphic card component overrides */
+article.group {
+  transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+}
