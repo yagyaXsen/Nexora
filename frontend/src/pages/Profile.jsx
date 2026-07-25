@@ -100,11 +100,14 @@ export default function Profile() {
     }
   }, [user])
 
+  const [saveSuccess, setSaveSuccess] = useState(false)
+
   const handleSaveProfile = async (e) => {
     e.preventDefault()
     setSaving(true)
     setMessage(null)
     setError(null)
+    setSaveSuccess(false)
 
     const payload = {
       full_name: fullName,
@@ -118,7 +121,9 @@ export default function Profile() {
     try {
       const updated = await api.updateProfile(payload)
       setProfile(updated)
+      setSaveSuccess(true)
       setMessage('Profile credentials successfully updated & AI vector re-indexed.')
+      setTimeout(() => setSaveSuccess(false), 3500)
     } catch (err) {
       setError(err.message || 'Failed to save profile updates')
     } finally {
@@ -302,9 +307,25 @@ export default function Profile() {
                 <button
                   type="submit"
                   disabled={saving}
-                  className="bg-[#0A0A0A] hover:bg-indigo-600 text-white font-bold text-sm px-8 py-3.5 rounded-2xl transition-all shadow-md"
+                  className={`font-bold text-sm px-8 py-3.5 rounded-2xl transition-all shadow-md flex items-center gap-2 ${
+                    saveSuccess
+                      ? 'bg-emerald-600 text-white'
+                      : 'bg-[#0A0A0A] hover:bg-slate-800 text-white active:scale-98'
+                  }`}
                 >
-                  {saving ? 'Re-indexing AI Vector...' : 'Save & Re-Index AI Profile'}
+                  {saving ? (
+                    <>
+                      <i className="ti ti-loader-2 animate-spin text-base" />
+                      <span>Re-indexing AI Vector...</span>
+                    </>
+                  ) : saveSuccess ? (
+                    <>
+                      <i className="ti ti-check text-base" />
+                      <span>✓ Saved &amp; Re-Indexed</span>
+                    </>
+                  ) : (
+                    <span>Save &amp; Re-Index AI Profile</span>
+                  )}
                 </button>
               </div>
 

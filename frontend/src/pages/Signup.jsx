@@ -477,7 +477,7 @@ export default function Signup() {
                   type="button"
                   onClick={handleCreateAccount}
                   disabled={busy}
-                  className="flex-1 bg-[#0A0A0A] hover:bg-indigo-600 text-white font-bold text-sm py-3.5 rounded-2xl shadow-xl hover:shadow-indigo-600/25 transition-all duration-300 flex items-center justify-center gap-2 disabled:opacity-50"
+                  className="flex-1 bg-[#0A0A0A] hover:bg-slate-800 text-white font-bold text-sm py-3.5 rounded-2xl shadow-xl transition-all duration-300 flex items-center justify-center gap-2 disabled:opacity-50 active:scale-98"
                 >
                   {busy ? (
                     <>

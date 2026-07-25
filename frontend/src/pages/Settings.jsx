@@ -213,7 +213,7 @@ export default function Settings() {
 
                 <button
                   type="submit"
-                  className="bg-[#0A0A0A] hover:bg-indigo-600 text-white font-bold text-xs px-6 py-3 rounded-2xl transition-all shadow-md"
+                  className="bg-[#0A0A0A] hover:bg-slate-800 text-white font-bold text-xs px-6 py-3 rounded-2xl transition-all shadow-md active:scale-98"
                 >
                   Save Changes
                 </button>
@@ -281,7 +281,7 @@ export default function Settings() {
 
                 <button
                   type="submit"
-                  className="bg-[#0A0A0A] hover:bg-indigo-600 text-white font-bold text-xs px-6 py-3 rounded-2xl transition-all shadow-md"
+                  className="bg-[#0A0A0A] hover:bg-slate-800 text-white font-bold text-xs px-6 py-3 rounded-2xl transition-all shadow-md active:scale-98"
                 >
                   Update AI Calibration
                 </button>
@@ -317,7 +317,7 @@ export default function Settings() {
 
                 <button
                   type="submit"
-                  className="bg-[#0A0A0A] hover:bg-indigo-600 text-white font-bold text-xs px-6 py-3 rounded-2xl transition-all shadow-md"
+                  className="bg-[#0A0A0A] hover:bg-slate-800 text-white font-bold text-xs px-6 py-3 rounded-2xl transition-all shadow-md active:scale-98"
                 >
                   Save Notification Preferences
                 </button>
