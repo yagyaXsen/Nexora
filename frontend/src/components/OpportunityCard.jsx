@@ -1,3 +1,4 @@
+import { useState, useEffect } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { applyUrl } from '../lib/api'
 import { categoryLabel, cleanTitle, deadlineInfo, formatDate, orgSlug } from '../lib/format'
@@ -7,6 +8,22 @@ export default function OpportunityCard({ opp, onSave, onApply, saved = false })
   const navigate = useNavigate()
   const dl = deadlineInfo(opp.deadline, opp.status)
   const closed = opp.status === 'expired' || opp.status === 'dead_link'
+
+  // Internal instant state for 0ms visual feedback
+  const [isSaved, setIsSaved] = useState(saved)
+
+  useEffect(() => {
+    setIsSaved(saved)
+  }, [saved])
+
+  const handleSaveToggle = (e) => {
+    e.stopPropagation()
+    const nextSavedState = !isSaved
+    setIsSaved(nextSavedState) // ⚡ INSTANT 0MS CARD STATE REACTION!
+    if (onSave) {
+      onSave(opp)
+    }
+  }
 
   return (
     <article
@@ -76,11 +93,16 @@ export default function OpportunityCard({ opp, onSave, onApply, saved = false })
         )}
         {onSave && (
           <button
-            className={`px-3 py-2 rounded-xl text-xs font-bold transition-all border ${saved ? 'bg-indigo-50 text-indigo-700 border-indigo-200 hover:bg-red-50 hover:text-red-600 hover:border-red-200' : 'bg-slate-50 text-slate-600 border-slate-200 hover:border-slate-400'}`}
-            onClick={() => onSave(opp)}
-            title={saved ? 'Click to unsave' : 'Save to tracker'}
+            type="button"
+            className={`px-3.5 py-2 rounded-xl text-xs font-bold transition-all border ${
+              isSaved
+                ? 'bg-emerald-50 text-emerald-700 border-emerald-300 font-extrabold shadow-2xs hover:bg-red-50 hover:text-red-600 hover:border-red-200'
+                : 'bg-slate-50 text-slate-700 border-slate-200 hover:border-indigo-400 hover:bg-indigo-50 hover:text-indigo-700'
+            }`}
+            onClick={handleSaveToggle}
+            title={isSaved ? 'Click to unsave' : 'Save to tracker'}
           >
-            {saved ? '✓ Saved' : '+ Save'}
+            {isSaved ? '✓ Saved' : '+ Save'}
           </button>
         )}
       </div>
