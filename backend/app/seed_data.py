@@ -561,7 +561,6 @@ def seed_database():
                 email="demo@nexora.ai",
                 name="Dr. Ariana Chen",
                 hashed_password=hash_password("nexora2026"),
-                is_active=True,
             )
             db.add(demo_user)
             db.flush()
