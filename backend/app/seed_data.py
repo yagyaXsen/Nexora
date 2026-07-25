@@ -494,10 +494,10 @@ OPPORTUNITIES = [
         "degree_requirements": "PhD / Doctorate",
         "funding_amount": "€2,700 - €3,200 / month (Fully Funded)",
         "deadline": utc(75),
-        "url": "https://www.humboldt-foundation.de/en/apply",
-        "apply_url": "https://www.humboldt-foundation.de/en/apply",
+        "url": "https://www.humboldt-foundation.de/en/apply/sponsorship-programmes/humboldt-research-fellowship",
+        "apply_url": "https://www.humboldt-foundation.de/en/apply/sponsorship-programmes/humboldt-research-fellowship",
         "eligibility_text": "Postdoctoral researchers of all nationalities who completed their doctorate within the last 4 years.",
-        "description": "Prestigious long-term research fellowship enabling postdocs to carry out independent research in cooperation with a academic host institution in Germany.",
+        "description": "Prestigious long-term research fellowship enabling postdocs to carry out independent research in cooperation with an academic host institution in Germany.",
         "tags": ["Humboldt", "Germany", "Postdoc", "Fellowship", "Research"],
     },
 ]
