@@ -24,6 +24,9 @@ class Settings(BaseSettings):
     # Ceiling on the Groq call. The free tier is an org-wide quota, so search
     # falls back to the mock parser rather than hanging or 500-ing.
     AI_TIMEOUT_SECONDS: float = 8.0
+    AI_QUERY_CACHE_TTL_SECONDS: int = 900
+    AI_QUERY_CACHE_MAX_ENTRIES: int = 256
+    AI_MIN_QUERY_LENGTH_FOR_LLM: int = 5
 
     ADMIN_SECRET_KEY: str = DEV_ADMIN_KEY
     CONFIDENCE_THRESHOLD: float = 0.70
@@ -32,6 +35,8 @@ class Settings(BaseSettings):
 
     # Password reset
     RESET_TOKEN_EXPIRE_MINUTES: int = 30
+    PASSWORD_RESET_RATE_LIMIT: int = 3
+    PASSWORD_RESET_RATE_WINDOW_SECONDS: int = 600
     MAILER: str = "console"  # console | smtp
     SMTP_HOST: str = ""
     SMTP_PORT: int = 587
@@ -52,6 +57,8 @@ class Settings(BaseSettings):
     # spin down after ~15 min idle, so deployed environments drive ingestion from
     # an external cron hitting /api/pipeline/cron/* instead.
     ENABLE_INTERNAL_SCHEDULER: bool = True
+    CRON_MAX_SOURCES: int = 10
+    CRON_MAX_DEAD_LINK_CHECKS: int = 30
 
     model_config = SettingsConfigDict(
         env_file=".env",

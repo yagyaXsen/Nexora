@@ -11,7 +11,7 @@
 - **Frontend live at:** `https://nexora.pages.dev` (Cloudflare Pages)
 - **Backend live at:** `https://nexora-api.onrender.com` (Render)
 - **Database:** Neon Postgres (free tier, persistent)
-- **AI features working:** Groq + Gemini free tiers
+- **AI search:** mock parser by default; Groq is optional and fail-open
 - **Email:** ConsoleMailer mode (prints to logs instead of sending — fine for demo)
 - **File uploads:** LocalDisk (works for demo; files are ephemeral on Render free tier)
 
@@ -155,13 +155,13 @@ gh repo create nexora --private --source=. --remote=origin --push
    | `DATABASE_URL` | (from step 2) |
    | `SECRET_KEY` | run `python3 -c "import secrets; print(secrets.token_hex(32))"` to generate one |
    | `GROQ_API_KEY` | (from step 3) |
-   | `GEMINI_API_KEY` | (from step 4) |
-   | `USE_MOCK_AI` | `False` |
-   | `CORS_ORIGINS` | leave blank for now — fill after step 6 |
+  | `USE_MOCK_AI` | `False` |
+  | `ENABLE_INTERNAL_SCHEDULER` | `False` |
+  | `CORS_ORIGINS` | leave blank for now — fill after step 6 |
 
 6. Click **Create Web Service**. Render starts building (~5 min).
 7. When build finishes, the dashboard shows your URL: `https://nexora-api.onrender.com`.
-8. Verify in a browser: `https://nexora-api.onrender.com/` should return `{"status":"healthy",...}`.
+8. Verify in a browser: `https://nexora-api.onrender.com/api/health` should return a healthy response.
 
 **Important:** if the build fails with a Playwright-related error (the scraper deps are heavy), edit `backend/requirements.txt` and remove `playwright` and `beautifulsoup4` lines for the deploy — the scraper isn't needed for the demo. Re-push and Render auto-redeploys.
 
@@ -190,7 +190,7 @@ gh repo create nexora --private --source=. --remote=origin --push
    - **Build command:** `cd frontend && npm install && npm run build`
    - **Build output directory:** `frontend/dist`
 5. Click **Environment variables (advanced)** → add:
-   - **Name:** `VITE_API_URL`
+   - **Name:** `VITE_API_BASE_URL`
    - **Value:** `https://nexora-api.onrender.com` (from step 5)
    - Type: **Production**
 6. Click **Save and Deploy**. First build takes ~2 min.
@@ -225,12 +225,12 @@ This is what each service ends up with. Save this somewhere:
 DATABASE_URL=postgresql://...neon.tech/neondb?sslmode=require
 SECRET_KEY=<64-char hex from secrets.token_hex(32)>
 GROQ_API_KEY=gsk_...
-GEMINI_API_KEY=AIza...
-USE_MOCK_AI=False
+USE_MOCK_AI=True
+ENABLE_INTERNAL_SCHEDULER=False
 CORS_ORIGINS=https://nexora.pages.dev
 
 # Cloudflare Pages (frontend)
-VITE_API_URL=https://nexora-api.onrender.com
+VITE_API_BASE_URL=https://nexora-api.onrender.com
 ```
 
 ---

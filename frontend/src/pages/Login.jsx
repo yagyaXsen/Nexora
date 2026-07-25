@@ -54,7 +54,8 @@ export default function Login() {
   const { login } = useAuth()
   const navigate = useNavigate()
   const location = useLocation()
-  const from = location.state?.from ?? '/dashboard'
+  const from = location.state?.from ?? sessionStorage.getItem('nexora_return_to') ?? '/dashboard'
+  const showDemoAccount = import.meta.env.VITE_ENABLE_DEMO_ACCOUNT === 'true'
 
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
@@ -70,6 +71,7 @@ export default function Login() {
     setBusy(true)
     try {
       await login(email, password)
+      sessionStorage.removeItem('nexora_return_to')
       navigate(from, { replace: true })
     } catch (err) {
       setError(
@@ -134,7 +136,8 @@ export default function Login() {
           </p>
         </div>
 
-        {/* 1-Click Demo Credentials Autofill Banner */}
+        {showDemoAccount && <>
+        {/* Local/demo-only credentials — never rendered in a public build by default. */}
         <div className="p-4 bg-slate-900 text-white rounded-2xl flex items-center justify-between gap-3 shadow-xl">
           <div className="flex items-center gap-3">
             <div className="w-9 h-9 bg-indigo-500/20 border border-indigo-400/30 text-indigo-400 rounded-xl flex items-center justify-center text-base shrink-0">
@@ -194,6 +197,7 @@ export default function Login() {
             OR EMAIL &amp; PASSWORD
           </span>
         </div>
+        </>}
 
         {error && (
           <div className="p-4 bg-red-50 border border-red-200 rounded-2xl text-xs font-bold text-red-600 flex items-center gap-2">

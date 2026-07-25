@@ -2,8 +2,9 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import { api } from '../lib/api'
 import { useAuth } from '../lib/auth.jsx'
-import { ALL_CATEGORIES, categoryLabel, formatDate } from '../lib/format'
+import { categoryLabel, formatDate } from '../lib/format'
 import { applyUrl } from '../lib/api'
+import { useApply } from '../hooks/useApply'
 import './Explore.css'
 
 const PAGE_SIZE = 12
@@ -107,6 +108,11 @@ export default function Explore() {
       /* idempotent safe */
     }
   }
+
+  // Applying creates a tracker row, so reflect it in the saved state immediately.
+  const applyHandler = useApply((opp) =>
+    setSavedIds((prev) => new Set(prev).add(opp.id))
+  )
 
   const toggleCompare = (opp) => {
     if (compareItems.some((item) => item.id === opp.id)) {
@@ -268,10 +274,17 @@ export default function Explore() {
           <div className="col-span-12 lg:col-span-8 space-y-6">
             
             {!loading && !error && result?.items.length > 0 && (
-              <div className="flex justify-between items-center pb-3 border-b border-slate-200 font-mono text-xs text-slate-400">
-                <span>
-                  INDEXED OPPORTUNITIES: <strong className="text-slate-800">{result.total}</strong>
-                </span>
+              <div className="space-y-3 pb-3 border-b border-slate-200 font-mono text-xs text-slate-400">
+                <div className="flex justify-between items-center">
+                  <span>
+                    INDEXED OPPORTUNITIES: <strong className="text-slate-800">{result.total}</strong>
+                  </span>
+                </div>
+                {result.degraded && (
+                  <p className="rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-amber-800">
+                    No exact matches — showing related opportunities.
+                  </p>
+                )}
               </div>
             )}
 
@@ -324,9 +337,11 @@ export default function Explore() {
                           <span className="prism-mono text-[9px] bg-slate-900 text-white font-extrabold px-2.5 py-1 rounded-full uppercase tracking-wider">
                             {categoryLabel(opp.category)}
                           </span>
-                          <span className="font-mono text-[10px] font-bold text-emerald-600 bg-emerald-50 px-2.5 py-1 rounded-full border border-emerald-100">
-                            98% MATCH
-                          </span>
+                          {opp.funding_amount && (
+                            <span className="font-mono text-[10px] font-bold text-emerald-700 bg-emerald-50 px-2.5 py-1 rounded-full border border-emerald-100">
+                              Funding listed
+                            </span>
+                          )}
                         </div>
 
                         {/* Card Body Content */}
@@ -352,6 +367,7 @@ export default function Explore() {
                         <div className="pt-3 flex items-center justify-between gap-3" onClick={(e) => e.stopPropagation()}>
                           <a
                             href={applyUrl(opp.id)}
+                            onClick={applyHandler(opp, `/explore?${params.toString()}`)}
                             target="_blank"
                             rel="noopener noreferrer"
                             className="bg-[#0A0A0A] text-white px-4 py-2 rounded-xl font-bold text-xs flex items-center gap-1 hover:bg-indigo-600 transition-colors"

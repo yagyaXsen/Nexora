@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom'
 import { api, applyUrl } from '../lib/api'
 import { cleanTitle, formatDate } from '../lib/format'
 import { CountUp } from '../components/CountUp'
+import { useApply } from '../hooks/useApply'
 import './Tracker.css'
 
 const STAGES = [
@@ -71,6 +72,17 @@ export default function Tracker() {
       /* rollback safe */
     }
   }
+
+  // Following the outbound link is an apply — record it and reflect the stage.
+  const applyHandler = useApply((opp) =>
+    setApps((prev) =>
+      prev.map((a) =>
+        a.opportunity?.id === opp.id && !a.applied_at
+          ? { ...a, status: 'Applied', applied_at: new Date().toISOString() }
+          : a
+      )
+    )
+  )
 
   const saveNotes = async () => {
     if (!activeApp) return
@@ -286,6 +298,7 @@ export default function Tracker() {
           <div className="pt-4 border-t border-slate-100 flex items-center justify-between gap-3">
             <a
               href={applyUrl(activeApp.opportunity.id)}
+              onClick={applyHandler(activeApp.opportunity, '/tracker')}
               target="_blank"
               rel="noopener noreferrer"
               className="bg-indigo-600 hover:bg-indigo-700 text-white px-5 py-3 rounded-xl font-bold text-xs flex items-center gap-1.5 transition-colors"

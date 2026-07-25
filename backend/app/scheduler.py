@@ -2,6 +2,7 @@ import logging
 from apscheduler.schedulers.background import BackgroundScheduler
 from apscheduler.triggers.cron import CronTrigger
 
+from app.config import settings
 from app.database import SessionLocal
 from app.models import Source
 from app.pipeline.runner import runner
@@ -15,12 +16,15 @@ def scheduled_ingest_all_sources():
     logger.info("Executing scheduled ingest for all enabled sources...")
     db = SessionLocal()
     try:
-        sources = db.query(Source).filter(Source.enabled == True).all()
+        sources = db.query(Source).filter(Source.enabled == True).limit(settings.CRON_MAX_SOURCES).all()
+        completed = 0
         for source in sources:
             try:
                 runner.run_source(db, source)
+                completed += 1
             except Exception as e:
                 logger.error(f"Error running scheduled source ID {source.id}: {e}")
+        return {"sources_processed": completed}
     finally:
         db.close()
 
@@ -28,8 +32,9 @@ def scheduled_daily_lifecycle_sweep():
     logger.info("Executing scheduled daily lifecycle sweep...")
     db = SessionLocal()
     try:
-        run_daily_expiry_sweep(db)
-        check_dead_links(db, max_checks=30)
+        expiry = run_daily_expiry_sweep(db)
+        dead_links = check_dead_links(db, max_checks=settings.CRON_MAX_DEAD_LINK_CHECKS)
+        return {**expiry, "dead_link_count": dead_links}
     except Exception as e:
         logger.error(f"Error during lifecycle sweep: {e}")
     finally:

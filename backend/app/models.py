@@ -65,6 +65,19 @@ class User(Base):
     applications = relationship("Application", back_populates="user", cascade="all, delete-orphan")
     notifications = relationship("Notification", back_populates="user", cascade="all, delete-orphan")
     org_following = relationship("OrganizationFollower", back_populates="user", cascade="all, delete-orphan")
+    password_reset_tokens = relationship("PasswordResetToken", back_populates="user", cascade="all, delete-orphan")
+
+class PasswordResetToken(Base):
+    __tablename__ = "password_reset_tokens"
+
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
+    token_hash = Column(String(64), unique=True, index=True, nullable=False)
+    expires_at = Column(DateTime(timezone=True), nullable=False)
+    used_at = Column(DateTime(timezone=True), nullable=True)
+    created_at = Column(DateTime(timezone=True), default=utc_now, nullable=False)
+
+    user = relationship("User", back_populates="password_reset_tokens")
 
 class Profile(Base):
     __tablename__ = "profiles"

@@ -1,4 +1,9 @@
 const TOKEN_KEY = 'nexora_token'
+const API_BASE_URL = (import.meta.env.VITE_API_BASE_URL || '').replace(/\/$/, '')
+
+function apiUrl(path) {
+  return `${API_BASE_URL}${path}`
+}
 
 export function getToken() {
   return localStorage.getItem(TOKEN_KEY)
@@ -34,7 +39,7 @@ async function request(path, { method = 'GET', body, form } = {}) {
     payload = JSON.stringify(body)
   }
 
-  const res = await fetch(path, { method, headers, body: payload })
+  const res = await fetch(apiUrl(path), { method, headers, body: payload })
 
   if (res.status === 204) return null
 
@@ -46,7 +51,13 @@ async function request(path, { method = 'GET', body, form } = {}) {
   }
 
   if (!res.ok) {
-    throw new ApiError(res.status, data?.detail ?? `HTTP ${res.status}`)
+    if (res.status === 401 && token) {
+      clearToken()
+      const returnTo = `${window.location.pathname}${window.location.search}`
+      sessionStorage.setItem('nexora_return_to', returnTo)
+      if (window.location.pathname !== '/login') window.location.assign('/login')
+    }
+    throw new ApiError(res.status, data?.detail ?? data?.error?.message ?? `HTTP ${res.status}`)
   }
   return data
 }
@@ -139,5 +150,5 @@ export const api = {
 }
 
 export function applyUrl(oppId) {
-  return `/api/opportunities/${oppId}/apply`
+  return apiUrl(`/api/opportunities/${oppId}/apply`)
 }

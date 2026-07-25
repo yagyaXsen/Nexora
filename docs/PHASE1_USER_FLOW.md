@@ -4,8 +4,9 @@
 > **Constraint:** it all runs on **$0/month** until there's revenue. See §10 —
 > that constraint invalidates three things the current code assumes.
 >
-> This document is the spec for Phase 1: what the flow is, what the code does
-> today, and the exact gaps that must close before it ships.
+> This document is the spec and ship checklist for Phase 1. The repository work
+> is complete as of 25 July 2026; deployment configuration and live-stack
+> verification remain before it can be called shipped.
 >
 > Written against the rebuilt backend (commit `fa56236`, FastAPI + SQLAlchemy +
 > Alembic on SQLite) and the untracked `frontend/` tree, as of 25 July 2026.
@@ -61,9 +62,21 @@ And one constraint that outranks both:
 | 4 | AI natural-language search (intent parse → filters) | ✅ works, mock by default |
 | 5 | Opportunity detail page by id **or** slug | ✅ works |
 | 6 | Save an opportunity (idempotent) | ✅ works |
-| 7 | Apply → redirect to organizer, count the click | ⚠️ works but **untracked & ungated** — §6.1 |
-| 8 | Tracker reflects what the user applied to | ❌ **the Phase 1 gap** — §6.1 |
-| 9 | Password reset (request link → set new password) | ❌ **frontend done, backend missing** — §2.5 |
+| 7 | Apply → redirect to organizer, count the click | ✅ gated and recorded through `POST /api/applications/apply` |
+| 8 | Tracker reflects what the user applied to | ✅ upserts one `Applied` row and stamps `applied_at` once |
+| 9 | Password reset (request link → set new password) | ✅ backend, migration, ConsoleMailer, and SMTP driver implemented; needs runtime verification |
+
+### Implementation status — 25 July 2026
+
+The app code now covers the Phase 1 loop. The remaining work is operational:
+
+- [ ] Install backend dependencies and run `alembic upgrade head`.
+- [ ] Exercise password reset end-to-end with `MAILER=console`.
+- [ ] Deploy with Neon Postgres, production secrets, explicit CORS, and
+      `VITE_API_BASE_URL`.
+- [ ] Set `NEXORA_API_URL` and `NEXORA_ADMIN_SECRET_KEY` GitHub secrets, then
+      confirm external cron produces `pipeline_runs`.
+- [ ] Complete the manual Definition of Done checklist in §9 against the live stack.
 
 ### Out (Phase 2+)
 
@@ -512,23 +525,28 @@ Ordered by how much damage they do. The first two are **data-loss and
 silent-rot** bugs that only appear once deployed on a free tier — they outrank
 every feature gap.
 
-### 6.0 SQLite on an ephemeral filesystem loses everything — **P0**
+### 6.0 SQLite on an ephemeral filesystem loses everything — **deployment P0**
 
 §10.1. Migrate to Neon free Postgres and add a boot guard that refuses to start
 with a `sqlite://` URL outside DEBUG. **Nothing else matters if accounts vanish
 on every spin-down.**
 
-### 6.1 Apply doesn't reach the tracker — **P0**
+### 6.1 Apply doesn't reach the tracker — **implemented**
 
-Covered in §4.2–§4.3. This is the one that makes the product feel real.
+`POST /api/applications/apply` is authenticated and idempotently creates or
+updates the tracker row to `Applied`, stamps `applied_at` only once, increments
+the click count, and returns the organizer URL. The frontend gates anonymous
+users through login while preserving their return path.
 
-### 6.2 The scheduler never fires on a sleeping instance — **P0**
+### 6.2 The scheduler never fires on a sleeping instance — **implemented, needs deployment**
 
 §10.2. In-process APScheduler cron (`scheduler.py:41-53`) cannot run while the
 free instance is spun down, so the index never updates *and* expired
-opportunities are never swept. Move the trigger to GitHub Actions cron.
+opportunities are never swept. Admin-keyed endpoints and
+`.github/workflows/pipeline-cron.yml` now provide the external trigger; configure
+the two repository secrets and verify it after deployment.
 
-### 6.3 Three flows fake success — **P0 (honesty bug)**
+### 6.3 Flows that fake success — **implemented**
 
 `frontend/src/lib/api.js:65-70`:
 
@@ -541,11 +559,9 @@ verifyEmail: (code) =>
   request('/api/auth/verify-email',    {...}).catch(() => ({ success: true })),
 ```
 
-**None of these endpoints exist** — `routes/auth.py` has only `register`,
-`login`, `me` (GET/PATCH/DELETE). The `.catch()` swallows the 404 and returns
-success, so `ForgotPassword`, `ResetPassword`, and `VerifyEmail` all render a
-cheerful confirmation for an operation that did not happen. `AiAssistantPage`
-has the same problem in spirit — no backend behind it.
+Password reset endpoints now exist and client errors are surfaced. The
+out-of-scope assistant route/widget and fabricated detail-page eligibility,
+document-readiness, and match claims were removed from the Phase 1 surface.
 
 Two different fixes, because these now have two different fates:
 
@@ -557,21 +573,21 @@ Two different fixes, because these now have two different fates:
   `App.jsx` or have them render an honest "coming soon". Hide the copilot
   buttons at `OpportunityDetail.jsx:329-341`.
 
-### 6.4 401s don't log the user out — **P1**
+### 6.4 401s don't log the user out — **implemented**
 
 §2.4. Central fix in `request()`.
 
-### 6.5 `degraded` search results are unlabelled — **P1**
+### 6.5 `degraded` search results are unlabelled — **implemented**
 
 §3.2. One line of UI copy; prevents the search box reading as broken.
 
-### 6.6 AI search has no rate-limit fallback — **P1**
+### 6.6 AI search has no rate-limit fallback — **implemented**
 
 §10.3. One org-wide Groq quota shared by all users, called on every search. Needs
 a timeout, a fail-open to the mock parser, and a query cache before Groq is
 enabled at all.
 
-### 6.7 Production config is unsafe — **P1**
+### 6.7 Production config is unsafe — **code safeguards implemented; configure before deploy**
 
 - `SECRET_KEY` dev default (`config.py:12`) — must fail closed outside DEBUG.
 - `allow_origins=["*"]` **with** `allow_credentials=True` (`main.py:54-60`).
@@ -582,7 +598,7 @@ enabled at all.
   behind a same-origin reverse proxy. The $0 stack splits frontend and backend
   across hosts (§10.5), so this **must** become a configurable `VITE_API_BASE_URL`.
 
-### 6.8 Repo hygiene — **P2**
+### 6.8 Repo hygiene — **pending commit**
 
 The entire `frontend/` tree is untracked, and `backend/nexora.db`,
 `__pycache__/`, and a built `frontend/dist/` are sitting in the working tree.
@@ -616,44 +632,44 @@ Recording these so they don't creep in mid-build:
 Each step is independently shippable. Step 0 comes first because everything else
 is built on sand without it.
 
-**Step 0 — Make persistence real.** §10.1. Provision Neon free Postgres, point
+**Step 0 — Make persistence real.** ⏳ Provision Neon free Postgres, point
 `DATABASE_URL` at it, run `alembic upgrade head`, commit the two untracked
 migration files (§6.8), and add the boot guard that refuses a `sqlite://` URL
 outside DEBUG. Keep SQLite locally. *Every step below assumes data survives a
 restart.*
 
-**Step 1 — Truthfulness pass.** §6.3. Strip the `verifyEmail` fake-success
+**Step 1 — Truthfulness pass.** ✅ Strip the `verifyEmail` fake-success
 catch, remove or stub `/verify-email` and `/assistant`, hide the dead copilot
 buttons. *Nothing else ships until the app stops claiming things that aren't
 true.* (Leave the two password-reset catches in place until Step 3 lands — then
 delete them.)
 
-**Step 2 — Apply becomes real.** §4.3. Add `POST /api/applications/apply`
+**Step 2 — Apply becomes real.** ✅ Add `POST /api/applications/apply`
 (auth, upsert→`Applied`, stamp `applied_at` once, atomic click increment, return
 `apply_url`). Wire the `onClick` on both `OpportunityDetail` and
 `OpportunityCard`. Decide §4.3's anonymous question and write the answer down.
 
-**Step 3 — Password reset.** §2.5. `password_reset_tokens` table + Alembic
+**Step 3 — Password reset.** ✅ `password_reset_tokens` table + Alembic
 revision → `services/mailer.py` with `ConsoleMailer` → the two endpoints →
 delete the `.catch()` fallbacks from `api.js`. Both frontend pages need no
 changes. Verify end-to-end by copying the link out of the backend log.
 
-**Step 4 — Session correctness.** §6.4 central 401 handling; §2.4 env-driven
+**Step 4 — Session correctness.** ✅ Central 401 handling; §2.4 env-driven
 `SECRET_KEY` with a boot-time guard.
 
-**Step 5 — Externalise the scheduler.** §10.2. Add the two admin-keyed cron
+**Step 5 — Externalise the scheduler.** ✅ Add the two admin-keyed cron
 endpoints, a GitHub Actions workflow that hits them on a schedule, and gate
 `start_scheduler()` behind a setting so it only runs locally. Cap the work per
 invocation so one run can't exhaust the Groq quota or the instance's memory.
 
-**Step 6 — Search polish + quota safety.** §6.5 surface `degraded`; §10.3 add a
+**Step 6 — Search polish + quota safety.** ✅ Surface `degraded`; §10.3 add a
 timeout, fail-open to the mock parser, and an in-memory cache for repeated
 queries; add the route-ordering comment above `routes/opportunities.py:191`.
 
-**Step 7 — Close the loop.** Post-apply confirmation that shows the tracker row
+**Step 7 — Close the loop.** ✅ Apply updates the tracker immediately; the tracker
 and the deadline, fed by `GET /api/applications/upcoming`.
 
-**Step 8 — Deploy on the $0 stack.** §10.6. Static frontend on Cloudflare Pages,
+**Step 8 — Deploy on the $0 stack.** ⏳ Static frontend on Cloudflare Pages,
 backend on Render free, `VITE_API_BASE_URL` + explicit CORS (§6.7), and
 `FRONTEND_URL` so reset links point at the real origin. Swap `ConsoleMailer` →
 Brevo only when there are real users to email.
@@ -663,7 +679,8 @@ Brevo only when there are real users to email.
 ## 9. Definition of done
 
 Phase 1 ships when all of these are true, verified by hand against a running
-stack:
+stack. The code items are implemented; leave these unchecked until they are
+observed in the local and deployed environments.
 
 - [ ] A new user can register, and is logged in immediately afterwards.
 - [ ] A returning user can log in; a wrong password gives a clear 401 message.
@@ -896,27 +913,29 @@ Everything Phase 1 touches. Anything not on this list should not be called.
 | `POST /api/auth/register` | — | login | ✅ |
 | `POST /api/auth/login` | — | login | ✅ form-encoded |
 | `GET /api/auth/me` | JWT | login | ✅ |
-| **`POST /api/auth/forgot-password`** | — | reset | ❌ **to build (§2.5)** |
-| **`POST /api/auth/reset-password`** | — | reset | ❌ **to build (§2.5)** |
+| `POST /api/auth/forgot-password` | — | reset | ✅ implemented; runtime verification pending |
+| `POST /api/auth/reset-password` | — | reset | ✅ implemented; runtime verification pending |
 | `GET /api/opportunities` | — | search | ✅ |
 | `POST /api/opportunities/search` | — | search | ✅ mock by default |
 | `GET /api/opportunities/{id_or_slug}` | — | search | ✅ keep last in file |
 | `GET /api/opportunities/stats` | — | landing | ✅ |
 | `GET /api/opportunities/trending` | — | landing | ✅ |
-| `GET /api/opportunities/{id}/apply` | — | apply | ⚠️ untracked (§4.2) |
+| `GET /api/opportunities/{id}/apply` | — | apply | ✅ public outbound redirect + click measurement |
 | `POST /api/applications` | JWT | save | ✅ idempotent |
 | `DELETE /api/applications/by-opportunity/{id}` | JWT | unsave | ✅ |
 | `GET /api/applications` | JWT | tracker | ✅ |
 | `PATCH /api/applications/{id}` | JWT | tracker | ✅ stamps `applied_at` |
 | `GET /api/applications/upcoming` | JWT | deadlines | ✅ |
-| **`POST /api/applications/apply`** | **JWT** | **apply** | ❌ **to build (§4.3)** |
-| **`POST /api/pipeline/cron/ingest`** | **admin key** | **ops** | ❌ **to build (§10.2)** |
-| **`POST /api/pipeline/cron/lifecycle`** | **admin key** | **ops** | ❌ **to build (§10.2)** |
+| `POST /api/applications/apply` | **JWT** | **apply** | ✅ implemented |
+| `POST /api/pipeline/cron/ingest` | **admin key** | **ops** | ✅ implemented; GitHub secret setup pending |
+| `POST /api/pipeline/cron/lifecycle` | **admin key** | **ops** | ✅ implemented; GitHub secret setup pending |
 | `GET /api/health` | — | ops | ✅ doubles as a warm-up ping |
 
 ## Appendix B — Decisions to record during build
 
-1. **Anonymous apply: gate it or allow it?** (§4.3 — recommendation: gate.)
+1. ~~**Anonymous apply: gate it or allow it?**~~ **Settled:** gate it. The
+   frontend preserves the visitor's return path through login, and every apply
+   is attributable to a tracker row.
 2. ~~**Deploy topology:** same-origin proxy or configurable API base?~~
    **Settled by §10.5** — the $0 stack puts the static frontend on a different
    host from the API, so `VITE_API_BASE_URL` + explicit CORS is required. (§6.7)

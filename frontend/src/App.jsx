@@ -3,7 +3,6 @@ import { useEffect } from 'react'
 import Nav from './components/Nav.jsx'
 import Footer from './components/Footer.jsx'
 import ProtectedRoute from './components/ProtectedRoute.jsx'
-import AiAssistant from './components/AiAssistant.jsx'
 
 // Pages
 import Landing from './pages/Landing.jsx'
@@ -20,7 +19,6 @@ import Tracker from './pages/Tracker.jsx'
 import Profile from './pages/Profile.jsx'
 import Settings from './pages/Settings.jsx'
 import Notifications from './pages/Notifications.jsx'
-import AiAssistantPage from './pages/AiAssistantPage.jsx'
 
 function ScrollToTop() {
   const { pathname } = useLocation()
@@ -33,7 +31,7 @@ function ScrollToTop() {
 export default function App() {
   const location = useLocation()
   
-  // Hide standard header Nav, Footer, and floating AiAssistant widget on landing & all auth/onboarding pages
+  // Hide standard header and footer on landing & all auth/onboarding pages.
   const isAuthOrLandingPage = [
     '/',
     '/login',
@@ -108,20 +106,11 @@ export default function App() {
               </ProtectedRoute>
             }
           />
-          <Route
-            path="/assistant"
-            element={
-              <ProtectedRoute>
-                <AiAssistantPage />
-              </ProtectedRoute>
-            }
-          />
           {/* Catch-all route */}
           <Route path="*" element={<Landing />} />
         </Routes>
       </main>
       {!isAuthOrLandingPage && <Footer />}
-      {!isAuthOrLandingPage && <AiAssistant />}
     </div>
   )
 }

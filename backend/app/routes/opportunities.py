@@ -188,6 +188,8 @@ def apply_redirect(opp_id: int, db: Session = Depends(get_db)):
     db.commit()
     return RedirectResponse(url=opp.apply_url, status_code=status.HTTP_307_TEMPORARY_REDIRECT)
 
+# Keep this catch-all route last: literal paths such as /stats, /search, and
+# /trending must be matched before a value can be treated as a slug.
 @router.get("/{id_or_slug}", response_model=OpportunityRead)
 def get_opportunity(id_or_slug: str, db: Session = Depends(get_db)):
     if id_or_slug.isdigit():

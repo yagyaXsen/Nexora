@@ -5,6 +5,7 @@ import { useAuth } from '../lib/auth.jsx'
 import OpportunityCard from '../components/OpportunityCard.jsx'
 import { CountUp } from '../components/CountUp.jsx'
 import { ALL_CATEGORIES, categoryLabel } from '../lib/format'
+import { useApply } from '../hooks/useApply'
 import './Dashboard.css'
 
 export default function Dashboard() {
@@ -16,6 +17,15 @@ export default function Dashboard() {
   const [stats, setStats] = useState(null)
   const [summary, setSummary] = useState(null)
   const [loading, setLoading] = useState(true)
+
+  // Applying creates/updates a tracker row, so add it to the local list too.
+  const applyHandler = useApply((opp) =>
+    setApps((prev) =>
+      prev.some((a) => a.opportunity?.id === opp.id)
+        ? prev.map((a) => (a.opportunity?.id === opp.id ? { ...a, status: 'Applied' } : a))
+        : [...prev, { opportunity: opp, status: 'Applied' }]
+    )
+  )
 
   useEffect(() => {
     let cancelled = false
@@ -219,6 +229,7 @@ export default function Dashboard() {
                           setApps([...apps, { opportunity: targetOpp, status: 'Saved' }])
                         }
                       }}
+                      onApply={applyHandler(opp, '/dashboard')}
                     />
                   ))}
                 </div>

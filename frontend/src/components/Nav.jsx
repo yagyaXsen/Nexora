@@ -59,15 +59,6 @@ export default function Nav() {
               </NavLink>
 
               <NavLink
-                to="/assistant"
-                className={({ isActive }) =>
-                  `px-3.5 py-2 rounded-xl transition-all ${isActive ? 'bg-slate-100 text-slate-950' : 'text-slate-600 hover:text-slate-950 hover:bg-slate-50'}`
-                }
-              >
-                AI Assistant
-              </NavLink>
-
-              <NavLink
                 to="/notifications"
                 className={({ isActive }) =>
                   `px-3.5 py-2 rounded-xl transition-all ${isActive ? 'bg-slate-100 text-slate-950' : 'text-slate-600 hover:text-slate-950 hover:bg-slate-50'}`
@@ -148,13 +139,6 @@ export default function Nav() {
                 className="block py-2 text-sm font-bold text-slate-800 border-b border-slate-100"
               >
                 Tracker
-              </NavLink>
-              <NavLink
-                to="/assistant"
-                onClick={() => setMobileOpen(false)}
-                className="block py-2 text-sm font-bold text-slate-800 border-b border-slate-100"
-              >
-                AI Assistant
               </NavLink>
               <NavLink
                 to="/notifications"

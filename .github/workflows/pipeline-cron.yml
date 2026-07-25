@@ -1,0 +1,28 @@
+name: Nexora pipeline cron
+
+on:
+  schedule:
+    - cron: "17 */6 * * *"
+    - cron: "43 1 * * *"
+  workflow_dispatch:
+
+jobs:
+  ingest:
+    if: github.event.schedule != '43 1 * * *'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Trigger bounded source ingest
+        run: >-
+          curl --fail --silent --show-error --request POST
+          --header "X-Admin-Key: ${{ secrets.NEXORA_ADMIN_SECRET_KEY }}"
+          "${{ secrets.NEXORA_API_URL }}/api/pipeline/cron/ingest"
+
+  lifecycle:
+    if: github.event.schedule == '43 1 * * *'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Trigger lifecycle sweep
+        run: >-
+          curl --fail --silent --show-error --request POST
+          --header "X-Admin-Key: ${{ secrets.NEXORA_ADMIN_SECRET_KEY }}"
+          "${{ secrets.NEXORA_API_URL }}/api/pipeline/cron/lifecycle"

@@ -2,6 +2,8 @@ import hashlib
 import json
 import logging
 import re
+import time
+from collections import OrderedDict
 from datetime import datetime, timedelta, timezone
 from typing import Dict, Any, Optional
 
@@ -18,10 +20,11 @@ class AIService:
         if not self.use_mock and settings.GROQ_API_KEY:
             try:
                 from groq import Groq
-                self.client = Groq(api_key=settings.GROQ_API_KEY)
+                self.client = Groq(api_key=settings.GROQ_API_KEY, timeout=settings.AI_TIMEOUT_SECONDS)
             except Exception as e:
                 logger.warning(f"Failed to initialize Groq client: {e}. Falling back to mock mode.")
                 self.use_mock = True
+        self.search_cache = OrderedDict()
 
     def extract_opportunity(self, text_content: str, source_name: str, candidate_url: str) -> OpportunityExtract:
         if self.use_mock or not self.client:
@@ -134,8 +137,16 @@ Text Content:
     }
 
     def parse_search_query(self, query: str) -> SearchIntent:
+        normalized_query = " ".join(query.lower().split())
+        cached = self.search_cache.get(normalized_query)
+        if cached and cached[0] > time.monotonic():
+            self.search_cache.move_to_end(normalized_query)
+            return cached[1]
+
+        if len(normalized_query) < settings.AI_MIN_QUERY_LENGTH_FOR_LLM:
+            return self._cache_search_intent(normalized_query, self._mock_parse_search(query))
         if self.use_mock or not self.client:
-            return self._mock_parse_search(query)
+            return self._cache_search_intent(normalized_query, self._mock_parse_search(query))
 
         categories = [c.value for c in OpportunityCategory]
         prompt = f"""
@@ -163,10 +174,22 @@ User query: "{query}"
             )
             content = chat_completion.choices[0].message.content
             parsed = json.loads(content)
-            return SearchIntent(**parsed)
+            return self._cache_search_intent(normalized_query, SearchIntent(**parsed))
         except Exception as e:
             logger.error(f"Groq search parsing failed: {e}. Falling back to mock parser.")
-            return self._mock_parse_search(query)
+            return self._cache_search_intent(normalized_query, self._mock_parse_search(query))
+
+    def _cache_search_intent(self, normalized_query: str, intent: SearchIntent) -> SearchIntent:
+        if not normalized_query:
+            return intent
+        self.search_cache[normalized_query] = (
+            time.monotonic() + settings.AI_QUERY_CACHE_TTL_SECONDS,
+            intent,
+        )
+        self.search_cache.move_to_end(normalized_query)
+        while len(self.search_cache) > settings.AI_QUERY_CACHE_MAX_ENTRIES:
+            self.search_cache.popitem(last=False)
+        return intent
 
     def _mock_parse_search(self, query: str) -> SearchIntent:
         tokens = re.findall(r"[a-z0-9]+", query.lower())

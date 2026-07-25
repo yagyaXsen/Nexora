@@ -30,6 +30,13 @@ class TokenResponse(BaseModel):
     access_token: str
     token_type: str = "bearer"
 
+class ForgotPasswordRequest(BaseModel):
+    email: EmailStr
+
+class ResetPasswordRequest(BaseModel):
+    token: str = Field(min_length=1, max_length=512)
+    password: str = Field(min_length=6, max_length=255)
+
 # ──────────────────────────────────────────────
 # Profile Schemas
 # ──────────────────────────────────────────────
@@ -309,4 +316,3 @@ class PipelineRunRead(BaseModel):
 
     class Config:
         from_attributes = True
-

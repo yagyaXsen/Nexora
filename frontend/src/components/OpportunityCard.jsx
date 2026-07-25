@@ -3,7 +3,7 @@ import { applyUrl } from '../lib/api'
 import { categoryLabel, cleanTitle, deadlineInfo, formatDate, orgSlug } from '../lib/format'
 import './OpportunityCard.css'
 
-export default function OpportunityCard({ opp, onSave, saved = false }) {
+export default function OpportunityCard({ opp, onSave, onApply, saved = false }) {
   const navigate = useNavigate()
   const dl = deadlineInfo(opp.deadline, opp.status)
   const closed = opp.status === 'expired' || opp.status === 'dead_link'
@@ -66,6 +66,7 @@ export default function OpportunityCard({ opp, onSave, saved = false }) {
           <a
             className="bg-[#0A0A0A] hover:bg-indigo-600 text-white font-bold text-xs px-4 py-2 rounded-xl flex items-center gap-1 transition-all"
             href={applyUrl(opp.id)}
+            onClick={onApply}
             target="_blank"
             rel="noopener noreferrer"
           >

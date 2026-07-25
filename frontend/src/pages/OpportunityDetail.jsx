@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import { api, applyUrl } from '../lib/api'
+import { useApply } from '../hooks/useApply'
 import { useAuth } from '../lib/auth.jsx'
 import {
   categoryLabel,
@@ -24,14 +25,6 @@ export default function OpportunityDetail() {
   const [notFound, setNotFound] = useState(false)
   const [saved, setSaved] = useState(false)
   const [saving, setSaving] = useState(false)
-
-  // Document checklist state
-  const [docChecklist, setDocChecklist] = useState({
-    cv: true,
-    sop: false,
-    transcripts: true,
-    recommendations: false,
-  })
 
   useEffect(() => {
     setOpp(null)
@@ -78,20 +71,10 @@ export default function OpportunityDetail() {
     }
   }
 
-  // Gate the apply, then record it. preventDefault only when we're redirecting to
-  // login — otherwise the <a> proceeds to the organizer regardless of whether the
-  // POST succeeds, so a backend hiccup never costs the user their application.
-  const handleApply = (e) => {
-    if (!user) {
-      e.preventDefault()
-      navigate('/login', { state: { from: `/opportunities/${idOrSlug}` } })
-      return
-    }
-    api
-      .applyToOpportunity(opp.id)
-      .then(() => setSaved(true))
-      .catch(() => {})
-  }
+  // Gate the apply, then record it. See useApply — the <a> still navigates even
+  // if the POST fails, so a backend hiccup never costs the user their application.
+  // Bound at the call site below, since `opp` is null while loading.
+  const applyHandler = useApply(() => setSaved(true))
 
   if (notFound) {
     return (
@@ -148,7 +131,6 @@ export default function OpportunityDetail() {
             {/* Badges Bar */}
             <div className="flex flex-wrap items-center gap-2 font-mono text-xs">
               <span className="bg-slate-900 text-white px-2.5 py-0.5 rounded-full font-bold uppercase">{categoryLabel(opp.category)}</span>
-              <span className="bg-indigo-50 border border-indigo-100 text-indigo-700 px-2.5 py-0.5 rounded-full font-bold">98% AI MATCH</span>
               <span className="bg-red-50 text-red-600 px-2.5 py-0.5 rounded-full font-bold">{dl.text}</span>
               {opp.country && (
                 <span className="bg-slate-50 border border-slate-200 px-2.5 py-0.5 rounded-full text-slate-700 font-bold flex items-center gap-1">
@@ -177,27 +159,6 @@ export default function OpportunityDetail() {
                 NOTICE: This opportunity signal has expired or is no longer accepting new entries.
               </div>
             )}
-
-            {/* 3. Why AI Recommended This (Transparency Section) */}
-            <section className="bg-indigo-50/50 border border-indigo-100 p-6 rounded-2xl space-y-3">
-              <div className="font-mono text-xs text-indigo-600 font-bold uppercase tracking-widest flex items-center gap-2">
-                <i className="ti ti-sparkles" /> [ WHY AI RECOMMENDED THIS PROGRAM ]
-              </div>
-              <ul className="space-y-2 font-serif text-xs text-slate-600 leading-relaxed">
-                <li className="flex items-start gap-2">
-                  <span className="text-indigo-600 font-bold">•</span>
-                  <span>Direct vector alignment with your PyTorch &amp; Robotics technical skills matrix.</span>
-                </li>
-                <li className="flex items-start gap-2">
-                  <span className="text-indigo-600 font-bold">•</span>
-                  <span>Fully eligible under Swiss passport and citizenship regulations.</span>
-                </li>
-                <li className="flex items-start gap-2">
-                  <span className="text-indigo-600 font-bold">•</span>
-                  <span>Matches your Computer Science PhD academic trajectory.</span>
-                </li>
-              </ul>
-            </section>
 
             {/* Full Program Description */}
             <section className="space-y-3 pt-6 border-t border-slate-100">
@@ -276,48 +237,12 @@ export default function OpportunityDetail() {
               )}
             </div>
 
-            {/* Eligibility Verifier Widget */}
-            <div className="bg-white border border-slate-200 p-6 rounded-3xl shadow-xl space-y-4">
-              <div className="flex items-center justify-between font-mono text-xs font-bold text-indigo-600 pb-2 border-b border-slate-200">
-                <span>ELIGIBILITY CHECKER</span>
-                <span className="text-emerald-600 font-bold">100% PASS</span>
-              </div>
-              <ul className="space-y-2 font-mono text-[11px] text-slate-500">
-                <li className="flex items-center justify-between">
-                  <span>Degree Requirement:</span>
-                  <span className="font-bold text-emerald-600">✓ PASSED</span>
-                </li>
-                <li className="flex items-center justify-between">
-                  <span>Citizenship &amp; Visa:</span>
-                  <span className="font-bold text-emerald-600">✓ PASSED</span>
-                </li>
-              </ul>
-            </div>
-
-            {/* Document Readiness Inspector */}
-            <div className="bg-white border border-slate-200 p-6 rounded-3xl shadow-xl space-y-4">
-              <div className="flex items-center justify-between font-mono text-xs font-bold text-slate-800 pb-2 border-b border-slate-200">
-                <span>DOCUMENT READINESS</span>
-                <span className="text-indigo-600">50% READY</span>
-              </div>
-              <div className="space-y-2 font-mono text-[11px] text-slate-600">
-                <label className="flex items-center gap-2 cursor-pointer">
-                  <input type="checkbox" className="rounded border-slate-300 text-indigo-600 focus:ring-indigo-500" checked={docChecklist.cv} onChange={(e) => setDocChecklist({ ...docChecklist, cv: e.target.checked })} />
-                  <span>Curriculum Vitae (PDF)</span>
-                </label>
-                <label className="flex items-center gap-2 cursor-pointer">
-                  <input type="checkbox" className="rounded border-slate-300 text-indigo-600 focus:ring-indigo-500" checked={docChecklist.sop} onChange={(e) => setDocChecklist({ ...docChecklist, sop: e.target.checked })} />
-                  <span>Statement of Purpose (SOP)</span>
-                </label>
-              </div>
-            </div>
-
             {/* Outbound Actions */}
             <div className="space-y-3">
               {!closed && (
                 <a
                   href={applyUrl(opp.id)}
-                  onClick={handleApply}
+                  onClick={applyHandler(opp, `/opportunities/${idOrSlug}`)}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="w-full bg-[#0A0A0A] hover:bg-indigo-600 text-white py-3.5 rounded-2xl font-bold text-sm transition-all flex items-center justify-center gap-2 shadow-lg"
