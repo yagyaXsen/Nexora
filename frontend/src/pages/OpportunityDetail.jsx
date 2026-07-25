@@ -55,17 +55,20 @@ export default function OpportunityDetail() {
       navigate('/login', { state: { from: `/opportunities/${idOrSlug}` } })
       return
     }
+    const previousState = saved
+    // ⚡ Instant Real-Time Optimistic UI Update
+    setSaved(!previousState)
     setSaving(true)
+
     try {
-      if (saved) {
+      if (previousState) {
         await api.unsaveOpportunity(opp.id)
-        setSaved(false)
       } else {
         await api.saveApplication(opp.id)
-        setSaved(true)
       }
     } catch {
-      /* handle error */
+      // Revert if network error
+      setSaved(previousState)
     } finally {
       setSaving(false)
     }

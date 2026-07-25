@@ -221,12 +221,26 @@ export default function Dashboard() {
                       opp={opp}
                       onSave={async (targetOpp) => {
                         const isSaved = savedSet.has(targetOpp.id)
+                        // ⚡ Instant Real-Time Optimistic UI Update
                         if (isSaved) {
-                          await api.unsaveOpportunity(targetOpp.id)
-                          setApps(apps.filter((a) => a.opportunity?.id !== targetOpp.id))
+                          setApps((prev) => prev.filter((a) => a.opportunity?.id !== targetOpp.id))
                         } else {
-                          await api.saveApplication(targetOpp.id)
-                          setApps([...apps, { opportunity: targetOpp, status: 'Saved' }])
+                          setApps((prev) => [...prev, { opportunity: targetOpp, status: 'Saved' }])
+                        }
+
+                        try {
+                          if (isSaved) {
+                            await api.unsaveOpportunity(targetOpp.id)
+                          } else {
+                            await api.saveApplication(targetOpp.id)
+                          }
+                        } catch {
+                          // Rollback on error
+                          if (isSaved) {
+                            setApps((prev) => [...prev, { opportunity: targetOpp, status: 'Saved' }])
+                          } else {
+                            setApps((prev) => prev.filter((a) => a.opportunity?.id !== targetOpp.id))
+                          }
                         }
                       }}
                       onApply={applyHandler(opp, '/dashboard')}

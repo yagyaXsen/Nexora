@@ -92,20 +92,35 @@ export default function Explore() {
       return
     }
     const isSaved = savedIds.has(opp.id)
+
+    // ⚡ Instant Real-Time Optimistic UI Update (0ms latency)
+    setSavedIds((prev) => {
+      const next = new Set(prev)
+      if (isSaved) {
+        next.delete(opp.id)
+      } else {
+        next.add(opp.id)
+      }
+      return next
+    })
+
     try {
       if (isSaved) {
         await api.unsaveOpportunity(opp.id)
-        setSavedIds((prev) => {
-          const next = new Set(prev)
-          next.delete(opp.id)
-          return next
-        })
       } else {
         await api.saveApplication(opp.id)
-        setSavedIds((prev) => new Set(prev).add(opp.id))
       }
     } catch {
-      /* idempotent safe */
+      // Revert if API fails
+      setSavedIds((prev) => {
+        const next = new Set(prev)
+        if (isSaved) {
+          next.add(opp.id)
+        } else {
+          next.delete(opp.id)
+        }
+        return next
+      })
     }
   }
 
