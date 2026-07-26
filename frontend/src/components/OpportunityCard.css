@@ -2,7 +2,33 @@
    Nexora Opportunity Card — Prism Signal Design System
    ========================================================================== */
 
-/* Clean glassmorphic card component overrides */
+/* Clean glassmorphic card component overrides with Elevation S2 -> S3 Lift */
 article.group {
-  transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+  box-shadow: var(--shadow-s1);
+  transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1),
+              box-shadow 0.3s cubic-bezier(0.16, 1, 0.3, 1),
+              border-color 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+  will-change: transform, box-shadow;
+}
+
+article.group:hover {
+  transform: translateY(-4px) scale(1.01);
+  box-shadow: var(--shadow-s3);
+  border-color: rgba(99, 102, 241, 0.3);
+}
+
+article.group:focus-within {
+  outline: 2px solid #6366f1;
+  outline-offset: 2px;
+}
+
+/* Desaturate 20% on idle, full vibrancy on hover */
+article.group img {
+  filter: grayscale(20%);
+  transition: filter 0.3s ease, transform 0.5s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+article.group:hover img {
+  filter: grayscale(0%);
+  transform: scale(1.03);
 }
