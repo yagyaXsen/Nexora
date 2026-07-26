@@ -61,7 +61,7 @@ export default function ResetPassword() {
       {/* Top Full-Width Navigation Bar */}
       <header className="w-full max-w-6xl mx-auto flex items-center justify-between pb-6 border-b border-slate-100">
         <Link to="/" className="flex items-center gap-2.5 group">
-          <div className="w-9 h-9 bg-[#0A0A0A] text-white rounded-xl flex items-center justify-center font-mono font-black text-sm shadow-sm group-hover:bg-indigo-600 transition-colors">
+          <div className="w-9 h-9 bg-[#0A0A0A] text-white rounded-xl flex items-center justify-center font-mono font-black text-sm shadow-sm">
             N
           </div>
           <span className="font-extrabold tracking-tight text-slate-950 text-lg">NEXORA</span>

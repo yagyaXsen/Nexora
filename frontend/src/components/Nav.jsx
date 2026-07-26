@@ -6,7 +6,7 @@ import './Nav.css'
 export function Logo() {
   return (
     <Link to="/" className="flex items-center gap-2 text-[#0A0A0A] font-extrabold tracking-tight text-base group">
-      <div className="w-7 h-7 bg-[#0A0A0A] text-white rounded-lg flex items-center justify-center text-xs font-mono font-extrabold shadow-sm group-hover:bg-indigo-600 transition-colors">
+      <div className="w-7 h-7 bg-[#0A0A0A] text-white rounded-lg flex items-center justify-center text-xs font-mono font-extrabold shadow-sm">
         N
       </div>
       <span className="font-extrabold tracking-tight">NEXORA</span>
