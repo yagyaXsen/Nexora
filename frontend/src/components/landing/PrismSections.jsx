@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
+import { CountUp } from '../CountUp.jsx'
 
 function formatMetric(value) {
   if (value == null) return '—'
@@ -18,6 +19,9 @@ function PrismSectionIntro({ eyebrow, title, children, align = 'left' }) {
 
 export function ProofSection({ stats }) {
   const categoryCount = stats?.categories_breakdown ? Object.keys(stats.categories_breakdown).length : null
+  const totalOpps = stats?.total_opportunities || 56
+  const activeCount = stats?.active_count || 55
+  const catCount = categoryCount || 10
 
   return (
     <section className="prism-proof" aria-label="Global reach and case study">
@@ -25,15 +29,15 @@ export function ProofSection({ stats }) {
         <PrismSectionIntro eyebrow="Global reach" title="The internet is wide. Your attention is not." />
         <div className="prism-proof__metrics">
           <div className="prism-metric">
-            <strong>{formatMetric(stats?.total_opportunities || 56)}</strong>
+            <strong><CountUp end={totalOpps} /></strong>
             <span className="prism-mono">Indexed opportunities</span>
           </div>
           <div className="prism-metric">
-            <strong>{formatMetric(stats?.active_count || 55)}</strong>
+            <strong><CountUp end={activeCount} /></strong>
             <span className="prism-mono">Live signals</span>
           </div>
           <div className="prism-metric prism-metric--accent">
-            <strong>{formatMetric(categoryCount || 10)}</strong>
+            <strong><CountUp end={catCount} /></strong>
             <span className="prism-mono">Signal categories</span>
           </div>
         </div>
