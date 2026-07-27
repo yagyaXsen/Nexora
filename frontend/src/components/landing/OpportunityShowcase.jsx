@@ -197,12 +197,7 @@ export default function OpportunityShowcase() {
             onMouseMove={(e) => handleMouseMove(e, featuredOpportunity.id)}
             onMouseEnter={() => setHoveredCardId(featuredOpportunity.id)}
             onMouseLeave={() => setHoveredCardId(null)}
-            className="lg:col-span-7 bg-white/80 backdrop-blur-2xl border border-white/80 rounded-[32px] p-6 md:p-8 shadow-[0_20px_50px_rgba(0,0,0,0.06)] hover:shadow-[0_30px_70px_rgba(37,99,235,0.12)] transition-all duration-500 relative overflow-hidden group"
-            style={{
-              background: hoveredCardId === featuredOpportunity.id
-                ? `radial-gradient(circle at ${mousePos.x}px ${mousePos.y}px, rgba(59,130,246,0.08), rgba(255,255,255,0.85) 60%)`
-                : undefined
-            }}
+            className="lg:col-span-7 bg-white/80 backdrop-blur-2xl border border-white/80 rounded-[32px] p-6 md:p-8 shadow-[0_20px_50px_rgba(0,0,0,0.06)] hover:shadow-xl transition-all duration-500 relative overflow-hidden group"
           >
             {/* Top Badges Row */}
             <div className="flex items-center justify-between gap-3 mb-6 relative z-10">
@@ -313,7 +308,7 @@ export default function OpportunityShowcase() {
                 href={featuredOpportunity.url}
                 target="_blank"
                 rel="noreferrer"
-                className="flex items-center gap-2 bg-slate-900 text-white font-bold text-xs md:text-sm px-6 py-3 rounded-xl hover:bg-blue-600 transition-all shadow-md group-hover:translate-x-1"
+                className="flex items-center gap-2 bg-[#0A0A0A] hover:bg-slate-800 text-white font-extrabold text-xs md:text-sm px-6 py-3.5 rounded-xl transition-all shadow-md active:scale-98"
               >
                 <span>View Opportunity</span>
                 <ArrowRight size={15} className="group-hover:translate-x-1 transition-transform" />
@@ -334,12 +329,7 @@ export default function OpportunityShowcase() {
                 onMouseMove={(e) => handleMouseMove(e, opp.id)}
                 onMouseEnter={() => setHoveredCardId(opp.id)}
                 onMouseLeave={() => setHoveredCardId(null)}
-                className="bg-white/80 backdrop-blur-2xl border border-white/80 rounded-[28px] p-6 shadow-[0_15px_35px_rgba(0,0,0,0.04)] hover:shadow-[0_25px_50px_rgba(37,99,235,0.1)] transition-all duration-300 relative overflow-hidden group"
-                style={{
-                  background: hoveredCardId === opp.id
-                    ? `radial-gradient(circle at ${mousePos.x}px ${mousePos.y}px, rgba(59,130,246,0.08), rgba(255,255,255,0.85) 60%)`
-                    : undefined
-                }}
+                className="bg-white/80 backdrop-blur-2xl border border-white/80 rounded-[28px] p-6 shadow-[0_15px_35px_rgba(0,0,0,0.04)] hover:shadow-xl transition-all duration-300 relative overflow-hidden group"
               >
                 <div className="flex items-start justify-between gap-3 mb-4">
                   <div className="flex items-center gap-2">
