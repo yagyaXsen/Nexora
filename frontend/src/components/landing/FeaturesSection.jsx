@@ -143,14 +143,14 @@ export default function FeaturesSection() {
                     <button
                       key={f.id}
                       onClick={() => scrollToFeature(f.id)}
-                      className={`text-left px-5 py-4 rounded-2xl transition-all duration-300 font-bold text-sm border backdrop-blur-md flex items-center justify-between ${
+                      className={`text-left px-5 py-4 rounded-2xl transition-all duration-300 font-bold text-sm border flex items-center justify-between ${
                         isActive 
-                          ? 'bg-indigo-600/30 border-indigo-500/60 text-white shadow-lg shadow-indigo-950/50 scale-[1.02]' 
-                          : 'bg-slate-900/50 border-slate-800/80 text-slate-400 hover:text-slate-200 hover:bg-slate-800/50'
+                          ? 'bg-slate-800/90 border-slate-700 text-white shadow-md' 
+                          : 'bg-slate-900/40 border-slate-800/80 text-slate-400 hover:text-slate-200 hover:bg-slate-800/40'
                       }`}
                     >
                       <span>{f.title}</span>
-                      <span className={`w-2 h-2 rounded-full transition-all ${isActive ? 'bg-indigo-400 scale-125' : 'bg-transparent'}`} />
+                      <span className={`w-2 h-2 rounded-full transition-all ${isActive ? 'bg-white scale-125' : 'bg-transparent'}`} />
                     </button>
                   )
                 })}
