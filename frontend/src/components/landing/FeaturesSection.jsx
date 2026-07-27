@@ -1,4 +1,5 @@
 import { useEffect, useState, useRef } from 'react'
+import { CheckCircle2, ArrowUpRight, Sparkles } from 'lucide-react'
 
 const features = [
   {
@@ -90,7 +91,7 @@ export default function FeaturesSection() {
           setActiveFeature(entry.target.id)
         }
       })
-    }, { threshold: 0.5 })
+    }, { threshold: 0.6 })
 
     const revealObserver = new IntersectionObserver((entries) => {
       entries.forEach((entry) => {
@@ -121,14 +122,17 @@ export default function FeaturesSection() {
   }
 
   return (
-    <section className="relative bg-[#090D16] text-white">
-      {/* Dark Ambient Radial Lighting */}
-      <div className="absolute top-1/2 left-1/4 w-[600px] h-[600px] bg-indigo-900/10 rounded-full blur-[150px] pointer-events-none" />
+    <section className="relative bg-black text-white">
+      {/* Fixed Background Image Texture */}
+      <div 
+        className="absolute inset-0 z-0 bg-cover bg-center opacity-30 pointer-events-none"
+        style={{ backgroundImage: `url('https://images.higgs.ai/?default=1&output=webp&url=https%3A%2F%2Fd8j0ntlcm91z4.cloudfront.net%2Fuser_38xzZboKViGWJOttwIXH07lWA1P%2Fhf_20260709_082449_46df5cc4-ad98-4541-9236-a2659c1478a4.png&w=1920&q=85')` }}
+      />
       
       <div className="relative z-10 px-5 md:px-10 lg:px-16 py-20 md:py-40 lg:py-48 max-w-7xl mx-auto">
         <div className="lg:grid lg:grid-cols-[400px_1fr] xl:grid-cols-[460px_1fr] lg:gap-24 xl:gap-48 items-start">
           
-          {/* Left Column - Original Full-Screen Sticky Viewport Effect */}
+          {/* Left Column - Sticky on Desktop */}
           <div className="hidden lg:flex lg:sticky lg:top-0 lg:h-screen lg:flex-col lg:justify-between lg:py-32">
             <div>
               <h2 className="text-white text-2xl sm:text-3xl lg:text-[46px] leading-[1.2] font-normal mb-12">
@@ -136,27 +140,17 @@ export default function FeaturesSection() {
               </h2>
               
               <div className="flex flex-col gap-3">
-                {features.map((f) => {
-                  const isActive = activeFeature === f.id
-                  return (
-                    <button
-                      key={f.id}
-                      onClick={() => scrollToFeature(f.id)}
-                      className={`text-left px-6 py-4 rounded-2xl transition-all duration-300 font-bold text-sm flex items-center justify-between border backdrop-blur-md ${
-                        isActive 
-                          ? 'bg-gradient-to-r from-indigo-950 via-slate-900 to-indigo-900 border-2 border-indigo-500 text-white shadow-xl shadow-indigo-950/60 translate-x-1.5' 
-                          : 'bg-slate-950/60 border-slate-800/80 text-slate-400 hover:text-slate-100 hover:bg-slate-900/80 hover:border-slate-700'
-                      }`}
-                    >
-                      <span>{f.title}</span>
-                      <span className={`w-2.5 h-2.5 rounded-full transition-all duration-300 ${
-                        isActive 
-                          ? 'bg-indigo-400 shadow-[0_0_10px_#818cf8] scale-110' 
-                          : 'bg-slate-800'
-                      }`} />
-                    </button>
-                  )
-                })}
+                {features.map((f) => (
+                  <button
+                    key={f.id}
+                    onClick={() => scrollToFeature(f.id)}
+                    className={`text-left px-5 py-4 rounded-2xl transition-all duration-300 font-medium ${
+                      activeFeature === f.id ? 'bg-black/20 text-white' : 'bg-black/20 text-white/40 hover:text-white/80'
+                    }`}
+                  >
+                    {f.title}
+                  </button>
+                ))}
               </div>
             </div>
 
@@ -184,7 +178,7 @@ export default function FeaturesSection() {
                 key={f.id}
                 id={f.id}
                 ref={el => cardRefs.current[index] = el}
-                className={`bg-slate-900/80 backdrop-blur-md rounded-3xl p-6 md:p-10 flex flex-col gap-6 transition-all duration-700 ease-out border border-slate-800 shadow-2xl ${
+                className={`bg-black/20 backdrop-blur-sm rounded-3xl p-6 md:p-10 flex flex-col gap-6 transition-all duration-700 ease-out border border-white/10 ${
                   revealed[f.id] ? 'opacity-100 translate-x-0' : 'opacity-0 translate-x-16'
                 }`}
               >
