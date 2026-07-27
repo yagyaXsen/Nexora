@@ -27,15 +27,17 @@ class AIService:
         self.search_cache = OrderedDict()
 
     def is_invalid_junk_url(self, url: str, text: str) -> bool:
-        """Reject forum threads, news articles, social discussions, and non-opportunity URLs."""
+        """Reject blog articles, shell tutorials, forum threads, news articles, and non-opportunity URLs."""
         url_lower = (url or "").lower()
+        text_lower = (text or "").lower()
+
         junk_domains = [
             'forum', 'rubyforum', 'discourse', 'reddit.com', 'news.ycombinator.com', 
             'twitter.com', 'x.com', 'facebook.com', 'quora.com', 'stackoverflow.com',
             'wsj.com', 'techcrunch.com', 'bloomberg.com', 'forbes.com', 'nytimes.com',
-            'reuters.com', 'cnbc.com', 'medium.com'
+            'reuters.com', 'cnbc.com', 'medium.com', 'refp.se', 'sublimehq.com', 'github.blog'
         ]
-        junk_patterns = ['/t/', '/topic/', '/comments/', '/thread/', '/discussion/', '/viewtopic', '/tech/', '/article/']
+        junk_patterns = ['/t/', '/topic/', '/comments/', '/thread/', '/discussion/', '/viewtopic', '/tech/', '/article/', '/articles/', '/blog/', '/post/']
         
         for domain in junk_domains:
             if domain in url_lower:
@@ -43,6 +45,18 @@ class AIService:
         for pat in junk_patterns:
             if pat in url_lower:
                 return True
+
+        # Mandatory Opportunity Signals: Must contain at least one real opportunity keyword
+        opportunity_keywords = [
+            'fellowship', 'grant', 'scholarship', 'accelerator', 'stipend', 
+            'call for applications', 'call for proposals', 'apply now', 
+            'funding', 'award', 'residency', 'studentship', 'cohort', 'incubation'
+        ]
+        
+        has_opportunity_keyword = any(kw in text_lower or kw in url_lower for kw in opportunity_keywords)
+        if not has_opportunity_keyword:
+            return True
+
         return False
 
     def extract_opportunity(self, text_content: str, source_name: str, candidate_url: str) -> OpportunityExtract:
