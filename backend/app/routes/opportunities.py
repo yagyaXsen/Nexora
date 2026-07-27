@@ -26,6 +26,7 @@ def list_opportunities(
 ):
     query = db.query(Opportunity).filter(
         Opportunity.needs_review == False,
+        Opportunity.confidence >= 0.85,
         ~Opportunity.organizer.ilike("%Y Combinator News%"),
         ~Opportunity.title.ilike("%ruby%"),
         ~Opportunity.title.ilike("%shell colon%")
@@ -99,6 +100,7 @@ def ai_search(payload: SearchRequest, db: Session = Depends(get_db)):
 
     base = db.query(Opportunity).filter(
         Opportunity.needs_review == False,
+        Opportunity.confidence >= 0.85,
         ~Opportunity.organizer.ilike("%Y Combinator News%"),
         ~Opportunity.title.ilike("%ruby%"),
         ~Opportunity.title.ilike("%shell colon%"),
