@@ -18,10 +18,6 @@ export default function PrismFooter() {
           <a href="/privacy" className="hover:text-white transition-colors">Privacy Policy</a>
         </div>
 
-        <div className="flex items-center gap-2">
-          <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-          <span className="text-slate-300 font-mono font-semibold">System Operational</span>
-        </div>
 
       </div>
     </footer>
