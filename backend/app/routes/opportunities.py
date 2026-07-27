@@ -29,7 +29,9 @@ def list_opportunities(
         Opportunity.confidence >= 0.85,
         ~Opportunity.organizer.ilike("%Y Combinator News%"),
         ~Opportunity.title.ilike("%ruby%"),
-        ~Opportunity.title.ilike("%shell colon%")
+        ~Opportunity.title.ilike("%shell colon%"),
+        ~Opportunity.title.ilike("Stories%"),
+        ~Opportunity.title.ilike("About%")
     )
 
     if status:
@@ -104,6 +106,8 @@ def ai_search(payload: SearchRequest, db: Session = Depends(get_db)):
         ~Opportunity.organizer.ilike("%Y Combinator News%"),
         ~Opportunity.title.ilike("%ruby%"),
         ~Opportunity.title.ilike("%shell colon%"),
+        ~Opportunity.title.ilike("Stories%"),
+        ~Opportunity.title.ilike("About%"),
         Opportunity.status.in_([OpportunityStatus.ACTIVE.value, OpportunityStatus.EXPIRING_SOON.value])
     )
 

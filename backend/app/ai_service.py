@@ -37,7 +37,7 @@ class AIService:
             'wsj.com', 'techcrunch.com', 'bloomberg.com', 'forbes.com', 'nytimes.com',
             'reuters.com', 'cnbc.com', 'medium.com', 'refp.se', 'sublimehq.com', 'github.blog'
         ]
-        junk_patterns = ['/t/', '/topic/', '/comments/', '/thread/', '/discussion/', '/viewtopic', '/tech/', '/article/', '/articles/', '/blog/', '/post/']
+        junk_patterns = ['/t/', '/topic/', '/comments/', '/thread/', '/discussion/', '/viewtopic', '/tech/', '/article/', '/articles/', '/blog/', '/post/', '/stories', '/about', '/privacy', '/terms', '/faq', '/contact']
         
         for domain in junk_domains:
             if domain in url_lower:

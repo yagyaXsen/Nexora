@@ -26,9 +26,12 @@ export function deadlineInfo(iso, status) {
   return { text: `${d} days left`, tone: 'green' }
 }
 
-/** Some scraped titles arrive with a "Title: " prefix — strip it for display. */
+/** Some scraped titles arrive with a "Title: " or HTML nav prefix — strip it for display. */
 export function cleanTitle(title) {
-  return (title ?? '').replace(/^title:\s*/i, '')
+  if (!title) return ''
+  let text = String(title).replace(/^title:\s*/i, '').trim()
+  text = text.replace(/^(Stories|About|Home|Search|Contact|Menu|Navigation)\s*/i, '').trim()
+  return text
 }
 
 export function orgSlug(organizer) {
