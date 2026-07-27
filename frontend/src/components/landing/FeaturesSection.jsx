@@ -122,15 +122,15 @@ export default function FeaturesSection() {
   }
 
   return (
-    <section className="relative bg-[#0A0E1A] text-white overflow-hidden">
+    <section className="relative bg-[#0A0E1A] text-white">
       {/* Ambient Deep Navy / Indigo Glow */}
       <div className="absolute top-1/2 left-1/4 -translate-y-1/2 w-[700px] h-[700px] bg-indigo-900/20 rounded-full blur-[160px] pointer-events-none" />
       
-      <div className="relative z-10 px-5 md:px-10 lg:px-16 py-20 md:py-40 lg:py-48 max-w-7xl mx-auto">
-        <div className="lg:grid lg:grid-cols-[400px_1fr] xl:grid-cols-[460px_1fr] lg:gap-24 xl:gap-48 items-start">
+      <div className="relative z-10 px-5 md:px-10 lg:px-16 py-24 md:py-36 max-w-7xl mx-auto">
+        <div className="lg:grid lg:grid-cols-[400px_1fr] xl:grid-cols-[460px_1fr] lg:gap-24 xl:gap-36 items-start">
           
-          {/* Left Column - Sticky on Desktop with Navbar Clearance */}
-          <div className="hidden lg:flex lg:sticky lg:top-24 lg:h-[calc(100vh-8rem)] lg:flex-col lg:justify-between py-4">
+          {/* Left Column - Pinned Sticky Panel */}
+          <div className="hidden lg:flex lg:sticky lg:top-28 lg:self-start lg:flex-col lg:justify-between space-y-12">
             <div>
               <h2 className="text-white text-2xl sm:text-3xl lg:text-[44px] leading-[1.2] font-extrabold tracking-tight mb-10">
                 Software that flows with your ambition, not over it
@@ -143,13 +143,14 @@ export default function FeaturesSection() {
                     <button
                       key={f.id}
                       onClick={() => scrollToFeature(f.id)}
-                      className={`text-left px-5 py-4 rounded-2xl transition-all duration-300 font-bold text-sm border backdrop-blur-md ${
+                      className={`text-left px-5 py-4 rounded-2xl transition-all duration-300 font-bold text-sm border backdrop-blur-md flex items-center justify-between ${
                         isActive 
-                          ? 'bg-indigo-600/20 border-indigo-500/50 text-white shadow-md' 
-                          : 'bg-slate-900/40 border-slate-800/60 text-slate-400 hover:text-slate-200 hover:bg-slate-800/40'
+                          ? 'bg-indigo-600/30 border-indigo-500/60 text-white shadow-lg shadow-indigo-950/50 scale-[1.02]' 
+                          : 'bg-slate-900/50 border-slate-800/80 text-slate-400 hover:text-slate-200 hover:bg-slate-800/50'
                       }`}
                     >
-                      {f.title}
+                      <span>{f.title}</span>
+                      <span className={`w-2 h-2 rounded-full transition-all ${isActive ? 'bg-indigo-400 scale-125' : 'bg-transparent'}`} />
                     </button>
                   )
                 })}
@@ -169,8 +170,8 @@ export default function FeaturesSection() {
             </div>
           </div>
 
-          {/* Right Column - Scrolling Cards with Reveal Motion */}
-          <div className="flex flex-col gap-12 md:gap-24">
+          {/* Right Column - Sequential Scrolling Opportunity Cards */}
+          <div className="flex flex-col gap-24 lg:gap-36">
             <h2 className="text-white text-2xl sm:text-3xl leading-[1.2] font-normal lg:hidden mb-8">
               Software that flows with your ambition, not over it
             </h2>
