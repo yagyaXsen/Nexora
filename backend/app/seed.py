@@ -7,14 +7,6 @@ logger = logging.getLogger("seed")
 
 SEED_SOURCES = [
     {
-        "name": "Devpost Hackathons",
-        "type": SourceType.RSS.value,
-        "url": "https://devpost.com/rss",
-        "config": {"category_hint": "competition"},
-        "enabled": True,
-        "schedule": "daily"
-    },
-    {
         "name": "TechCrunch Startups & Grants",
         "type": SourceType.RSS.value,
         "url": "https://feeds.feedburner.com/TechCrunch/startups",
