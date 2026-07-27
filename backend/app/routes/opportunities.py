@@ -24,7 +24,12 @@ def list_opportunities(
     page_size: int = Query(20, ge=1, le=100, description="Items per page"),
     db: Session = Depends(get_db)
 ):
-    query = db.query(Opportunity).filter(Opportunity.needs_review == False)
+    query = db.query(Opportunity).filter(
+        Opportunity.needs_review == False,
+        ~Opportunity.organizer.ilike("%Y Combinator News%"),
+        ~Opportunity.title.ilike("%ruby%"),
+        ~Opportunity.title.ilike("%shell colon%")
+    )
 
     if status:
         query = query.filter(Opportunity.status == status)
@@ -94,6 +99,9 @@ def ai_search(payload: SearchRequest, db: Session = Depends(get_db)):
 
     base = db.query(Opportunity).filter(
         Opportunity.needs_review == False,
+        ~Opportunity.organizer.ilike("%Y Combinator News%"),
+        ~Opportunity.title.ilike("%ruby%"),
+        ~Opportunity.title.ilike("%shell colon%"),
         Opportunity.status.in_([OpportunityStatus.ACTIVE.value, OpportunityStatus.EXPIRING_SOON.value])
     )
 
