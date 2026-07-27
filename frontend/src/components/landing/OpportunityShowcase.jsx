@@ -293,14 +293,14 @@ export default function OpportunityShowcase() {
             </div>
 
             {/* AI Insights Panel */}
-            <div className="bg-slate-900 border border-slate-800 text-white rounded-2xl p-4 mb-6 relative z-10 space-y-2">
-              <p className="text-xs font-bold uppercase tracking-wider text-indigo-400 flex items-center gap-1.5 font-mono">
-                <ShieldCheck size={14} className="text-indigo-400" /> AI Match Rationale
+            <div className="bg-slate-50/80 border border-slate-200 rounded-2xl p-4 mb-6 relative z-10 space-y-2.5">
+              <p className="text-xs font-extrabold uppercase tracking-wider text-indigo-950 flex items-center gap-1.5 font-mono">
+                <ShieldCheck size={14} className="text-indigo-950" /> AI Match Rationale
               </p>
               <div className="space-y-1.5">
                 {featuredOpportunity.aiInsights.map((insight, idx) => (
-                  <p key={idx} className="text-xs font-medium text-slate-700 flex items-center gap-2">
-                    <CheckCircle2 size={13} className="text-emerald-600 shrink-0" />
+                  <p key={idx} className="text-xs font-medium text-slate-800 flex items-center gap-2">
+                    <CheckCircle2 size={14} className="text-emerald-600 shrink-0" />
                     <span>{insight}</span>
                   </p>
                 ))}
