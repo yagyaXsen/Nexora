@@ -210,7 +210,7 @@ export default function OpportunityShowcase() {
                 <span className="w-8 h-8 rounded-lg bg-slate-900 text-white flex items-center justify-center text-xs font-mono font-bold shadow-xs">
                   {featuredOpportunity.logoText}
                 </span>
-                <span className="text-xs font-bold uppercase tracking-wider text-blue-700 bg-blue-50 border border-blue-200 px-3 py-1 rounded-full">
+                <span className="text-xs font-bold uppercase tracking-wider text-indigo-950 bg-indigo-50 border border-indigo-200 px-3 py-1 rounded-full font-mono">
                   {featuredOpportunity.category}
                 </span>
               </div>
@@ -227,7 +227,7 @@ export default function OpportunityShowcase() {
                   onClick={(e) => toggleSave(e, featuredOpportunity.id)}
                   className={`w-9 h-9 rounded-full border flex items-center justify-center transition-all ${
                     savedIds.has(featuredOpportunity.id)
-                      ? 'bg-blue-600 border-blue-600 text-white shadow-md'
+                      ? 'bg-slate-950 border-slate-950 text-white shadow-md'
                       : 'bg-white border-slate-200 text-slate-400 hover:text-slate-900'
                   }`}
                 >
@@ -250,7 +250,7 @@ export default function OpportunityShowcase() {
 
             {/* Title & Vector Metadata */}
             <div className="relative z-10 mb-6">
-              <h3 className="text-2xl md:text-3xl font-extrabold text-slate-900 mb-4 group-hover:text-blue-600 transition-colors leading-snug">
+              <h3 className="text-2xl md:text-3xl font-extrabold text-slate-900 mb-4 group-hover:text-indigo-950 transition-colors leading-snug">
                 {featuredOpportunity.title}
               </h3>
 
@@ -280,22 +280,22 @@ export default function OpportunityShowcase() {
             </div>
 
             {/* Deadline Progress Bar */}
-            <div className="bg-slate-50 border border-slate-200/80 rounded-xl p-4 mb-6 relative z-10">
+            <div className="bg-slate-50 border border-slate-200/80 rounded-2xl p-4 mb-6 relative z-10">
               <div className="flex items-center justify-between text-xs font-bold text-slate-700 mb-2">
-                <span className="flex items-center gap-1.5 text-amber-700">
-                  <Clock size={13} /> {featuredOpportunity.deadlineDays} Days Remaining
+                <span className="flex items-center gap-1.5 text-indigo-950 font-extrabold">
+                  <Clock size={13} className="text-indigo-950" /> {featuredOpportunity.deadlineDays} Days Remaining
                 </span>
                 <span className="text-slate-500 font-mono">72% Completed</span>
               </div>
               <div className="w-full h-2 bg-slate-200 rounded-full overflow-hidden">
-                <div className="h-full bg-gradient-to-r from-blue-500 to-indigo-600 rounded-full w-[72%]" />
+                <div className="h-full bg-gradient-to-r from-slate-950 via-indigo-950 to-slate-900 rounded-full w-[72%]" />
               </div>
             </div>
 
             {/* AI Insights Panel */}
-            <div className="bg-blue-50/70 border border-blue-200/80 rounded-2xl p-4 mb-6 relative z-10">
-              <p className="text-xs font-bold uppercase tracking-wider text-blue-800 mb-2 flex items-center gap-1.5">
-                <ShieldCheck size={14} className="text-blue-600" /> AI Match Rationale
+            <div className="bg-slate-900 border border-slate-800 text-white rounded-2xl p-4 mb-6 relative z-10 space-y-2">
+              <p className="text-xs font-bold uppercase tracking-wider text-indigo-400 flex items-center gap-1.5 font-mono">
+                <ShieldCheck size={14} className="text-indigo-400" /> AI Match Rationale
               </p>
               <div className="space-y-1.5">
                 {featuredOpportunity.aiInsights.map((insight, idx) => (
@@ -346,7 +346,7 @@ export default function OpportunityShowcase() {
                     <span className="w-6 h-6 rounded-md bg-slate-900 text-white flex items-center justify-center text-[10px] font-mono font-bold">
                       {opp.logoText}
                     </span>
-                    <span className="text-xs font-bold uppercase tracking-wider text-blue-700 bg-blue-50 border border-blue-200 px-2.5 py-0.5 rounded-full">
+                    <span className="text-xs font-bold uppercase tracking-wider text-indigo-950 bg-indigo-50 border border-indigo-200 px-2.5 py-0.5 rounded-full font-mono">
                       {opp.category}
                     </span>
                   </div>
@@ -358,7 +358,7 @@ export default function OpportunityShowcase() {
                     <button
                       onClick={(e) => toggleSave(e, opp.id)}
                       className={`w-7 h-7 rounded-full border flex items-center justify-center transition-all ${
-                        savedIds.has(opp.id) ? 'bg-blue-600 border-blue-600 text-white' : 'bg-white border-slate-200 text-slate-400'
+                        savedIds.has(opp.id) ? 'bg-slate-950 border-slate-950 text-white' : 'bg-white border-slate-200 text-slate-400'
                       }`}
                     >
                       <Bookmark size={12} fill={savedIds.has(opp.id) ? 'currentColor' : 'none'} />
@@ -371,7 +371,7 @@ export default function OpportunityShowcase() {
                     <img src={opp.image} alt={opp.title} className="w-full h-full object-cover" />
                   </div>
                   <div>
-                    <h4 className="text-base font-extrabold text-slate-900 group-hover:text-blue-600 transition-colors leading-snug line-clamp-2">
+                    <h4 className="text-base font-extrabold text-slate-900 group-hover:text-indigo-950 transition-colors leading-snug line-clamp-2">
                       {opp.title}
                     </h4>
                     <p className="text-xs text-slate-500 font-semibold mt-1">{opp.organization}</p>
@@ -387,7 +387,7 @@ export default function OpportunityShowcase() {
                     href={opp.url}
                     target="_blank"
                     rel="noreferrer"
-                    className="flex items-center gap-1 font-bold text-slate-900 hover:text-blue-600 transition-colors"
+                    className="flex items-center gap-1 font-extrabold text-slate-950 hover:text-indigo-950 transition-colors"
                   >
                     <span>View Call</span>
                     <ArrowRight size={13} />
