@@ -19,6 +19,7 @@ import Tracker from './pages/Tracker.jsx'
 import Profile from './pages/Profile.jsx'
 import Settings from './pages/Settings.jsx'
 import Notifications from './pages/Notifications.jsx'
+import AiAssistantPage from './pages/AiAssistantPage.jsx'
 
 function ScrollToTop() {
   const { pathname } = useLocation()
@@ -48,9 +49,24 @@ export default function App() {
       <main style={{ flex: 1 }}>
         <Routes>
           <Route path="/" element={<Landing />} />
-          <Route path="/explore" element={<Explore />} />
-          <Route path="/opportunities/:idOrSlug" element={<OpportunityDetail />} />
+          <Route
+            path="/explore"
+            element={
+              <ProtectedRoute>
+                <Explore />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/opportunities/:idOrSlug"
+            element={
+              <ProtectedRoute>
+                <OpportunityDetail />
+              </ProtectedRoute>
+            }
+          />
           <Route path="/organizations/:slug" element={<OrganizationDetail />} />
+          <Route path="/ai-assistant" element={<AiAssistantPage />} />
           
           {/* Auth Routes */}
           <Route path="/login" element={<Login />} />
@@ -58,11 +74,12 @@ export default function App() {
           <Route path="/forgot-password" element={<ForgotPassword />} />
           <Route path="/reset-password" element={<ResetPassword />} />
 
+          {/* Phase 2: Onboarding (Deferred for Phase 1 launch - directs to Dashboard) */}
           <Route
             path="/onboarding"
             element={
               <ProtectedRoute>
-                <Onboarding />
+                <Dashboard />
               </ProtectedRoute>
             }
           />

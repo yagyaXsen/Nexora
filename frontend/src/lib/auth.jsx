@@ -9,16 +9,30 @@ export function AuthProvider({ children }) {
 
   // Restore session on mount if a token exists
   useEffect(() => {
-    if (!getToken()) return
+    if (!getToken()) {
+      setLoading(false)
+      return
+    }
     api
       .me()
       .then(setUser)
-      .catch(() => clearToken())
+      .catch(() => {
+        clearToken()
+        setUser(null)
+      })
       .finally(() => setLoading(false))
   }, [])
 
   const login = useCallback(async (email, password) => {
     const { access_token } = await api.login(email, password)
+    setToken(access_token)
+    const me = await api.me()
+    setUser(me)
+    return me
+  }, [])
+
+  const loginWithGoogle = useCallback(async (payload) => {
+    const { access_token } = await api.loginWithGoogle(payload)
     setToken(access_token)
     const me = await api.me()
     setUser(me)
@@ -33,9 +47,15 @@ export function AuthProvider({ children }) {
     [login]
   )
 
-  const logout = useCallback(() => {
-    clearToken()
-    setUser(null)
+  const logout = useCallback(async () => {
+    try {
+      await api.logout()
+    } catch {
+      /* non-fatal */
+    } finally {
+      clearToken()
+      setUser(null)
+    }
   }, [])
 
   const refresh = useCallback(async () => {
@@ -45,7 +65,7 @@ export function AuthProvider({ children }) {
   }, [])
 
   return (
-    <AuthContext.Provider value={{ user, loading, login, signup, logout, refresh }}>
+    <AuthContext.Provider value={{ user, loading, login, signup, logout, refresh, loginWithGoogle }}>
       {children}
     </AuthContext.Provider>
   )

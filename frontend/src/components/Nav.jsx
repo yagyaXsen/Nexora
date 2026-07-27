@@ -1,15 +1,14 @@
 import { useState } from 'react'
 import { Link, NavLink } from 'react-router-dom'
 import { useAuth } from '../lib/auth.jsx'
+import { NexoraLogoIcon } from './common/NexoraLogo.jsx'
 import './Nav.css'
 
 export function Logo() {
   return (
-    <Link to="/" className="flex items-center gap-2 text-[#0A0A0A] font-extrabold tracking-tight text-base group">
-      <div className="w-7 h-7 bg-[#0A0A0A] text-white rounded-lg flex items-center justify-center text-xs font-mono font-extrabold shadow-sm">
-        N
-      </div>
-      <span className="font-extrabold tracking-tight">NEXORA</span>
+    <Link to="/" className="flex items-center gap-2.5 text-slate-950 font-extrabold tracking-tight text-lg group">
+      <NexoraLogoIcon className="w-8 h-8 shadow-xs group-hover:scale-105 transition-transform" fillSquare="#000000" fillN="#FFFFFF" />
+      <span className="font-extrabold tracking-tight text-slate-950">Nexora</span>
     </Link>
   )
 }

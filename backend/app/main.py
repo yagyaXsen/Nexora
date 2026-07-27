@@ -74,6 +74,7 @@ app.add_middleware(
 # ── Routes ─────────────────────────────────────────────────────────────────────
 
 app.include_router(auth.router)
+app.include_router(auth.legacy_router)
 app.include_router(profile.router)
 app.include_router(notifications.router)
 app.include_router(organizations.router)

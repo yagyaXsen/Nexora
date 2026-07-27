@@ -70,7 +70,13 @@ export const api = {
     request('/api/auth/register', { method: 'POST', body: { name, email, password } }),
   login: (email, password) =>
     request('/api/auth/login', { method: 'POST', form: { username: email, password } }),
+  loginWithGoogle: (payload) =>
+    request('/api/auth/google', {
+      method: 'POST',
+      body: typeof payload === 'string' ? { credential: payload } : payload,
+    }),
   me: () => request('/api/auth/me'),
+  logout: () => request('/api/auth/logout', { method: 'POST' }),
   updateMe: (payload) => request('/api/auth/me', { method: 'PATCH', body: payload }),
   deleteMe: () => request('/api/auth/me', { method: 'DELETE' }),
   forgotPassword: (email) =>

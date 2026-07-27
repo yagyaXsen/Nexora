@@ -1,37 +1,32 @@
 import { useState } from 'react'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
+import { useGoogleLogin } from '@react-oauth/google'
 import { useAuth } from '../lib/auth.jsx'
 import { api } from '../lib/api'
-import { AtomIcon, SchoolIcon, RocketIcon, BriefcaseIcon } from '../components/common/Icons.jsx'
 import './Auth.css'
-
-const USER_ROLES = [
-  { id: 'Researcher', label: 'Researcher / Postdoc', Icon: AtomIcon },
-  { id: 'Student', label: 'Student / Scholar', Icon: SchoolIcon },
-  { id: 'Founder', label: 'Founder / Entrepreneur', Icon: RocketIcon },
-  { id: 'Professional', label: 'Industry Professional', Icon: BriefcaseIcon },
-]
-
-const VERTICAL_OPTIONS = [
-  'Fellowships',
-  'Research Grants',
-  'Residencies',
-  'Scholarships',
-  'Accelerators',
-  'Competitions',
-]
 
 const DOMAIN_OPTIONS = [
   'AI & Machine Learning',
+  'Software Engineering',
   'Deeptech & Quantum',
   'Robotics & Hardware',
   'Climate & Clean Energy',
-  'Biotech & Health',
-  'Software Systems',
+  'Biotech & Healthcare',
+  'Business & Finance',
+  'Data Science',
+]
+
+const DEGREE_OPTIONS = [
+  'Master / PhD',
+  'Bachelor / Student',
+  'Postdoc / Researcher',
+  'Founder / Entrepreneur',
+  'Industry Professional',
+  'Other',
 ]
 
 export default function Signup() {
-  const { signup } = useAuth()
+  const { signup, loginWithGoogle } = useAuth()
   const navigate = useNavigate()
   const location = useLocation()
 
@@ -41,17 +36,10 @@ export default function Signup() {
   const [name, setName] = useState('')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
-  const [role, setRole] = useState('Researcher')
   const [showPassword, setShowPassword] = useState(false)
 
-  // Step 2: Academic Profile
-  const [institution, setInstitution] = useState('ETH Zurich')
+  // Step 2: Degree & Domain
   const [educationLevel, setEducationLevel] = useState('Master / PhD')
-  const [residence, setResidence] = useState('Switzerland')
-  const [citizenship, setCitizenship] = useState('Switzerland, Global')
-
-  // Step 3: Opportunity Focus
-  const [selectedVerticals, setSelectedVerticals] = useState(['Fellowships', 'Research Grants'])
   const [selectedDomains, setSelectedDomains] = useState(['AI & Machine Learning'])
 
   const [error, setError] = useState(null)
@@ -73,19 +61,38 @@ export default function Signup() {
 
   const strength = getStrength(password)
 
-  const toggleVertical = (v) => {
-    setSelectedVerticals((prev) =>
-      prev.includes(v) ? prev.filter((item) => item !== v) : [...prev, v]
-    )
-  }
-
   const toggleDomain = (d) => {
     setSelectedDomains((prev) =>
       prev.includes(d) ? prev.filter((item) => item !== d) : [...prev, d]
     )
   }
 
-  const handleStep1Next = (e) => {
+  const triggerGoogleLogin = useGoogleLogin({
+    onSuccess: async (tokenResponse) => {
+      setError(null)
+      setBusy(true)
+      try {
+        await loginWithGoogle({ access_token: tokenResponse.access_token })
+        navigate('/dashboard')
+      } catch (err) {
+        setError(err.message || 'Google Sign-Up failed. Please try again.')
+      } finally {
+        setBusy(false)
+      }
+    },
+    onError: (errResp) => {
+      console.error('Google OAuth Error:', errResp)
+      if (errResp?.error === 'invalid_client') {
+        setError('Google Client ID invalid. Please update VITE_GOOGLE_CLIENT_ID in frontend/.env with your Google Cloud Console Client ID.')
+      } else {
+        setError('Google Sign-In popup was closed or cancelled. Please try again.')
+      }
+      setBusy(false)
+    }
+  })
+
+  // Step 1 Submission
+  const handleStep1Next = async (e) => {
     e.preventDefault()
     setError(null)
     if (!name.trim()) {
@@ -103,11 +110,7 @@ export default function Signup() {
     setStep(2)
   }
 
-  const handleStep2Next = (e) => {
-    e.preventDefault()
-    setStep(3)
-  }
-
+  // Step 2 Submission & Account Creation
   const handleCreateAccount = async () => {
     setError(null)
     setBusy(true)
@@ -117,18 +120,17 @@ export default function Signup() {
 
       try {
         await api.updateProfile({
+          full_name: name.trim(),
           academic_degree: educationLevel,
-          institution,
-          residence,
-          citizenship,
-          interests: [...selectedVerticals, ...selectedDomains],
+          field_of_study: selectedDomains.join(', ') || 'AI & Computer Science',
+          interests: selectedDomains,
         })
       } catch {
         /* non-fatal */
       }
 
-      setStep(4)
-      setTimeout(() => navigate('/onboarding'), 2200)
+      setStep(3)
+      setTimeout(() => navigate('/dashboard'), 2000)
     } catch (err) {
       setError(
         err.status === 409
@@ -168,16 +170,16 @@ export default function Signup() {
       <main className="w-full max-w-md mx-auto my-auto py-8 space-y-7">
         
         {/* Step Progress Bar */}
-        {step <= 3 && (
+        {step <= 2 && (
           <div className="space-y-2">
             <div className="flex justify-between items-center font-mono text-[10px] font-bold text-slate-400">
-              <span className="text-indigo-600 font-extrabold">STEP 0{step} OF 03</span>
-              <span>CALIBRATING VECTOR</span>
+              <span className="text-indigo-950 font-extrabold tracking-wider">STEP 0{step} OF 02</span>
+              <span className="text-slate-500 font-bold">CALIBRATING VECTOR</span>
             </div>
             <div className="w-full h-1 bg-slate-100 rounded-full overflow-hidden flex">
               <div
-                className="h-full bg-gradient-to-r from-indigo-500 to-purple-600 transition-all duration-500"
-                style={{ width: `${(step / 3) * 100}%` }}
+                className="h-full bg-gradient-to-r from-slate-950 via-indigo-950 to-slate-900 transition-all duration-500"
+                style={{ width: `${(step / 2) * 100}%` }}
               />
             </div>
           </div>
@@ -190,7 +192,7 @@ export default function Signup() {
           </div>
         )}
 
-        {/* ════════ STEP 1: Account Information ════════ */}
+        {/* ════════ STEP 1: Account Credentials ════════ */}
         {step === 1 && (
           <div className="space-y-6">
             <div className="space-y-1 text-center sm:text-left">
@@ -198,14 +200,46 @@ export default function Signup() {
                 Create your account
               </h1>
               <p className="text-sm text-slate-500 font-serif">
-                Step 1: Account credentials &amp; primary role.
+                Step 1: Account credentials &amp; identity.
               </p>
+            </div>
+
+            {/* Google Auth Button */}
+            <button
+              type="button"
+              onClick={() => {
+                setError(null)
+                setBusy(true)
+                try {
+                  triggerGoogleLogin()
+                } catch {
+                  setError('Unable to launch Google Account Picker. Please try again.')
+                  setBusy(false)
+                }
+              }}
+              disabled={busy}
+              className="w-full py-3.5 px-4 bg-white border-2 border-slate-200 hover:border-slate-400 rounded-2xl text-slate-800 font-bold text-sm flex items-center justify-center gap-3 transition-all shadow-xs hover:shadow-md active:scale-98 disabled:opacity-50"
+            >
+              <svg className="w-5 h-5" viewBox="0 0 24 24">
+                <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" />
+                <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" />
+                <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z" />
+                <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z" />
+              </svg>
+              <span>Continue with Google</span>
+            </button>
+
+            <div className="relative flex items-center justify-center">
+              <div className="border-t border-slate-200 w-full" />
+              <span className="bg-white px-3 font-mono text-[10px] uppercase font-bold text-slate-400 relative">
+                OR REGISTER WITH EMAIL
+              </span>
             </div>
 
             <form onSubmit={handleStep1Next} className="space-y-4">
               <div className="space-y-1.5">
                 <label htmlFor="signup-name" className="block font-mono text-[10px] uppercase font-bold text-slate-700 tracking-wider">
-                  FULL NAME &amp; TITLE
+                  FULL NAME
                 </label>
                 <input
                   id="signup-name"
@@ -228,47 +262,20 @@ export default function Signup() {
                   required
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  placeholder="ariana@ethz.ch"
+                  placeholder="you@institution.edu"
                   className="w-full px-4 py-3.5 bg-slate-50 border border-slate-200 rounded-2xl text-sm font-medium text-slate-900 placeholder-slate-400 focus:bg-white focus:border-indigo-600 focus:ring-4 focus:ring-indigo-50 outline-none transition-all"
                 />
               </div>
 
               <div className="space-y-1.5">
-                <label className="block font-mono text-[10px] uppercase font-bold text-slate-700 tracking-wider">
-                  PRIMARY ARCHETYPE
-                </label>
-                <div className="grid grid-cols-2 gap-2">
-                  {USER_ROLES.map(({ id, label, Icon }) => {
-                    const isSel = role === id
-                    return (
-                      <button
-                        key={id}
-                        type="button"
-                        onClick={() => setRole(id)}
-                        className={`p-3 rounded-xl border text-left flex items-center gap-2.5 transition-all ${
-                          isSel
-                            ? 'border-indigo-600 bg-indigo-50/80 text-indigo-950 font-bold shadow-xs'
-                            : 'border-slate-200 bg-slate-50 text-slate-700 hover:border-slate-300'
-                        }`}
-                      >
-                        <Icon className={`w-4 h-4 shrink-0 ${isSel ? 'text-indigo-600' : 'text-slate-400'}`} />
-                        <span className="text-xs">{label}</span>
-                      </button>
-                    )
-                  })}
-                </div>
-              </div>
-
-              <div className="space-y-1.5">
                 <label htmlFor="signup-password" className="block font-mono text-[10px] uppercase font-bold text-slate-700 tracking-wider">
-                  PASSWORD (6+ CHARS)
+                  PASSWORD
                 </label>
                 <div className="relative">
                   <input
                     id="signup-password"
                     type={showPassword ? 'text' : 'password'}
                     required
-                    minLength={6}
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
                     placeholder="••••••••••••"
@@ -282,18 +289,17 @@ export default function Signup() {
                     <i className={showPassword ? 'ti ti-eye-off' : 'ti ti-eye'} />
                   </button>
                 </div>
-
                 {password && (
-                  <div className="pt-1.5 space-y-1">
-                    <div className="flex justify-between font-mono text-[9px]">
-                      <span className="text-slate-400">STRENGTH:</span>
-                      <span className="font-bold text-slate-700">{strength.label}</span>
-                    </div>
-                    <div className="h-1.5 bg-slate-100 rounded-full overflow-hidden">
+                  <div className="space-y-1 pt-1">
+                    <div className="h-1 w-full bg-slate-100 rounded-full overflow-hidden">
                       <div
                         className={`h-full ${strength.color} transition-all duration-300`}
                         style={{ width: `${strength.score}%` }}
                       />
+                    </div>
+                    <div className="flex justify-between font-mono text-[9px] text-slate-400 font-bold">
+                      <span>STRENGTH</span>
+                      <span className="uppercase">{strength.label}</span>
                     </div>
                   </div>
                 )}
@@ -301,148 +307,56 @@ export default function Signup() {
 
               <button
                 type="submit"
-                className="w-full bg-[#0A0A0A] hover:bg-indigo-600 text-white font-bold text-sm py-4 rounded-2xl shadow-xl hover:shadow-indigo-600/25 transition-all duration-300 flex items-center justify-center gap-2 mt-2"
+                className="w-full bg-[#0A0A0A] hover:bg-slate-800 text-white font-bold text-sm py-4 rounded-2xl shadow-xl transition-all duration-300 flex items-center justify-center gap-2 mt-2"
               >
-                <span>Continue to Profile</span>
+                <span>Continue to Profile Setup</span>
                 <i className="ti ti-arrow-right text-xs" />
               </button>
             </form>
           </div>
         )}
 
-        {/* ════════ STEP 2: Basic Profile ════════ */}
+        {/* ════════ STEP 2: Candidate Profile (Degree & Domain) ════════ */}
         {step === 2 && (
           <div className="space-y-6">
             <div className="space-y-1 text-center sm:text-left">
               <h1 className="text-3xl sm:text-4xl font-extrabold text-slate-950 tracking-tight leading-tight">
-                Academic Footprint
+                Candidate Profile
               </h1>
               <p className="text-sm text-slate-500 font-serif">
-                Step 2: Tell us your institution and location footprint.
+                Step 2: Select your degree level and primary domain discipline.
               </p>
             </div>
 
-            <form onSubmit={handleStep2Next} className="space-y-4">
-              <div className="space-y-1.5">
-                <label className="block font-mono text-[10px] uppercase font-bold text-slate-700 tracking-wider">
-                  INSTITUTION / UNIVERSITY
-                </label>
-                <input
-                  type="text"
-                  required
-                  value={institution}
-                  onChange={(e) => setInstitution(e.target.value)}
-                  placeholder="ETH Zurich"
-                  className="w-full px-4 py-3.5 bg-slate-50 border border-slate-200 rounded-2xl text-sm font-medium text-slate-900 placeholder-slate-400 focus:bg-white focus:border-indigo-600 focus:ring-4 focus:ring-indigo-50 outline-none transition-all"
-                />
-              </div>
-
-              <div className="space-y-1.5">
-                <label className="block font-mono text-[10px] uppercase font-bold text-slate-700 tracking-wider">
-                  DEGREE LEVEL / ROLE TITLE
-                </label>
-                <input
-                  type="text"
-                  required
-                  value={educationLevel}
-                  onChange={(e) => setEducationLevel(e.target.value)}
-                  placeholder="Postdoctoral Fellow / Master Student"
-                  className="w-full px-4 py-3.5 bg-slate-50 border border-slate-200 rounded-2xl text-sm font-medium text-slate-900 placeholder-slate-400 focus:bg-white focus:border-indigo-600 focus:ring-4 focus:ring-indigo-50 outline-none transition-all"
-                />
-              </div>
-
-              <div className="grid grid-cols-2 gap-3">
-                <div className="space-y-1.5">
-                  <label className="block font-mono text-[10px] uppercase font-bold text-slate-700 tracking-wider">
-                    RESIDENCE
-                  </label>
-                  <input
-                    type="text"
-                    required
-                    value={residence}
-                    onChange={(e) => setResidence(e.target.value)}
-                    placeholder="Switzerland"
-                    className="w-full px-4 py-3.5 bg-slate-50 border border-slate-200 rounded-2xl text-sm font-medium text-slate-900 outline-none focus:bg-white focus:border-indigo-600 transition-all"
-                  />
-                </div>
-                <div className="space-y-1.5">
-                  <label className="block font-mono text-[10px] uppercase font-bold text-slate-700 tracking-wider">
-                    CITIZENSHIP
-                  </label>
-                  <input
-                    type="text"
-                    required
-                    value={citizenship}
-                    onChange={(e) => setCitizenship(e.target.value)}
-                    placeholder="Global / EU"
-                    className="w-full px-4 py-3.5 bg-slate-50 border border-slate-200 rounded-2xl text-sm font-medium text-slate-900 outline-none focus:bg-white focus:border-indigo-600 transition-all"
-                  />
-                </div>
-              </div>
-
-              <div className="flex items-center gap-3 pt-2">
-                <button
-                  type="button"
-                  onClick={() => setStep(1)}
-                  className="w-1/3 border border-slate-200 hover:bg-slate-50 text-slate-700 font-bold text-xs py-3.5 rounded-2xl transition-colors"
-                >
-                  ← Back
-                </button>
-                <button
-                  type="submit"
-                  className="flex-1 bg-[#0A0A0A] hover:bg-indigo-600 text-white font-bold text-sm py-3.5 rounded-2xl shadow-xl hover:shadow-indigo-600/25 transition-all duration-300 flex items-center justify-center gap-2"
-                >
-                  <span>Continue to Focus</span>
-                  <i className="ti ti-arrow-right text-xs" />
-                </button>
-              </div>
-            </form>
-          </div>
-        )}
-
-        {/* ════════ STEP 3: Opportunity Focus ════════ */}
-        {step === 3 && (
-          <div className="space-y-6">
-            <div className="space-y-1 text-center sm:text-left">
-              <h1 className="text-3xl sm:text-4xl font-extrabold text-slate-950 tracking-tight leading-tight">
-                Opportunity Focus
-              </h1>
-              <p className="text-sm text-slate-500 font-serif">
-                Step 3: Select your target program verticals &amp; disciplines.
-              </p>
-            </div>
-
-            <div className="space-y-5">
+            <form onSubmit={(e) => { e.preventDefault(); handleCreateAccount(); }} className="space-y-5">
+              {/* 1. DEGREE / LEVEL */}
               <div className="space-y-2">
-                <div className="font-mono text-[10px] uppercase font-bold text-slate-700 tracking-wider">
-                  PROGRAM VERTICALS (MULTI-SELECT)
-                </div>
-                <div className="flex flex-wrap gap-2">
-                  {VERTICAL_OPTIONS.map((v) => {
-                    const isSel = selectedVerticals.includes(v)
-                    return (
-                      <button
-                        key={v}
-                        type="button"
-                        onClick={() => toggleVertical(v)}
-                        className={`px-3 py-1.5 rounded-xl border text-xs font-bold transition-all flex items-center gap-1.5 ${
-                          isSel
-                            ? 'border-indigo-600 bg-indigo-50 text-indigo-700 shadow-2xs'
-                            : 'border-slate-200 bg-slate-50 text-slate-600 hover:border-slate-300'
-                        }`}
-                      >
-                        <span>{isSel ? '✓' : '+'}</span>
-                        <span>{v}</span>
-                      </button>
-                    )
-                  })}
+                <label className="block font-mono text-[10px] uppercase font-bold text-slate-700 tracking-wider">
+                  DEGREE LEVEL / ROLE
+                </label>
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                  {DEGREE_OPTIONS.map((deg) => (
+                    <button
+                      key={deg}
+                      type="button"
+                      onClick={() => setEducationLevel(deg)}
+                      className={`p-3.5 rounded-2xl border text-xs font-bold transition-all text-center ${
+                        educationLevel === deg
+                          ? 'border-indigo-950 bg-indigo-950 text-white shadow-sm'
+                          : 'border-slate-200 bg-slate-50 text-slate-700 hover:border-slate-300'
+                      }`}
+                    >
+                      {deg}
+                    </button>
+                  ))}
                 </div>
               </div>
 
-              <div className="space-y-2">
-                <div className="font-mono text-[10px] uppercase font-bold text-slate-700 tracking-wider">
-                  DOMAIN DISCIPLINES
-                </div>
+              {/* 2. PRIMARY DOMAIN DISCIPLINE */}
+              <div className="space-y-2 pt-2">
+                <label className="block font-mono text-[10px] uppercase font-bold text-slate-700 tracking-wider">
+                  PRIMARY DOMAIN DISCIPLINE (MULTI-SELECT)
+                </label>
                 <div className="flex flex-wrap gap-2">
                   {DOMAIN_OPTIONS.map((d) => {
                     const isSel = selectedDomains.includes(d)
@@ -451,9 +365,9 @@ export default function Signup() {
                         key={d}
                         type="button"
                         onClick={() => toggleDomain(d)}
-                        className={`px-3 py-1.5 rounded-xl border text-xs font-bold transition-all flex items-center gap-1.5 ${
+                        className={`px-3.5 py-2 rounded-xl border text-xs font-bold transition-all flex items-center gap-1.5 ${
                           isSel
-                            ? 'border-purple-600 bg-purple-50 text-purple-700 shadow-2xs'
+                            ? 'border-indigo-950 bg-indigo-950 text-white shadow-2xs'
                             : 'border-slate-200 bg-slate-50 text-slate-600 hover:border-slate-300'
                         }`}
                       >
@@ -465,48 +379,46 @@ export default function Signup() {
                 </div>
               </div>
 
-              <div className="flex items-center gap-3 pt-2">
+              <div className="flex items-center gap-3 pt-4">
                 <button
                   type="button"
-                  onClick={() => setStep(2)}
+                  onClick={() => setStep(1)}
                   className="w-1/3 border border-slate-200 hover:bg-slate-50 text-slate-700 font-bold text-xs py-3.5 rounded-2xl transition-colors"
                 >
                   ← Back
                 </button>
                 <button
-                  type="button"
-                  onClick={handleCreateAccount}
+                  type="submit"
                   disabled={busy}
-                  className="flex-1 bg-[#0A0A0A] hover:bg-slate-800 text-white font-bold text-sm py-3.5 rounded-2xl shadow-xl transition-all duration-300 flex items-center justify-center gap-2 disabled:opacity-50 active:scale-98"
+                  className="flex-1 bg-[#0A0A0A] hover:bg-slate-800 text-white font-bold text-sm py-4 rounded-2xl shadow-xl transition-all duration-300 flex items-center justify-center gap-2 disabled:opacity-50"
                 >
                   {busy ? (
                     <>
                       <i className="ti ti-loader-2 animate-spin text-base" />
-                      <span>Initializing AI Vector…</span>
+                      <span>Creating Account…</span>
                     </>
                   ) : (
                     <>
-                      <span>Complete &amp; Launch</span>
-                      <i className="ti ti-sparkles text-xs" />
+                      <span>Complete &amp; Launch Dashboard</span>
+                      <i className="ti ti-arrow-right text-xs" />
                     </>
                   )}
                 </button>
               </div>
-            </div>
+            </form>
           </div>
         )}
 
-        {/* ════════ STEP 4: Confirmation Success State ════════ */}
-        {step === 4 && (
-          <div className="p-8 bg-slate-50 border border-slate-200 rounded-3xl space-y-6 text-center shadow-lg">
-            <div className="w-16 h-16 bg-emerald-100 text-emerald-600 rounded-3xl flex items-center justify-center text-3xl font-bold mx-auto border border-emerald-200 shadow-sm animate-bounce">
-              <i className="ti ti-circle-check" />
+        {/* ════════ STEP 3: Success Confirmation ════════ */}
+        {step === 3 && (
+          <div className="py-12 space-y-6 text-center">
+            <div className="w-16 h-16 bg-emerald-500 text-white rounded-3xl mx-auto flex items-center justify-center text-2xl shadow-xl shadow-emerald-500/20 animate-bounce">
+              ✓
             </div>
-
             <div className="space-y-2">
               <h2 className="text-2xl font-extrabold text-slate-950 tracking-tight">Account Created!</h2>
               <p className="text-xs text-slate-600 font-serif leading-relaxed max-w-sm mx-auto">
-                Welcome to Nexora. Launching your signal calibration onboarding…
+                Welcome to Nexora. Launching your personalized opportunity intelligence dashboard…
               </p>
             </div>
           </div>
@@ -514,7 +426,7 @@ export default function Signup() {
 
       </main>
 
-      {/* Full-Width Footer */}
+      {/* Footer */}
       <footer className="w-full max-w-6xl mx-auto pt-6 border-t border-slate-100 flex flex-col sm:flex-row items-center justify-between gap-4 font-mono text-[11px] text-slate-400">
         <div>© 2026 Nexora Intelligence Platform · Swiss Standard</div>
         <div className="flex gap-4">

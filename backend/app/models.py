@@ -54,10 +54,14 @@ class User(Base):
     __tablename__ = "users"
 
     id = Column(Integer, primary_key=True, index=True)
+    google_id = Column(String(255), unique=True, index=True, nullable=True)
     name = Column(String(255), nullable=False)
     email = Column(String(255), unique=True, index=True, nullable=False)
     hashed_password = Column(String(255), nullable=False)
+    avatar = Column(Text, nullable=True)
+    email_verified = Column(Boolean, default=True, nullable=False)
     role = Column(String(50), default="candidate", nullable=False)
+    last_login = Column(DateTime(timezone=True), default=utc_now, nullable=True)
     created_at = Column(DateTime(timezone=True), default=utc_now, nullable=False)
     updated_at = Column(DateTime(timezone=True), default=utc_now, onupdate=utc_now, nullable=False)
 

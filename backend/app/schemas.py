@@ -37,9 +37,15 @@ class ResetPasswordRequest(BaseModel):
     token: str = Field(min_length=1, max_length=512)
     password: str = Field(min_length=6, max_length=255)
 
-# ──────────────────────────────────────────────
-# Profile Schemas
-# ──────────────────────────────────────────────
+class GoogleAuthRequest(BaseModel):
+    id_token: Optional[str] = None
+    credential: Optional[str] = None
+    access_token: Optional[str] = None
+    email: Optional[EmailStr] = None
+    name: Optional[str] = None
+    avatar: Optional[str] = None
+    google_id: Optional[str] = None
+    email_verified: Optional[bool] = True
 
 class ProfileRead(BaseModel):
     id: int
@@ -72,10 +78,15 @@ class ProfileUpdate(BaseModel):
 
 class UserRead(BaseModel):
     id: int
+    google_id: Optional[str] = None
     name: str
     email: EmailStr
+    avatar: Optional[str] = None
+    email_verified: bool = True
     role: str
+    last_login: Optional[datetime] = None
     created_at: datetime
+    updated_at: Optional[datetime] = None
     profile: Optional[ProfileRead] = None
 
     class Config:

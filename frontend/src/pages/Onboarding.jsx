@@ -192,7 +192,7 @@ export default function Onboarding() {
         {step === 1 && (
           <div className="space-y-6">
             <div className="space-y-2">
-              <div className="prism-mono text-[10px] font-bold text-indigo-600 uppercase tracking-widest">
+              <div className="prism-mono text-[10px] font-bold text-indigo-950 uppercase tracking-widest">
                 STEP 01 · SIGNAL FOCUS
               </div>
               <h1 className="text-3xl font-extrabold text-slate-950 tracking-tight">
@@ -243,7 +243,7 @@ export default function Onboarding() {
         {step === 2 && (
           <div className="space-y-6">
             <div className="space-y-2">
-              <div className="prism-mono text-[10px] font-bold text-indigo-600 uppercase tracking-widest">
+              <div className="prism-mono text-[10px] font-bold text-indigo-950 uppercase tracking-widest">
                 STEP 02 · ACADEMIC FOOTPRINT
               </div>
               <h1 className="text-3xl font-extrabold text-slate-950 tracking-tight">
@@ -340,7 +340,7 @@ export default function Onboarding() {
         {step === 3 && (
           <div className="space-y-6">
             <div className="space-y-2">
-              <div className="prism-mono text-[10px] font-bold text-indigo-600 uppercase tracking-widest">
+              <div className="prism-mono text-[10px] font-bold text-indigo-950 uppercase tracking-widest">
                 STEP 03 · DOMAIN SPECIALIZATION
               </div>
               <h1 className="text-3xl font-extrabold text-slate-950 tracking-tight">
@@ -394,7 +394,7 @@ export default function Onboarding() {
         {step === 4 && (
           <div className="space-y-6">
             <div className="space-y-2">
-              <div className="prism-mono text-[10px] font-bold text-indigo-600 uppercase tracking-widest">
+              <div className="prism-mono text-[10px] font-bold text-indigo-950 uppercase tracking-widest">
                 STEP 04 · SKILLS &amp; GOALS
               </div>
               <h1 className="text-3xl font-extrabold text-slate-950 tracking-tight">
