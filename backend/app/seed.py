@@ -7,26 +7,34 @@ logger = logging.getLogger("seed")
 
 SEED_SOURCES = [
     {
-        "name": "TechCrunch Startups & Grants",
-        "type": SourceType.RSS.value,
-        "url": "https://feeds.feedburner.com/TechCrunch/startups",
+        "name": "CERN Careers Portal",
+        "type": SourceType.HTML.value,
+        "url": "https://careers.cern/",
+        "config": {"category_hint": "fellowship"},
+        "enabled": True,
+        "schedule": "daily"
+    },
+    {
+        "name": "DAAD Scholarship Database",
+        "type": SourceType.HTML.value,
+        "url": "https://www.daad.de/en/study-and-research-in-germany/scholarships/",
         "config": {"category_hint": "grant"},
         "enabled": True,
         "schedule": "daily"
     },
     {
-        "name": "Y Combinator Launches & Grants",
-        "type": SourceType.RSS.value,
-        "url": "https://news.ycombinator.com/rss",
-        "config": {"category_hint": "accelerator"},
+        "name": "Opportunity Desk Fellowships",
+        "type": SourceType.HTML.value,
+        "url": "https://opportunitydesk.org/category/fellowships/",
+        "config": {"category_hint": "fellowship"},
         "enabled": True,
         "schedule": "daily"
     },
     {
-        "name": "Opportunity Desk Global",
-        "type": SourceType.RSS.value,
-        "url": "https://opportunitydesk.org/feed/",
-        "config": {"category_hint": "fellowship"},
+        "name": "Y Combinator Applications",
+        "type": SourceType.HTML.value,
+        "url": "https://www.ycombinator.com/apply",
+        "config": {"category_hint": "accelerator"},
         "enabled": True,
         "schedule": "daily"
     }

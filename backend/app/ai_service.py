@@ -27,13 +27,15 @@ class AIService:
         self.search_cache = OrderedDict()
 
     def is_invalid_junk_url(self, url: str, text: str) -> bool:
-        """Reject forum threads, social discussions, and non-opportunity URLs."""
+        """Reject forum threads, news articles, social discussions, and non-opportunity URLs."""
         url_lower = (url or "").lower()
         junk_domains = [
-            'forum', 'rubyforum', 'discourse', 'reddit.com', 'news.ycombinator.com/item', 
-            'twitter.com', 'x.com', 'facebook.com', 'quora.com', 'stackoverflow.com'
+            'forum', 'rubyforum', 'discourse', 'reddit.com', 'news.ycombinator.com', 
+            'twitter.com', 'x.com', 'facebook.com', 'quora.com', 'stackoverflow.com',
+            'wsj.com', 'techcrunch.com', 'bloomberg.com', 'forbes.com', 'nytimes.com',
+            'reuters.com', 'cnbc.com', 'medium.com'
         ]
-        junk_patterns = ['/t/', '/topic/', '/comments/', '/thread/', '/discussion/', '/viewtopic']
+        junk_patterns = ['/t/', '/topic/', '/comments/', '/thread/', '/discussion/', '/viewtopic', '/tech/', '/article/']
         
         for domain in junk_domains:
             if domain in url_lower:
