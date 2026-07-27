@@ -91,7 +91,7 @@ export default function FeaturesSection() {
           setActiveFeature(entry.target.id)
         }
       })
-    }, { threshold: 0.6 })
+    }, { threshold: 0.3, rootMargin: '-15% 0px -15% 0px' })
 
     const revealObserver = new IntersectionObserver((entries) => {
       entries.forEach((entry) => {
@@ -99,7 +99,7 @@ export default function FeaturesSection() {
           setRevealed(prev => ({ ...prev, [entry.target.id]: true }))
         }
       })
-    }, { threshold: 0.15 })
+    }, { threshold: 0.1 })
 
     cardRefs.current.forEach((card) => {
       if (card) {
@@ -126,40 +126,47 @@ export default function FeaturesSection() {
       {/* Dark Ambient Radial Lighting */}
       <div className="absolute top-1/2 left-1/4 w-[600px] h-[600px] bg-indigo-900/10 rounded-full blur-[150px] pointer-events-none" />
       
-      <div className="relative z-10 px-5 md:px-10 lg:px-16 py-20 md:py-40 lg:py-48 max-w-7xl mx-auto">
-        <div className="lg:grid lg:grid-cols-[400px_1fr] xl:grid-cols-[460px_1fr] lg:gap-24 xl:gap-48 items-start">
+      <div className="relative z-10 px-5 md:px-10 lg:px-16 py-24 md:py-32 max-w-7xl mx-auto">
+        <div className="lg:grid lg:grid-cols-[400px_1fr] xl:grid-cols-[460px_1fr] lg:gap-24 xl:gap-36 items-start">
           
-          {/* Left Column - Sticky on Desktop */}
-          <div className="hidden lg:flex lg:sticky lg:top-0 lg:h-screen lg:flex-col lg:justify-between lg:py-32">
-            <div>
-              <h2 className="text-white text-2xl sm:text-3xl lg:text-[46px] leading-[1.2] font-normal mb-12">
+          {/* Left Column - Perfectly Pinned Sticky Until All Right Items Complete */}
+          <div className="hidden lg:flex lg:sticky lg:top-24 lg:self-start lg:h-[calc(100vh-8rem)] lg:flex-col lg:justify-between py-4">
+            <div className="space-y-8">
+              <h2 className="text-white text-2xl sm:text-3xl lg:text-[42px] leading-[1.2] font-extrabold tracking-tight">
                 Software that flows with your ambition, not over it
               </h2>
               
-              <div className="flex flex-col gap-3">
-                {features.map((f) => (
-                  <button
-                    key={f.id}
-                    onClick={() => scrollToFeature(f.id)}
-                    className={`text-left px-5 py-4 rounded-2xl transition-all duration-300 font-medium ${
-                      activeFeature === f.id ? 'bg-black/20 text-white' : 'bg-black/20 text-white/40 hover:text-white/80'
-                    }`}
-                  >
-                    {f.title}
-                  </button>
-                ))}
+              <div className="flex flex-col gap-2.5">
+                {features.map((f) => {
+                  const isActive = activeFeature === f.id
+                  return (
+                    <button
+                      key={f.id}
+                      onClick={() => scrollToFeature(f.id)}
+                      className={`text-left px-5 py-4 rounded-2xl transition-all duration-300 font-bold text-sm flex items-center justify-between border ${
+                        isActive 
+                          ? 'bg-indigo-950/80 border-indigo-500/60 text-white shadow-lg shadow-indigo-950/50 translate-x-1' 
+                          : 'bg-slate-900/40 border-slate-800/80 text-slate-400 hover:text-slate-200 hover:border-slate-700'
+                      }`}
+                    >
+                      <span>{f.title}</span>
+                      <span className={`w-2 h-2 rounded-full transition-all ${isActive ? 'bg-indigo-400 scale-125' : 'bg-transparent'}`} />
+                    </button>
+                  )
+                })}
               </div>
             </div>
 
-            <div>
-              <p className="text-white/80 text-sm font-medium mb-4">
+            <div className="pt-8 border-t border-slate-800/80 space-y-4">
+              <p className="text-slate-400 text-xs font-medium leading-relaxed">
                 No noise. No complicated systems. Just your path, gently sorted.
               </p>
               <a
                 href="/explore"
-                className="inline-block bg-white text-black text-sm font-medium px-5 py-2.5 rounded-xl hover:bg-white/90 transition-colors shadow-md"
+                className="inline-flex items-center gap-2 bg-white hover:bg-slate-100 text-slate-950 text-xs font-extrabold px-5 py-3 rounded-xl transition-all shadow-md active:scale-98"
               >
-                Start for free
+                <span>Start for free</span>
+                <i className="ti ti-arrow-right text-xs" />
               </a>
             </div>
           </div>
