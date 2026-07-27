@@ -26,7 +26,27 @@ class AIService:
                 self.use_mock = True
         self.search_cache = OrderedDict()
 
+    def is_invalid_junk_url(self, url: str, text: str) -> bool:
+        """Reject forum threads, social discussions, and non-opportunity URLs."""
+        url_lower = (url or "").lower()
+        junk_domains = [
+            'forum', 'rubyforum', 'discourse', 'reddit.com', 'news.ycombinator.com/item', 
+            'twitter.com', 'x.com', 'facebook.com', 'quora.com', 'stackoverflow.com'
+        ]
+        junk_patterns = ['/t/', '/topic/', '/comments/', '/thread/', '/discussion/', '/viewtopic']
+        
+        for domain in junk_domains:
+            if domain in url_lower:
+                return True
+        for pat in junk_patterns:
+            if pat in url_lower:
+                return True
+        return False
+
     def extract_opportunity(self, text_content: str, source_name: str, candidate_url: str) -> OpportunityExtract:
+        if self.is_invalid_junk_url(candidate_url, text_content):
+            raise ValueError(f"URL {candidate_url} identified as forum or discussion thread — skipping normalization.")
+
         if self.use_mock or not self.client:
             return self._mock_extraction(text_content, source_name, candidate_url)
 
