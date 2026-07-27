@@ -122,12 +122,9 @@ export default function FeaturesSection() {
   }
 
   return (
-    <section className="relative bg-black text-white">
-      {/* Fixed Background Image Texture */}
-      <div 
-        className="absolute inset-0 z-0 bg-cover bg-center opacity-30 pointer-events-none"
-        style={{ backgroundImage: `url('https://images.higgs.ai/?default=1&output=webp&url=https%3A%2F%2Fd8j0ntlcm91z4.cloudfront.net%2Fuser_38xzZboKViGWJOttwIXH07lWA1P%2Fhf_20260709_082449_46df5cc4-ad98-4541-9236-a2659c1478a4.png&w=1920&q=85')` }}
-      />
+    <section className="relative bg-[#0A0E1A] text-white overflow-hidden">
+      {/* Ambient Deep Navy / Indigo Glow */}
+      <div className="absolute top-1/2 left-1/4 -translate-y-1/2 w-[700px] h-[700px] bg-indigo-900/20 rounded-full blur-[160px] pointer-events-none" />
       
       <div className="relative z-10 px-5 md:px-10 lg:px-16 py-20 md:py-40 lg:py-48 max-w-7xl mx-auto">
         <div className="lg:grid lg:grid-cols-[400px_1fr] xl:grid-cols-[460px_1fr] lg:gap-24 xl:gap-48 items-start">
