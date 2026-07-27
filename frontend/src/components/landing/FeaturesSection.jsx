@@ -129,35 +129,40 @@ export default function FeaturesSection() {
       <div className="relative z-10 px-5 md:px-10 lg:px-16 py-20 md:py-40 lg:py-48 max-w-7xl mx-auto">
         <div className="lg:grid lg:grid-cols-[400px_1fr] xl:grid-cols-[460px_1fr] lg:gap-24 xl:gap-48 items-start">
           
-          {/* Left Column - Sticky on Desktop */}
-          <div className="hidden lg:flex lg:sticky lg:top-0 lg:h-screen lg:flex-col lg:justify-between lg:py-32">
+          {/* Left Column - Sticky on Desktop with Navbar Clearance */}
+          <div className="hidden lg:flex lg:sticky lg:top-24 lg:h-[calc(100vh-8rem)] lg:flex-col lg:justify-between py-4">
             <div>
-              <h2 className="text-white text-2xl sm:text-3xl lg:text-[46px] leading-[1.2] font-normal mb-12">
+              <h2 className="text-white text-2xl sm:text-3xl lg:text-[44px] leading-[1.2] font-extrabold tracking-tight mb-10">
                 Software that flows with your ambition, not over it
               </h2>
               
               <div className="flex flex-col gap-3">
-                {features.map((f) => (
-                  <button
-                    key={f.id}
-                    onClick={() => scrollToFeature(f.id)}
-                    className={`text-left px-5 py-4 rounded-2xl transition-all duration-300 font-medium ${
-                      activeFeature === f.id ? 'bg-black/20 text-white' : 'bg-black/20 text-white/40 hover:text-white/80'
-                    }`}
-                  >
-                    {f.title}
-                  </button>
-                ))}
+                {features.map((f) => {
+                  const isActive = activeFeature === f.id
+                  return (
+                    <button
+                      key={f.id}
+                      onClick={() => scrollToFeature(f.id)}
+                      className={`text-left px-5 py-4 rounded-2xl transition-all duration-300 font-bold text-sm border backdrop-blur-md ${
+                        isActive 
+                          ? 'bg-indigo-600/20 border-indigo-500/50 text-white shadow-md' 
+                          : 'bg-slate-900/40 border-slate-800/60 text-slate-400 hover:text-slate-200 hover:bg-slate-800/40'
+                      }`}
+                    >
+                      {f.title}
+                    </button>
+                  )
+                })}
               </div>
             </div>
 
-            <div>
-              <p className="text-white/80 text-sm font-medium mb-4">
+            <div className="pt-6 border-t border-slate-800/60">
+              <p className="text-slate-400 text-xs font-medium mb-4">
                 No noise. No complicated systems. Just your path, gently sorted.
               </p>
               <a
                 href="/explore"
-                className="inline-block bg-white text-black text-sm font-medium px-5 py-2.5 rounded-xl hover:bg-white/90 transition-colors shadow-md"
+                className="inline-block bg-white text-slate-950 text-xs font-extrabold px-5 py-3 rounded-xl hover:bg-slate-100 transition-colors shadow-md"
               >
                 Start for free
               </a>
