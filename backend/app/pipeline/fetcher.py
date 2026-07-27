@@ -89,28 +89,40 @@ class PipelineFetcher:
             soup = BeautifulSoup(resp.text, "html.parser")
 
         config = source.config or {}
-        item_selector = config.get("item_selector", "article, .opportunity, .job, .grant, li")
-        title_selector = config.get("title_selector", "h1, h2, h3, a")
+        item_selector = config.get("item_selector", "article, .opportunity, .job, .grant, .program-card, .card")
+        title_selector = config.get("title_selector", "h1, h2, h3")
         link_selector = config.get("link_selector", "a")
 
         elements = soup.select(item_selector)
         items = []
         if not elements:
-            # Treat entire page as single item
+            # Treat entire page as single opportunity item
             items.append(FetchedItem(url=source.url, raw_content=soup.get_text(separator="\n"), canonical_url=source.url))
             return items
 
-        for el in elements[:20]:
-            title_el = el.select_one(title_selector) if title_selector else None
+        junk_href_patterns = ['/stories', '/alumni', '/about', '/privacy', '/terms', '/faq', '/contact', '/login', '/signup']
+
+        for el in elements[:15]:
             link_el = el.select_one(link_selector) if link_selector else None
-            title_text = title_el.get_text(strip=True) if title_el else el.get_text(strip=True)[:100]
             href = link_el.get("href") if link_el and link_el.get("href") else source.url
             if href and not href.startswith("http"):
                 from urllib.parse import urljoin
                 href = urljoin(source.url, href)
 
+            if any(pat in href.lower() for pat in junk_href_patterns):
+                continue
+
+            title_el = el.select_one(title_selector) if title_selector else None
+            title_text = title_el.get_text(strip=True) if title_el else ""
+            if not title_text or len(title_text) < 5:
+                continue
+
             raw_text = el.get_text(separator="\n", strip=True)
             items.append(FetchedItem(url=href or source.url, raw_content=f"Title: {title_text}\nContent: {raw_text}", canonical_url=href))
+        
+        if not items:
+            items.append(FetchedItem(url=source.url, raw_content=soup.get_text(separator="\n"), canonical_url=source.url))
+            
         return items
 
     def _fetch_sitemap(self, source: Source) -> List[FetchedItem]:

@@ -31,7 +31,9 @@ def list_opportunities(
         ~Opportunity.title.ilike("%ruby%"),
         ~Opportunity.title.ilike("%shell colon%"),
         ~Opportunity.title.ilike("Stories%"),
-        ~Opportunity.title.ilike("About%")
+        ~Opportunity.title.ilike("About%"),
+        ~Opportunity.title.ilike("%Meet founders%"),
+        ~Opportunity.title.ilike("%Discover what it means%")
     )
 
     if status:
@@ -108,6 +110,8 @@ def ai_search(payload: SearchRequest, db: Session = Depends(get_db)):
         ~Opportunity.title.ilike("%shell colon%"),
         ~Opportunity.title.ilike("Stories%"),
         ~Opportunity.title.ilike("About%"),
+        ~Opportunity.title.ilike("%Meet founders%"),
+        ~Opportunity.title.ilike("%Discover what it means%"),
         Opportunity.status.in_([OpportunityStatus.ACTIVE.value, OpportunityStatus.EXPIRING_SOON.value])
     )
 
