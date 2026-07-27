@@ -136,19 +136,27 @@ export default function FeaturesSection() {
               </h2>
               
               <div className="flex flex-col gap-3">
-                {features.map((f) => (
-                  <button
-                    key={f.id}
-                    onClick={() => scrollToFeature(f.id)}
-                    className={`text-left px-5 py-4 rounded-2xl transition-all duration-300 font-medium ${
-                      activeFeature === f.id 
-                        ? 'bg-slate-800/80 border border-slate-700 text-white font-bold shadow-lg' 
-                        : 'bg-slate-900/40 text-white/40 hover:text-white/80 border border-transparent'
-                    }`}
-                  >
-                    {f.title}
-                  </button>
-                ))}
+                {features.map((f) => {
+                  const isActive = activeFeature === f.id
+                  return (
+                    <button
+                      key={f.id}
+                      onClick={() => scrollToFeature(f.id)}
+                      className={`text-left px-6 py-4 rounded-2xl transition-all duration-300 font-bold text-sm flex items-center justify-between border backdrop-blur-md ${
+                        isActive 
+                          ? 'bg-gradient-to-r from-indigo-950 via-slate-900 to-indigo-900 border-2 border-indigo-500 text-white shadow-xl shadow-indigo-950/60 translate-x-1.5' 
+                          : 'bg-slate-950/60 border-slate-800/80 text-slate-400 hover:text-slate-100 hover:bg-slate-900/80 hover:border-slate-700'
+                      }`}
+                    >
+                      <span>{f.title}</span>
+                      <span className={`w-2.5 h-2.5 rounded-full transition-all duration-300 ${
+                        isActive 
+                          ? 'bg-indigo-400 shadow-[0_0_10px_#818cf8] scale-110' 
+                          : 'bg-slate-800'
+                      }`} />
+                    </button>
+                  )
+                })}
               </div>
             </div>
 
