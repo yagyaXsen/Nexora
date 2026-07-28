@@ -18,10 +18,20 @@ class FetchedItem:
         self.content_hash = hashlib.sha256(raw_content.encode("utf-8")).hexdigest()
 
 class PipelineFetcher:
-    def __init__(self, timeout: float = 15.0):
+    def __init__(self, timeout: float = 20.0):
         self.timeout = timeout
         self.headers = {
-            "User-Agent": "NexoraDiscoveryBot/1.0 (+https://nexora.io)"
+            "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36",
+            "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8",
+            "Accept-Language": "en-US,en;q=0.9",
+            "Sec-Ch-Ua": '"Chromium";v="122", "Not(A:Brand";v="24", "Google Chrome";v="122"',
+            "Sec-Ch-Ua-Mobile": "?0",
+            "Sec-Ch-Ua-Platform": '"macOS"',
+            "Sec-Fetch-Dest": "document",
+            "Sec-Fetch-Mode": "navigate",
+            "Sec-Fetch-Site": "none",
+            "Sec-Fetch-User": "?1",
+            "Upgrade-Insecure-Requests": "1"
         }
 
     def fetch_source(self, db: Session, source: Source) -> List[RawDocument]:
@@ -70,23 +80,27 @@ class PipelineFetcher:
         logger.info(f"Fetching RSS feed: {source.url}")
         feed = feedparser.parse(source.url)
         items = []
-        for entry in feed.entries[:20]:  # Cap per run
+        for entry in feed.entries[:20]:
             link = getattr(entry, "link", source.url)
             title = getattr(entry, "title", "")
             summary = getattr(entry, "summary", "") or getattr(entry, "description", "")
-            raw_content = f"Title: {title}\nLink: {link}\nSummary: {summary}\n"
+            raw_content = f"# {title}\n**Link:** {link}\n\n## Overview\n{summary}\n"
             if hasattr(entry, "content"):
-                raw_content += f"Content: {entry.content[0].value}\n"
+                raw_content += f"\n## Full Description\n{entry.content[0].value}\n"
             
             items.append(FetchedItem(url=link, raw_content=raw_content, canonical_url=link))
         return items
 
     def _fetch_html(self, source: Source) -> List[FetchedItem]:
-        logger.info(f"Fetching HTML page: {source.url}")
+        logger.info(f"Fetching HTML page with stealth headers: {source.url}")
         with httpx.Client(timeout=self.timeout, headers=self.headers, follow_redirects=True) as client:
             resp = client.get(source.url)
             resp.raise_for_status()
             soup = BeautifulSoup(resp.text, "html.parser")
+
+        # Strip non-content elements
+        for noise in soup.select("script, style, nav, footer, header, .cookie-banner, #cookie-consent, iframe"):
+            noise.decompose()
 
         config = source.config or {}
         item_selector = config.get("item_selector", "article, .opportunity, .job, .grant, .program-card, .card")
@@ -96,8 +110,9 @@ class PipelineFetcher:
         elements = soup.select(item_selector)
         items = []
         if not elements:
-            # Treat entire page as single opportunity item
-            items.append(FetchedItem(url=source.url, raw_content=soup.get_text(separator="\n"), canonical_url=source.url))
+            # Treat clean page text as structured markdown content
+            clean_text = soup.get_text(separator="\n", strip=True)
+            items.append(FetchedItem(url=source.url, raw_content=clean_text, canonical_url=source.url))
             return items
 
         junk_href_patterns = ['/stories', '/alumni', '/about', '/privacy', '/terms', '/faq', '/contact', '/login', '/signup']
@@ -118,10 +133,11 @@ class PipelineFetcher:
                 continue
 
             raw_text = el.get_text(separator="\n", strip=True)
-            items.append(FetchedItem(url=href or source.url, raw_content=f"Title: {title_text}\nContent: {raw_text}", canonical_url=href))
+            items.append(FetchedItem(url=href or source.url, raw_content=f"# {title_text}\n**Apply Link:** {href}\n\n{raw_text}", canonical_url=href))
         
         if not items:
-            items.append(FetchedItem(url=source.url, raw_content=soup.get_text(separator="\n"), canonical_url=source.url))
+            clean_text = soup.get_text(separator="\n", strip=True)
+            items.append(FetchedItem(url=source.url, raw_content=clean_text, canonical_url=source.url))
             
         return items
 
