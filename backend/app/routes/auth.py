@@ -76,7 +76,7 @@ def google_auth(payload: GoogleAuthRequest, db: Session = Depends(get_db)):
     if token_str:
         # Step A: Verify via Google official library or tokeninfo endpoint
         try:
-            client_id = getattr(settings, 'GOOGLE_CLIENT_ID', '') or None
+            client_id = settings.GOOGLE_CLIENT_ID or None
             google_info = google_id_token.verify_oauth2_token(
                 token_str, google_requests.Request(), audience=client_id
             )

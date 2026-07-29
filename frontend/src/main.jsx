@@ -6,7 +6,7 @@ import App from './App.jsx'
 import { AuthProvider } from './lib/auth.jsx'
 import './styles/base.css'
 
-const googleClientId = import.meta.env.VITE_GOOGLE_CLIENT_ID || '1058294975253-nexora-platform.apps.googleusercontent.com'
+const googleClientId = import.meta.env.VITE_GOOGLE_CLIENT_ID || ''
 
 createRoot(document.getElementById('root')).render(
   <StrictMode>
