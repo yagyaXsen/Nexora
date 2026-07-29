@@ -6,24 +6,19 @@ import App from './App.jsx'
 import { AuthProvider } from './lib/auth.jsx'
 import './styles/base.css'
 
-const googleClientId = import.meta.env.VITE_GOOGLE_CLIENT_ID || ''
-
-// GoogleOAuthProvider crashes with an empty clientId, so only mount it when
-// a real Client ID is configured. The pass-through provider is a no-op wrapper
-// that renders children directly — the Google buttons won't appear but the
-// rest of the app works fine.
-const GoogleProvider = googleClientId
-  ? GoogleOAuthProvider
-  : ({ children }) => <>{children}</>
+// GoogleOAuthProvider initialises fine with any non-empty string — sign-in
+// simply fails gracefully if the client ID is invalid (handled by onError in
+// Login / Signup). An empty string would crash the GIS SDK script load.
+const googleClientId = import.meta.env.VITE_GOOGLE_CLIENT_ID || 'unconfigured'
 
 createRoot(document.getElementById('root')).render(
   <StrictMode>
-    <GoogleProvider clientId={googleClientId}>
+    <GoogleOAuthProvider clientId={googleClientId}>
       <BrowserRouter>
         <AuthProvider>
           <App />
         </AuthProvider>
       </BrowserRouter>
-    </GoogleProvider>
+    </GoogleOAuthProvider>
   </StrictMode>
 )
