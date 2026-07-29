@@ -21,7 +21,10 @@ config = context.config
 config.set_main_option("sqlalchemy.url", settings.DATABASE_URL)
 
 # Interpret the config file for Python logging.
-if config.config_file_name is not None:
+# When called via the Python API (alembic_command.upgrade), startup.py sets
+# the skip_fileconfig attribute so we don't corrupt the root logger setup that
+# app.main.py already configured.
+if config.config_file_name is not None and not config.attributes.get("skip_fileconfig"):
     fileConfig(config.config_file_name)
 
 target_metadata = Base.metadata
