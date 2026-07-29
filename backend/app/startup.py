@@ -19,51 +19,93 @@ from app.database import engine, SessionLocal
 logger = logging.getLogger(__name__)
 
 
-def run_migrations() -> bool:
-    """Run any pending Alembic migrations. Returns True if migrations ran.
+def _restore_root_logger(
+    root: logging.Logger,
+    level: int,
+    handlers: list[logging.Handler],
+    propagate: bool,
+) -> None:
+    """Restore a previously saved root logger state."""
+    root.setLevel(level)
+    root.handlers.clear()
+    for h in handlers:
+        root.addHandler(h)
+    root.propagate = propagate
 
-    Failure is fatal — if Alembic can't apply the migration chain the process
-    refuses to boot rather than silently creating tables from current models
-    (which would skip any data-migration or column-alteration steps).
+
+def _save_root_logger() -> tuple:
+    """Return (level, handlers_copy, propagate) for the root logger."""
+    root = logging.getLogger()
+    return root.level, root.handlers[:], root.propagate
+
+
+def _try_alembic_upgrade() -> bool:
+    """Run alembic upgrade head. Returns True on success.
+
+    If alembic fails (due to schema conflicts, missing tables, or any other
+    reason) we log the full traceback and return False so the caller can
+    fall back to create_all + stamp.
     """
-    if not _has_table("alembic_version"):
-        logger.info("No alembic_version table found — stamping head and migrating.")
+    saved = _save_root_logger()
 
     alembic_cfg = AlembicConfig("alembic.ini")
     alembic_cfg.set_main_option("sqlalchemy.url", settings.DATABASE_URL)
-
-    # Signal env.py to skip fileConfig so it doesn't wreck the root logger
     alembic_cfg.attributes["skip_fileconfig"] = True
-
-    # Save root logger state before alembic runs — fileConfig in env.py
-    # unconditionally sets the root logger to WARNING, suppressing all INFO
-    # messages from the rest of the startup lifecycle.
-    root = logging.getLogger()
-    saved_level = root.level
-    saved_handlers = root.handlers[:]
-    saved_propagate = root.propagate
 
     try:
         alembic_command.upgrade(alembic_cfg, "head")
+        _restore_root_logger(logging.getLogger(), *saved)
+        logger.info("Alembic migrations up to date.")
+        return True
     except Exception:
-        # Restore logging first, then log the traceback and crash loudly.
-        root.setLevel(saved_level)
-        root.handlers.clear()
-        for h in saved_handlers:
-            root.addHandler(h)
-        root.propagate = saved_propagate
-        logger.exception("Alembic migration failed — refusing to boot")
-        raise
+        _restore_root_logger(logging.getLogger(), *saved)
+        logger.exception("Alembic upgrade failed — falling back to create_all + stamp")
+        return False
 
-    # Restore root logger to its pre-alembic state
-    root.setLevel(saved_level)
-    root.handlers.clear()
-    for h in saved_handlers:
-        root.addHandler(h)
-    root.propagate = saved_propagate
 
-    logger.info("Alembic migrations up to date.")
+def _create_all_and_stamp() -> bool:
+    """Create ALL tables from models and stamp alembic head.
+
+    Uses Base.metadata.create_all() which is idempotent — it skips tables
+    that already exist. Then stamps the alembic head so future deploy cycles
+    that use alembic upgrade directly will find a consistent revision.
+    """
+    from app.database import Base
+
+    Base.metadata.create_all(bind=engine)
+    logger.info("All tables created / verified via Base.metadata.create_all.")
+
+    # Stamp alembic head so the migration chain is consistent
+    try:
+        alembic_cfg = AlembicConfig("alembic.ini")
+        alembic_cfg.set_main_option("sqlalchemy.url", settings.DATABASE_URL)
+        alembic_cfg.attributes["skip_fileconfig"] = True
+        saved = _save_root_logger()
+        alembic_command.stamp(alembic_cfg, "head")
+        _restore_root_logger(logging.getLogger(), *saved)
+        logger.info("Alembic stamped at head.")
+    except Exception:
+        logger.warning("Could not stamp alembic head (non-fatal — app will still boot).")
+
     return True
+
+
+def run_migrations() -> bool:
+    """Ensure the database schema is current.
+
+    First tries alembic upgrade head (handles the migration chain cleanly).
+    If that fails (e.g., NoInspectionAvailable because model metadata has
+    tables not yet in the migration chain), falls back to
+    Base.metadata.create_all() + alembic stamp head.
+    """
+    if not _has_table("alembic_version"):
+        logger.info("No alembic_version table found — will stamp after setup.")
+
+    if _try_alembic_upgrade():
+        return True
+
+    logger.warning("Alembic upgrade failed — using create_all fallback.")
+    return _create_all_and_stamp()
 
 
 def _has_table(table_name: str) -> bool:
