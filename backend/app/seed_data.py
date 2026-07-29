@@ -226,7 +226,7 @@ ORGANIZATIONS = [
 
 # ─── 25 Real Verified Opportunities ───────────────────────────────────────────
 
-OPPORTUNITIES = [
+SEED_OPPORTUNITIES = [
     {
         "title": "CERN Technical & Doctoral Studentship 2026",
         "slug": "cern-technical-doctoral-studentship-2026",
@@ -520,7 +520,7 @@ def seed_database():
 
         # 3. Seed Opportunities
         logger.info("Seeding Opportunities...")
-        for opp_data in OPPORTUNITIES:
+        for opp_data in SEED_OPPORTUNITIES:
             existing = db.query(Opportunity).filter(Opportunity.slug == opp_data["slug"]).first()
             if not existing:
                 opp_dict = dict(opp_data)
