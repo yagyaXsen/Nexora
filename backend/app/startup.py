@@ -17,22 +17,83 @@ Alembic remains available as a CLI tool for manual schema migrations.
 
 import logging
 
+from sqlalchemy import inspect as sa_inspect, text as sa_text
+
 from app.config import settings
 from app.database import engine, SessionLocal
 
 logger = logging.getLogger(__name__)
 
 
+def _sync_missing_columns() -> None:
+    """Add columns that exist in the models but not in the DB tables.
+
+    Base.metadata.create_all() creates missing TABLES but does NOT alter
+    existing tables to add new columns. This function fills the gap by
+    running ALTER TABLE ... ADD COLUMN IF NOT EXISTS for every column that
+    the model defines but the database lacks.
+    """
+    from app.database import Base
+
+    table_col_map = {
+        "opportunities": [
+            ("organization_id", "INTEGER", True),
+        ],
+        "users": [
+            ("google_id", "VARCHAR(255)", True),
+            ("avatar", "TEXT", True),
+            ("email_verified", "BOOLEAN NOT NULL DEFAULT TRUE", False),
+            ("role", "VARCHAR(50) NOT NULL DEFAULT 'candidate'", False),
+            ("last_login", "TIMESTAMP WITH TIME ZONE", True),
+            ("updated_at", "TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW()", False),
+        ],
+        "notifications": [
+            ("is_pinned", "BOOLEAN NOT NULL DEFAULT FALSE", False),
+            ("opp_id", "INTEGER", True),
+            ("organizer", "VARCHAR(255) NOT NULL DEFAULT 'Nexora Intelligence'", False),
+        ],
+    }
+
+    inspector = sa_inspect(engine)
+    existing_tables = set(inspector.get_table_names())
+
+    with engine.connect() as conn:
+        for table_name, columns in table_col_map.items():
+            if table_name not in existing_tables:
+                continue  # create_all will handle this on fresh DB
+
+            # Check which columns already exist
+            db_cols = {c["name"] for c in inspector.get_columns(table_name)}
+
+            for col_name, col_type, nullable in columns:
+                if col_name in db_cols:
+                    continue
+
+                null_clause = "" if nullable else ""
+                sql = sa_text(
+                    f"ALTER TABLE {table_name} ADD COLUMN IF NOT EXISTS "
+                    f"{col_name} {col_type}"
+                )
+                conn.execute(sql)
+                logger.info(f"  Added column '{table_name}.{col_name}' ({col_type})")
+
+        conn.commit()
+
+
 def ensure_tables() -> bool:
     """Create all tables if they don't exist. Idempotent — safe every boot.
 
-    Base.metadata.create_all() is idempotent on Postgres (uses CREATE TABLE IF NOT
-    EXISTS internally), so there is no need to check whether tables exist first.
+    1. Base.metadata.create_all() creates any missing TABLES.
+    2. _sync_missing_columns() adds any columns that exist in the models
+       but were never added to pre-existing tables by migrations.
     """
     from app.database import Base
 
     Base.metadata.create_all(bind=engine)
-    logger.info("All tables ready (create_all idempotent).")
+    logger.info("Base tables created / verified.")
+
+    _sync_missing_columns()
+    logger.info("All columns synced.")
     return True
 
 
