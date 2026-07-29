@@ -16,7 +16,6 @@ Alembic remains available as a CLI tool for manual schema migrations.
 """
 
 import logging
-from sqlalchemy import inspect
 
 from app.config import settings
 from app.database import engine, SessionLocal
@@ -29,8 +28,6 @@ def ensure_tables() -> bool:
 
     Base.metadata.create_all() is idempotent on Postgres (uses CREATE TABLE IF NOT
     EXISTS internally), so there is no need to check whether tables exist first.
-    We skip that check explicitly because inspect(engine) can raise
-    NoInspectionAvailable (SQLAlchemy error f405) on some Postgres configurations.
     """
     from app.database import Base
 
