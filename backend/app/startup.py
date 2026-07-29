@@ -11,7 +11,7 @@ migration MUST run before any request handler touches the tables.
 import logging
 from alembic.config import Config as AlembicConfig
 from alembic import command as alembic_command
-from sqlalchemy import inspect, text as sa_text
+from sqlalchemy import inspect
 
 from app.config import settings
 from app.database import engine, SessionLocal
@@ -28,9 +28,40 @@ def run_migrations() -> bool:
     """
     if not _has_table("alembic_version"):
         logger.info("No alembic_version table found — stamping head and migrating.")
+
     alembic_cfg = AlembicConfig("alembic.ini")
     alembic_cfg.set_main_option("sqlalchemy.url", settings.DATABASE_URL)
-    alembic_command.upgrade(alembic_cfg, "head")
+
+    # Signal env.py to skip fileConfig so it doesn't wreck the root logger
+    alembic_cfg.attributes["skip_fileconfig"] = True
+
+    # Save root logger state before alembic runs — fileConfig in env.py
+    # unconditionally sets the root logger to WARNING, suppressing all INFO
+    # messages from the rest of the startup lifecycle.
+    root = logging.getLogger()
+    saved_level = root.level
+    saved_handlers = root.handlers[:]
+    saved_propagate = root.propagate
+
+    try:
+        alembic_command.upgrade(alembic_cfg, "head")
+    except Exception:
+        # Restore logging first, then log the traceback and crash loudly.
+        root.setLevel(saved_level)
+        root.handlers.clear()
+        for h in saved_handlers:
+            root.addHandler(h)
+        root.propagate = saved_propagate
+        logger.exception("Alembic migration failed — refusing to boot")
+        raise
+
+    # Restore root logger to its pre-alembic state
+    root.setLevel(saved_level)
+    root.handlers.clear()
+    for h in saved_handlers:
+        root.addHandler(h)
+    root.propagate = saved_propagate
+
     logger.info("Alembic migrations up to date.")
     return True
 
