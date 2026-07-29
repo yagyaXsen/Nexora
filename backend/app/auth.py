@@ -1,5 +1,6 @@
 import logging
 from datetime import datetime, timedelta, timezone
+from typing import Optional
 
 import bcrypt
 import jwt
@@ -49,7 +50,7 @@ def get_current_user(token: str = Depends(oauth2_scheme), db: Session = Depends(
         raise credentials_exception
     return user
 
-def get_optional_current_user(token: str = Depends(optional_oauth2_scheme), db: Session = Depends(get_db)) -> User | None:
+def get_optional_current_user(token: str = Depends(optional_oauth2_scheme), db: Session = Depends(get_db)) -> Optional[User]:
     if not token:
         return None
     try:

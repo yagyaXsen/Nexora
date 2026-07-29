@@ -163,7 +163,7 @@ gh repo create nexora --private --source=. --remote=origin --push
 7. When build finishes, the dashboard shows your URL: `https://nexora-api.onrender.com`.
 8. Verify in a browser: `https://nexora-api.onrender.com/api/health` should return a healthy response.
 
-**Important:** if the build fails with a Playwright-related error (the scraper deps are heavy), edit `backend/requirements.txt` and remove `playwright` and `beautifulsoup4` lines for the deploy — the scraper isn't needed for the demo. Re-push and Render auto-redeploys.
+**Important:** the scraper dependencies (`scrapling[fetchers]`, Playwright) have been moved to `backend/requirements-dev.txt` specifically because they're too heavy for Render free tier. The main `requirements.txt` is kept lean — the scraper code gracefully falls back to `httpx` + `BeautifulSoup` when Scrapling isn't installed. If you need local scraping, run `pip install -r requirements-dev.txt && playwright install chromium`.
 
 ---
 

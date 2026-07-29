@@ -6,6 +6,8 @@ __pycache__/
 .Python
 test_*.py
 backend/test_*.py
+# But keep actual test suites (under tests/ directories)
+!backend/tests/test_*.py
 env/
 build/
 develop-eggs/
@@ -49,7 +51,11 @@ yarn-error.log
 *.sqlite3
 *.db
 nexora.db
+nexora.db.bak*
 postgres_data/
+
+# Freebuff desktop
+.freebuff/
 
 # IDEs
 .vscode/

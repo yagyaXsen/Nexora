@@ -1,0 +1,10 @@
+# ── Cloudflare Pages headers ────────────────────────────────────
+# These apply to all routes on the deployed frontend.
+# The API lives on a different host, so no CORS needed here —
+# CORS is handled server-side by the backend's CORSMiddleware.
+
+/*
+  X-Content-Type-Options: nosniff
+  X-Frame-Options: DENY
+  Referrer-Policy: strict-origin-when-cross-origin
+  Permissions-Policy: camera=(), microphone=(), geolocation=()
