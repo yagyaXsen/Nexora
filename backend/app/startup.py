@@ -172,7 +172,7 @@ def seed_initial_data() -> int:
             import math
             import random
             from datetime import datetime, timezone, timedelta
-            from python_slugify import slugify
+            from slugify import slugify
 
             inserted = 0
             for opp_data in SEED_OPPORTUNITIES:
@@ -232,7 +232,7 @@ def seed_initial_data() -> int:
 def backfill_slugs() -> int:
     """Update any opportunities that have a null or empty slug."""
     from app.models import Opportunity
-    from python_slugify import slugify
+    from slugify import slugify
 
     db = SessionLocal()
     try:
