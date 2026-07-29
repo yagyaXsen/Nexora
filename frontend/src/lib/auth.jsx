@@ -32,11 +32,12 @@ export function AuthProvider({ children }) {
   }, [])
 
   const loginWithGoogle = useCallback(async (payload) => {
-    const { access_token } = await api.loginWithGoogle(payload)
+    const data = await api.loginWithGoogle(payload)
+    const { access_token, is_new_user } = data
     setToken(access_token)
     const me = await api.me()
     setUser(me)
-    return me
+    return { user: me, is_new_user }
   }, [])
 
   const signup = useCallback(

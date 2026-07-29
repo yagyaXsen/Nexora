@@ -10,7 +10,7 @@ from sqlalchemy.orm import Session
 
 from app.database import get_db
 from app.config import settings
-from app.models import PasswordResetToken, User, Profile, utc_now
+from app.models import PasswordResetToken, User, utc_now
 from app.schemas import (
     ForgotPasswordRequest, ResetPasswordRequest, TokenResponse, UserRead,
     UserRegister, UserUpdate, GoogleAuthRequest,
@@ -67,7 +67,7 @@ def google_auth(payload: GoogleAuthRequest, db: Session = Depends(get_db)):
     1. Validates raw Google ID Token / Credential / Access Token via Google OAuth2 APIs.
     2. Extracts authentic claims: sub (google_id), email, name, picture (avatar), email_verified.
     3. Look up or create user in SQLite/Postgres DB.
-    4. Auto-provision default Profile for new Google users.
+    4. Returns is_new_user=True so the frontend redirects to onboarding instead of dashboard.
     5. Issue and return secure JWT bearer access token.
     """
     token_str = payload.credential or payload.id_token
@@ -123,8 +123,11 @@ def google_auth(payload: GoogleAuthRequest, db: Session = Depends(get_db)):
 
     now = utc_now()
 
+    is_new_user = not user
+
     if not user:
-        # Provision New User
+        # Provision New User — no default Profile; the frontend will redirect
+        # to /onboarding so the user fills in their real details.
         random_pass = secrets.token_urlsafe(16)
         user = User(
             google_id=real_google_id or f"google_{secrets.token_hex(8)}",
@@ -138,22 +141,6 @@ def google_auth(payload: GoogleAuthRequest, db: Session = Depends(get_db)):
         db.add(user)
         db.commit()
         db.refresh(user)
-
-        # Create Default Research Profile for New Google User
-        default_profile = Profile(
-            user_id=user.id,
-            academic_degree="Master / PhD",
-            institution="Global Research Institution",
-            field_of_study="Artificial Intelligence & Computer Science",
-            citizenship="Global",
-            residence="Switzerland",
-            skills=["AI", "Data Science", "Research"],
-            interests=["Fellowships", "Research Grants", "Accelerators"],
-            target_countries=["Switzerland", "United States", "Germany"],
-            vector_confidence=98.4
-        )
-        db.add(default_profile)
-        db.commit()
     else:
         # Update existing user session & claims
         user.last_login = now
@@ -166,7 +153,7 @@ def google_auth(payload: GoogleAuthRequest, db: Session = Depends(get_db)):
         user.email_verified = True
         db.commit()
 
-    return TokenResponse(access_token=create_access_token(user.id))
+    return TokenResponse(access_token=create_access_token(user.id), is_new_user=is_new_user)
 
 @router.post("/logout")
 def logout(current_user: Optional[User] = Depends(get_optional_current_user)):
