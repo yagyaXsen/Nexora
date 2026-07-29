@@ -16,8 +16,6 @@ Alembic remains available as a CLI tool for manual schema migrations.
 """
 
 import logging
-import sys
-import traceback
 from sqlalchemy import inspect
 
 from app.config import settings
@@ -27,27 +25,18 @@ logger = logging.getLogger(__name__)
 
 
 def ensure_tables() -> bool:
-    """Create all tables if they don't exist. Idempotent — safe every boot."""
+    """Create all tables if they don't exist. Idempotent — safe every boot.
+
+    Base.metadata.create_all() is idempotent on Postgres (uses CREATE TABLE IF NOT
+    EXISTS internally), so there is no need to check whether tables exist first.
+    We skip that check explicitly because inspect(engine) can raise
+    NoInspectionAvailable (SQLAlchemy error f405) on some Postgres configurations.
+    """
     from app.database import Base
 
-    existing = _get_table_names()
-    if existing:
-        logger.info(f"Database already has {len(existing)} table(s): {', '.join(sorted(existing)[:10])}...")
-        return True
-
-    logger.info("No tables found — creating all from models...")
     Base.metadata.create_all(bind=engine)
-    created = _get_table_names()
-    logger.info(f"Created {len(created)} table(s): {', '.join(sorted(created))}")
+    logger.info("All tables ready (create_all idempotent).")
     return True
-
-
-def _get_table_names() -> list[str]:
-    """Return list of table names in the current database."""
-    try:
-        return inspect(engine).get_table_names()
-    except Exception:
-        return []
 
 
 def seed_initial_data() -> int:
