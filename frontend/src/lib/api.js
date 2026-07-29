@@ -155,6 +155,29 @@ export const api = {
     request('/api/notifications/read-all', { method: 'PATCH' }),
 }
 
-export function applyUrl(oppId) {
-  return apiUrl(`/api/opportunities/${oppId}/apply`)
+export function applyUrl(opp) {
+  // Resolve the direct apply URL client-side — no backend round-trip.
+  // Click tracking is handled separately via navigator.sendBeacon
+  // in the useApply hook, so the user reaches the destination immediately
+  // without waiting for a backend redirect.
+  if (opp && typeof opp === 'object') {
+    return opp.apply_url || apiUrl(`/api/opportunities/${opp.id}/apply`)
+  }
+  return apiUrl(`/api/opportunities/${String(opp)}/apply`)
+}
+
+/**
+ * Fire a fire-and-forget beacon to record an Apply click.
+ * Uses navigator.sendBeacon which is guaranteed to be sent even during
+ * page unload, unlike fetch/XHR. Returns true if queued successfully.
+ */
+export function trackApplyClick(oppId) {
+  try {
+    return navigator.sendBeacon(
+      apiUrl(`/api/opportunities/${oppId}/click`),
+      'ping'
+    )
+  } catch {
+    return false
+  }
 }

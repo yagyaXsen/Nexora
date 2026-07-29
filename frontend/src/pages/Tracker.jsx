@@ -297,7 +297,7 @@ export default function Tracker() {
 
           <div className="pt-4 border-t border-slate-100 flex items-center justify-between gap-3">
             <a
-              href={applyUrl(activeApp.opportunity.id)}
+              href={applyUrl(activeApp.opportunity)}
               onClick={applyHandler(activeApp.opportunity, '/tracker')}
               target="_blank"
               rel="noopener noreferrer"

@@ -26,12 +26,14 @@ export function deadlineInfo(iso, status) {
   return { text: `${d} days left`, tone: 'green' }
 }
 
-/** Some scraped titles arrive with a "Title: " or HTML nav prefix — strip it for display. */
+/**
+ * Title cleaning — now handled by the pipeline extractor's _clean_title().
+ * This is kept as a safety net for titles from non-pipeline sources (seed data,
+ * manual entry). Passthrough that trims whitespace.
+ */
 export function cleanTitle(title) {
   if (!title) return ''
-  let text = String(title).replace(/^title:\s*/i, '').trim()
-  text = text.replace(/^(Stories|About|Home|Search|Contact|Menu|Navigation)\s*/i, '').trim()
-  return text
+  return String(title).trim()
 }
 
 export function orgSlug(organizer) {
@@ -46,15 +48,15 @@ export function orgSlug(organizer) {
 
 const CATEGORY_LABELS = {
   scholarship: 'Scholarship',
-  fellowship: 'Fellowship',
+  fellowship:  'Fellowship',
+  grant:       'Grant',
   accelerator: 'Accelerator',
-  grant: 'Grant',
   competition: 'Competition',
-  conference: 'Conference',
-  exchange: 'Exchange Program',
-  travel: 'Travel Program',
-  gov_scheme: 'Government Scheme',
-  giveaway: 'Giveaway',
+  conference:  'Conference',
+  exchange:    'Exchange Program',
+  travel:      'Travel Program',
+  gov_scheme:  'Government Scheme',
+  giveaway:    'Giveaway',
 }
 
 export function categoryLabel(cat) {

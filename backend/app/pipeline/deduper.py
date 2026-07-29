@@ -6,7 +6,7 @@ from rapidfuzz import fuzz
 from sqlalchemy.orm import Session
 
 from app.config import settings
-from app.models import Opportunity, OpportunityStatus, Source, RawDocument
+from app.models import Opportunity, OpportunityStatus, Organization, Source, RawDocument
 from app.schemas import OpportunityExtract
 
 logger = logging.getLogger(__name__)
@@ -51,6 +51,9 @@ class PipelineDeduper:
                     existing_opp = opp
                     break
 
+        # Resolve organization_id by fuzzy-matching organizer name
+        org_id = self._resolve_organization(db, extract.organizer)
+
         needs_review = extract.confidence < settings.CONFIDENCE_THRESHOLD
 
         if existing_opp:
@@ -69,6 +72,8 @@ class PipelineDeduper:
             existing_opp.needs_review = needs_review
             existing_opp.source_id = source.id
             existing_opp.raw_document_id = raw_doc.id
+            if org_id:
+                existing_opp.organization_id = org_id
 
             db.commit()
             db.refresh(existing_opp)
@@ -99,11 +104,47 @@ class PipelineDeduper:
             needs_review=needs_review,
             dedupe_key=dedupe_key,
             source_id=source.id,
-            raw_document_id=raw_doc.id
+            raw_document_id=raw_doc.id,
+            organization_id=org_id,
         )
         db.add(new_opp)
         db.commit()
         db.refresh(new_opp)
         return (new_opp, True, False)
+
+    @staticmethod
+    def _resolve_organization(db: Session, organizer_name: str) -> Optional[int]:
+        """Fuzzy-match the organizer string against the Organization table.
+        Returns the organization ID if a good match is found, else None."""
+        if not organizer_name:
+            return None
+
+        # 1. Exact match first (fast path)
+        org = db.query(Organization).filter(
+            Organization.name.ilike(organizer_name)
+        ).first()
+        if org:
+            return org.id
+
+        # 2. Fuzzy match against name and slug
+        target = organizer_name.lower()
+        all_orgs = db.query(Organization).all()
+        best_score = 0
+        best_id = None
+
+        for org in all_orgs:
+            # Compare against both name and slug
+            for candidate in (org.name, org.slug.replace('-', ' ')):
+                score = fuzz.token_set_ratio(target, candidate.lower())
+                if score > best_score:
+                    best_score = score
+                    best_id = org.id
+
+        if best_score >= 75:
+            logger.info(f"Organization fuzzy match: '{organizer_name}' → '{db.query(Organization).filter(Organization.id == best_id).first().name}' (score={best_score})")
+            return best_id
+
+        return None
+
 
 deduper = PipelineDeduper()
