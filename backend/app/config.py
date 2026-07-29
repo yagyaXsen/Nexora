@@ -50,6 +50,9 @@ class Settings(BaseSettings):
     # is on static hosting.
     FRONTEND_URL: str = "http://localhost:5173"
 
+    # Google OAuth
+    GOOGLE_CLIENT_ID: str = ""
+
     # Comma-separated list of allowed browser origins.
     CORS_ORIGINS: str = "http://localhost:5173,http://127.0.0.1:5173"
 
