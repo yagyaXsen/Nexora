@@ -3,6 +3,7 @@ import logging
 import secrets
 from datetime import timedelta
 
+from typing import Optional
 from fastapi import APIRouter, Depends, HTTPException, Request, status
 from fastapi.security import OAuth2PasswordRequestForm
 from sqlalchemy.orm import Session
@@ -168,7 +169,7 @@ def google_auth(payload: GoogleAuthRequest, db: Session = Depends(get_db)):
     return TokenResponse(access_token=create_access_token(user.id))
 
 @router.post("/logout")
-def logout(current_user: User | None = Depends(get_optional_current_user)):
+def logout(current_user: Optional[User] = Depends(get_optional_current_user)):
     """Logout endpoint — invalidates session and always returns 200 OK."""
     return {"success": True, "message": "Logged out successfully"}
 

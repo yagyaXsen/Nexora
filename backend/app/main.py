@@ -19,6 +19,14 @@ logger = logging.getLogger("nexora")
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     logger.info("Starting Nexora Discovery Engine...")
+
+    # ── Bootstrap the database ──────────────────────────────────────────
+    # Run migrations, seed initial data, and backfill slugs so the API is
+    # ready to serve requests immediately. Idempotent — safe on every boot.
+    from app.startup import run_startup
+    run_startup()
+
+    # ── Scheduler ───────────────────────────────────────────────────────
     # In-process cron only fires while the process is awake. Deployed on a free
     # host that spins down when idle, the midnight jobs would never run — so
     # those environments set ENABLE_INTERNAL_SCHEDULER=false and drive ingestion
@@ -27,6 +35,7 @@ async def lifespan(app: FastAPI):
         start_scheduler()
     else:
         logger.info("Internal scheduler disabled — expecting external cron.")
+
     yield
     logger.info("Shutting down Nexora Discovery Engine...")
     if settings.ENABLE_INTERNAL_SCHEDULER:

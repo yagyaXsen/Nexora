@@ -27,34 +27,109 @@ class AIService:
         self.search_cache = OrderedDict()
 
     def is_invalid_junk_url(self, url: str, text: str) -> bool:
-        """Reject blog articles, shell tutorials, forum threads, news articles, and non-opportunity URLs."""
-        url_lower = (url or "").lower()
-        text_lower = (text or "").lower()
-
-        junk_domains = [
-            'forum', 'rubyforum', 'discourse', 'reddit.com', 'news.ycombinator.com', 
-            'twitter.com', 'x.com', 'facebook.com', 'quora.com', 'stackoverflow.com',
-            'wsj.com', 'techcrunch.com', 'bloomberg.com', 'forbes.com', 'nytimes.com',
-            'reuters.com', 'cnbc.com', 'medium.com', 'refp.se', 'sublimehq.com', 'github.blog'
-        ]
-        junk_patterns = ['/t/', '/topic/', '/comments/', '/thread/', '/discussion/', '/viewtopic', '/tech/', '/article/', '/articles/', '/blog/', '/post/', '/stories', '/about', '/privacy', '/terms', '/faq', '/contact']
+        """Reject blog articles, shell tutorials, forum threads, news articles, 
+        and non-opportunity URLs. Returns True if the URL SHOULD be rejected.
         
+        The checks are ordered from cheapest (URL pattern match) to most
+        expensive (text scanning) so non-opportunities are rejected early.
+        """
+        if not url or not text:
+            return True
+
+        url_lower = url.lower()
+        text_lower = text.lower()
+
+        # ── Tier 1: Reject known non-opportunity domains ────────────────────────
+        junk_domains = [
+            # Forums & social media
+            'forum.', 'discourse.', 'reddit.com', 'news.ycombinator.com', 
+            'twitter.com', 'x.com', 'facebook.com', 'quora.com', 'stackoverflow.com',
+            'discord.', 'slack.com', 'telegram.', 
+            # News & media
+            'wsj.com', 'techcrunch.com', 'bloomberg.com', 'forbes.com', 'nytimes.com',
+            'reuters.com', 'cnbc.com', 'medium.com', 'refp.se', 'github.blog',
+            'popsci.com', 'popularmechanics.com', 'wired.com', 'theverge.com',
+            'arstechnica.com', 'bbc.com', 'bbc.in', 'cnn.com', 'theguardian.com',
+            'news.mongabay.com', 'energiesmedia.com', 'aerospaceglobalnews.com',
+            'korben.info', 'dead.garden', 'saffroncr.itch.io',
+            # Personal blogs / substacks
+            'substack.com', 'medium.com', 'wordpress.com', 'blogger.com',
+            'tumblr.com', 'ghost.org', 'hashnode.dev', 'dev.to',
+            # Package registries & code hosting
+            'pypi.org', 'npmjs.com', 'crates.io', 'rubygems.org',
+            'pkg.go.dev', 'godoc.org',
+        ]
+        url_domain = url_lower.split('/')[2] if '://' in url_lower else url_lower
         for domain in junk_domains:
-            if domain in url_lower:
+            if domain in url_lower or domain in url_domain:
                 return True
-        for pat in junk_patterns:
+
+        # ── Tier 2: Reject URLs with junk path patterns ────────────────────────
+        junk_path_patterns = [
+            # Navigational / non-content pages
+            '/t/', '/topic/', '/comments/', '/thread/', '/discussion/', '/viewtopic',
+            '/stories', '/about', '/privacy', '/terms', '/faq', '/contact', '/login', '/signup',
+            # Blogs & news sections
+            '/blog/', '/blogs/', '/news/', '/press/', '/media/', '/article/', '/articles/',
+            '/post/', '/posts/', '/story/', '/stories/',
+            # Legal & admin
+            '/legal', '/cookies', '/cookie', '/gdpr',
+        ]
+        for pat in junk_path_patterns:
             if pat in url_lower:
                 return True
 
-        # Mandatory Opportunity Signals: Must contain at least one real opportunity keyword
+        # ── Tier 3: Reject known non-opportunity URL patterns ──────────────────
+        # devpost.com hackathon listing page (not a specific competition page)
+        if 'devpost.com' in url_lower and 'hackathons' in url_lower:
+            return True
+
+        # kaggle.com/competitions listing page only (not a specific competition)
+        # Specific competitions use slug-based URLs like /competitions/competition-name
+        if 'kaggle.com' in url_lower:
+            url_no_query = url_lower.split('?')[0].rstrip('/')
+            if url_no_query.endswith('/competitions'):
+                return True
+
+        # ── Tier 4: Mandatory opportunity keywords ─────────────────────────────
+        # Must contain at least TWO opportunity keywords (one is too permissive).
+        # This prevents blog posts that casually mention "funding" or "award" from
+        # being classified as opportunities.
         opportunity_keywords = [
             'fellowship', 'grant', 'scholarship', 'accelerator', 'stipend', 
-            'call for applications', 'call for proposals', 'apply now', 
-            'funding', 'award', 'residency', 'studentship', 'cohort', 'incubation'
+            'call for applications', 'call for proposals', 'apply now', 'apply today',
+            'funding opportunity', 'funding program', 'funding scheme',
+            'research grant', 'research fellowship', 'doctoral', 'postdoctoral',
+            'studentship', 'cohort', 'incubation', 'seed funding',
+            'young professionals', 'graduate program', 'traineeship',
         ]
         
-        has_opportunity_keyword = any(kw in text_lower or kw in url_lower for kw in opportunity_keywords)
-        if not has_opportunity_keyword:
+        opportunity_keyword_count = sum(
+            1 for kw in opportunity_keywords 
+            if kw in text_lower or kw in url_lower
+        )
+        if opportunity_keyword_count < 2:
+            return True
+
+        # ── Tier 5: Title heuristic — reject titles that don't look like opportunities ──
+        # Extract the first line as a rough title
+        first_line = text.strip().split('\n')[0] if text else ''
+        first_line_lower = first_line.lower()
+        
+        # Reject if the first line reads like a blog post or article
+        blog_title_indicators = [
+            'how to', 'why i', 'what is', 'the case for', 'my take on',
+            'a look at', 'review:', 'tutorial:', 'guide:', 'introducing',
+            'announcing', 'show hn:', 'ask hn:', 'tell hn:', 'launch hn:',
+            'building a', 'building an', 'i built', 'i made', 'we built',
+        ]
+        for indicator in blog_title_indicators:
+            if first_line_lower.startswith(indicator):
+                return True
+
+        # Reject very short titles (less than 10 chars after stripping labels)
+        cleaned_first = re.sub(r'^title:\s*', '', first_line, flags=re.IGNORECASE).strip()
+        if len(cleaned_first) < 10:
             return True
 
         return False
