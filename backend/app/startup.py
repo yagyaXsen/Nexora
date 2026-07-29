@@ -35,45 +35,55 @@ def _sync_missing_columns() -> None:
     """
     from app.database import Base
 
+    # Known columns that exist in models but were never added to DB by migrations.
+    # Each entry: (table_name, [(column_name, sql_type), ...])
     table_col_map = {
         "opportunities": [
-            ("organization_id", "INTEGER", True),
+            ("organization_id", "INTEGER"),
         ],
         "users": [
-            ("google_id", "VARCHAR(255)", True),
-            ("avatar", "TEXT", True),
-            ("email_verified", "BOOLEAN NOT NULL DEFAULT TRUE", False),
-            ("role", "VARCHAR(50) NOT NULL DEFAULT 'candidate'", False),
-            ("last_login", "TIMESTAMP WITH TIME ZONE", True),
-            ("updated_at", "TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW()", False),
+            ("google_id", "VARCHAR(255)"),
+            ("avatar", "TEXT"),
+            ("email_verified", "BOOLEAN NOT NULL DEFAULT TRUE"),
+            ("role", "VARCHAR(50) NOT NULL DEFAULT 'candidate'"),
+            ("last_login", "TIMESTAMP WITH TIME ZONE"),
+            ("updated_at", "TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW()"),
         ],
         "notifications": [
-            ("is_pinned", "BOOLEAN NOT NULL DEFAULT FALSE", False),
-            ("opp_id", "INTEGER", True),
-            ("organizer", "VARCHAR(255) NOT NULL DEFAULT 'Nexora Intelligence'", False),
+            ("is_pinned", "BOOLEAN NOT NULL DEFAULT FALSE"),
+            ("opp_id", "INTEGER"),
+            ("organizer", "VARCHAR(255) NOT NULL DEFAULT 'Nexora Intelligence'"),
         ],
     }
 
-    inspector = sa_inspect(engine)
-    existing_tables = set(inspector.get_table_names())
+    try:
+        inspector = sa_inspect(engine)
+        existing_tables = set(inspector.get_table_names())
+    except Exception:
+        logger.warning("Cannot inspect database — skipping column sync (non-fatal)")
+        return
 
     with engine.connect() as conn:
         for table_name, columns in table_col_map.items():
             if table_name not in existing_tables:
-                continue  # create_all will handle this on fresh DB
+                continue  # create_all will create it fresh with all columns
 
-            # Check which columns already exist
-            db_cols = {c["name"] for c in inspector.get_columns(table_name)}
+            try:
+                db_cols = {c["name"] for c in inspector.get_columns(table_name)}
+            except Exception:
+                logger.warning(f"Cannot inspect columns for '{table_name}' — skipping")
+                continue
 
-            for col_name, col_type, nullable in columns:
+            for col_name, col_type in columns:
                 if col_name in db_cols:
                     continue
 
-                null_clause = "" if nullable else ""
-                sql = sa_text(
-                    f"ALTER TABLE {table_name} ADD COLUMN IF NOT EXISTS "
-                    f"{col_name} {col_type}"
-                )
+                # SQLite does not support IF NOT EXISTS on ADD COLUMN.
+                # We already checked db_cols above, so a plain ADD COLUMN is safe.
+                if engine.dialect.name == "sqlite":
+                    sql = sa_text(f"ALTER TABLE {table_name} ADD COLUMN {col_name} {col_type}")
+                else:
+                    sql = sa_text(f"ALTER TABLE {table_name} ADD COLUMN IF NOT EXISTS {col_name} {col_type}")
                 conn.execute(sql)
                 logger.info(f"  Added column '{table_name}.{col_name}' ({col_type})")
 
