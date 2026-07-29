@@ -3,6 +3,7 @@ import { useEffect } from 'react'
 import Nav from './components/Nav.jsx'
 import Footer from './components/Footer.jsx'
 import ProtectedRoute from './components/ProtectedRoute.jsx'
+import { ToastProvider } from './components/Toast.jsx'
 
 // Pages
 import Landing from './pages/Landing.jsx'
@@ -44,90 +45,92 @@ export default function App() {
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', minHeight: '100vh' }}>
-      <ScrollToTop />
-      {!isAuthOrLandingPage && <Nav />}
-      <main style={{ flex: 1 }}>
-        <Routes>
-          <Route path="/" element={<Landing />} />
-          <Route
-            path="/explore"
-            element={
-              <ProtectedRoute>
-                <Explore />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/opportunities/:idOrSlug"
-            element={
-              <ProtectedRoute>
-                <OpportunityDetail />
-              </ProtectedRoute>
-            }
-          />
-          <Route path="/organizations/:slug" element={<OrganizationDetail />} />
-          <Route path="/ai-assistant" element={<AiAssistantPage />} />
-          
-          {/* Auth Routes */}
-          <Route path="/login" element={<Login />} />
-          <Route path="/signup" element={<Signup />} />
-          <Route path="/forgot-password" element={<ForgotPassword />} />
-          <Route path="/reset-password" element={<ResetPassword />} />
+      <ToastProvider>
+        <ScrollToTop />
+        {!isAuthOrLandingPage && <Nav />}
+        <main style={{ flex: 1 }}>
+          <Routes>
+            <Route path="/" element={<Landing />} />
+            <Route
+              path="/explore"
+              element={
+                <ProtectedRoute>
+                  <Explore />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/opportunities/:idOrSlug"
+              element={
+                <ProtectedRoute>
+                  <OpportunityDetail />
+                </ProtectedRoute>
+              }
+            />
+            <Route path="/organizations/:slug" element={<OrganizationDetail />} />
+            <Route path="/ai-assistant" element={<AiAssistantPage />} />
+            
+            {/* Auth Routes */}
+            <Route path="/login" element={<Login />} />
+            <Route path="/signup" element={<Signup />} />
+            <Route path="/forgot-password" element={<ForgotPassword />} />
+            <Route path="/reset-password" element={<ResetPassword />} />
 
-          {/* Phase 2: Onboarding (Deferred for Phase 1 launch - directs to Dashboard) */}
-          <Route
-            path="/onboarding"
-            element={
-              <ProtectedRoute>
-                <Dashboard />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/dashboard"
-            element={
-              <ProtectedRoute>
-                <Dashboard />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/tracker"
-            element={
-              <ProtectedRoute>
-                <Tracker />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/profile"
-            element={
-              <ProtectedRoute>
-                <Profile />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/settings"
-            element={
-              <ProtectedRoute>
-                <Settings />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/notifications"
-            element={
-              <ProtectedRoute>
-                <Notifications />
-              </ProtectedRoute>
-            }
-          />
-          {/* Catch-all route */}
-          <Route path="*" element={<Landing />} />
-        </Routes>
-      </main>
-      {!isAuthOrLandingPage && <Footer />}
+            {/* Phase 2: Onboarding (Deferred for Phase 1 launch - directs to Dashboard) */}
+            <Route
+              path="/onboarding"
+              element={
+                <ProtectedRoute>
+                  <Dashboard />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/dashboard"
+              element={
+                <ProtectedRoute>
+                  <Dashboard />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/tracker"
+              element={
+                <ProtectedRoute>
+                  <Tracker />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/profile"
+              element={
+                <ProtectedRoute>
+                  <Profile />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/settings"
+              element={
+                <ProtectedRoute>
+                  <Settings />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/notifications"
+              element={
+                <ProtectedRoute>
+                  <Notifications />
+                </ProtectedRoute>
+              }
+            />
+            {/* Catch-all route */}
+            <Route path="*" element={<Landing />} />
+          </Routes>
+        </main>
+        {!isAuthOrLandingPage && <Footer />}
+      </ToastProvider>
     </div>
   )
 }

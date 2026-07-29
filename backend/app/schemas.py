@@ -147,6 +147,7 @@ class OpportunityRead(BaseModel):
     click_count: int = 0
     confidence: float
     needs_review: bool
+    organization_id: Optional[int] = None
     created_at: datetime
 
     class Config:

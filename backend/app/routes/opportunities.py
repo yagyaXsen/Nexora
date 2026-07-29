@@ -1,6 +1,6 @@
 from typing import Optional, List
 from fastapi import APIRouter, Depends, Query, HTTPException, status
-from fastapi.responses import RedirectResponse
+from fastapi.responses import RedirectResponse, Response
 from sqlalchemy import or_, func, cast, String
 from sqlalchemy.orm import Session
 
@@ -185,11 +185,28 @@ def trending_opportunities(
         .order_by(Opportunity.click_count.desc(), Opportunity.created_at.desc())\
         .limit(limit).all()
 
+@router.post("/{opp_id}/click")
+def track_click(opp_id: int, db: Session = Depends(get_db)):
+    """Fire-and-forget click tracking endpoint called by navigator.sendBeacon.
+    Increments click_count atomically and returns 204 with no body — the
+    beacon response is never read by the browser. This is the single outbound
+    exit point for click measurement (feeds /trending).
+    """
+    # Lightweight: no 404 check needed — if the opp doesn't exist, the
+    # UPDATE simply affects zero rows and we still return 204.
+    db.query(Opportunity).filter(Opportunity.id == opp_id).update(
+        {Opportunity.click_count: Opportunity.click_count + 1},
+        synchronize_session=False,
+    )
+    db.commit()
+    return Response(status_code=status.HTTP_204_NO_CONTENT)
+
+
 @router.get("/{opp_id}/apply")
 def apply_redirect(opp_id: int, db: Session = Depends(get_db)):
-    """Count the click, then 307-redirect the user to the organizer's apply_url.
-    This is the single outbound exit point — front the 'Apply' button with it so
-    every click is measured (feeds /trending) without a separate tracking call."""
+    """Legacy redirect endpoint. Counts the click and 307-redirects the user
+    to the organizer's apply_url. New code should use the direct apply_url
+    from the API response + track_click for click tracking."""
     opp = db.query(Opportunity).filter(Opportunity.id == opp_id).first()
     if not opp:
         raise HTTPException(

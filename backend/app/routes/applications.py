@@ -134,10 +134,6 @@ def apply_to_opportunity(
         if application.applied_at is None:
             application.applied_at = utc_now()
 
-    # Atomic increment — column-side arithmetic avoids a read-modify-write race.
-    # Mirrors GET /api/opportunities/{id}/apply so both paths feed /trending.
-    opportunity.click_count = Opportunity.click_count + 1
-
     db.commit()
     db.refresh(application)
 

@@ -244,7 +244,7 @@ export default function OpportunityDetail() {
             <div className="space-y-3">
               {!closed && (
                 <a
-                  href={applyUrl(opp.id)}
+                  href={applyUrl(opp)}
                   onClick={applyHandler(opp, `/opportunities/${idOrSlug}`)}
                   target="_blank"
                   rel="noopener noreferrer"

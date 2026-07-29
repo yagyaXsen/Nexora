@@ -1,15 +1,14 @@
 import { useNavigate } from 'react-router-dom'
-import { api } from '../lib/api'
+import { api, trackApplyClick } from '../lib/api'
 import { useAuth } from '../lib/auth.jsx'
 
 /**
- * Gates the Apply action behind login and records it in the tracker.
+ * Gates the Apply action behind login, fires a sendBeacon to record the
+ * click (no round-trip blocking), and records the application in the
+ * tracker via a best-effort background POST.
  *
- * Returns an onClick handler for an <a href={applyUrl(id)} target="_blank">.
- * The anchor is deliberately left intact: we only preventDefault when sending an
- * anonymous user to login. For a logged-in user the browser follows the href
- * immediately while the POST happens in the background, so a slow or failing API
- * can never stop someone reaching the organizer's site.
+ * The <a> navigates directly to opp.apply_url — the user reaches the
+ * destination immediately without waiting for any backend call.
  *
  * @param {() => void} [onRecorded] called once the tracker row is confirmed,
  *   e.g. to flip local "saved" state.
@@ -26,6 +25,11 @@ export function useApply(onRecorded) {
       })
       return
     }
+
+    // Fire-and-forget: beacon records the click, POST records in tracker.
+    // Neither blocks navigation — the <a href> is followed by the browser.
+    trackApplyClick(opp.id)
+
     api
       .applyToOpportunity(opp.id)
       .then(() => onRecorded?.(opp))

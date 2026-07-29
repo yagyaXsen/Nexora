@@ -121,6 +121,7 @@ class Organization(Base):
     updated_at = Column(DateTime(timezone=True), default=utc_now, onupdate=utc_now, nullable=False)
 
     followers = relationship("OrganizationFollower", back_populates="organization", cascade="all, delete-orphan")
+    opportunities = relationship("Opportunity", back_populates="organization")
 
 class OrganizationFollower(Base):
     __tablename__ = "organization_followers"
@@ -192,11 +193,13 @@ class Opportunity(Base):
     dedupe_key = Column(String(255), nullable=False, index=True)
     source_id = Column(Integer, ForeignKey("sources.id", ondelete="SET NULL"), nullable=True)
     raw_document_id = Column(Integer, ForeignKey("raw_documents.id", ondelete="SET NULL"), nullable=True)
+    organization_id = Column(Integer, ForeignKey("organizations.id", ondelete="SET NULL"), nullable=True, index=True)
     created_at = Column(DateTime(timezone=True), default=utc_now, nullable=False)
     updated_at = Column(DateTime(timezone=True), default=utc_now, onupdate=utc_now, nullable=False)
 
     source = relationship("Source", back_populates="opportunities")
     raw_document = relationship("RawDocument", back_populates="opportunities")
+    organization = relationship("Organization", back_populates="opportunities")
 
 class Application(Base):
     __tablename__ = "applications"

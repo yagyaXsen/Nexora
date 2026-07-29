@@ -216,67 +216,34 @@ export default function Explore() {
               [ DIRECTORY CATEGORIES ]
             </div>
             
-            <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
+            <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-8 gap-3">
               
-              {/* All Types Card */}
-              <button
-                className={`rounded-2xl border p-5 text-left h-24 flex flex-col justify-between transition-all duration-300 ${!category ? 'border-slate-800 bg-[#0A0A0A] text-white shadow-lg' : 'border-slate-200 bg-slate-50 text-slate-800 hover:border-slate-400'}`}
-                onClick={() => update({ category: '' })}
-              >
-                <div className="flex justify-between items-start w-full">
-                  <i className="ti ti-grid-dots text-lg" />
-                  <span className="font-mono text-[10px] font-bold opacity-60">ALL</span>
-                </div>
-                <strong className="text-sm font-bold block">All Opportunities</strong>
-              </button>
-
-              {/* Fellowship Card */}
-              <button
-                className={`rounded-2xl border p-5 text-left h-24 flex flex-col justify-between transition-all duration-300 ${category === 'fellowship' ? 'border-indigo-600 bg-indigo-950 text-white shadow-lg shadow-indigo-950/20' : 'border-slate-200 bg-slate-50 text-slate-800 hover:border-slate-400'}`}
-                onClick={() => update({ category: 'fellowship' })}
-              >
-                <div className="flex justify-between items-start w-full">
-                  <i className="ti ti-rocket text-lg" />
-                  <span className="font-mono text-[10px] font-bold opacity-60">ACTIVE</span>
-                </div>
-                <strong className="text-sm font-bold block">Fellowships</strong>
-              </button>
-
-              {/* Residency Card */}
-              <button
-                className={`rounded-2xl border p-5 text-left h-24 flex flex-col justify-between transition-all duration-300 ${category === 'residency' ? 'border-indigo-600 bg-indigo-950 text-white shadow-lg shadow-indigo-950/20' : 'border-slate-200 bg-slate-50 text-slate-800 hover:border-slate-400'}`}
-                onClick={() => update({ category: 'residency' })}
-              >
-                <div className="flex justify-between items-start w-full">
-                  <i className="ti ti-atom-2 text-lg" />
-                  <span className="font-mono text-[10px] font-bold opacity-60">ACTIVE</span>
-                </div>
-                <strong className="text-sm font-bold block">Residencies</strong>
-              </button>
-
-              {/* Grant Card */}
-              <button
-                className={`rounded-2xl border p-5 text-left h-24 flex flex-col justify-between transition-all duration-300 ${category === 'grant' ? 'border-indigo-600 bg-indigo-950 text-white shadow-lg shadow-indigo-950/20' : 'border-slate-200 bg-slate-50 text-slate-800 hover:border-slate-400'}`}
-                onClick={() => update({ category: 'grant' })}
-              >
-                <div className="flex justify-between items-start w-full">
-                  <i className="ti ti-currency-euro text-lg" />
-                  <span className="font-mono text-[10px] font-bold opacity-60">ACTIVE</span>
-                </div>
-                <strong className="text-sm font-bold block">Research Grants</strong>
-              </button>
-
-              {/* Scholarship Card */}
-              <button
-                className={`rounded-2xl border p-5 text-left h-24 flex flex-col justify-between transition-all duration-300 ${category === 'scholarship' ? 'border-indigo-600 bg-indigo-950 text-white shadow-lg shadow-indigo-950/20' : 'border-slate-200 bg-slate-50 text-slate-800 hover:border-slate-400'}`}
-                onClick={() => update({ category: 'scholarship' })}
-              >
-                <div className="flex justify-between items-start w-full">
-                  <i className="ti ti-school text-lg" />
-                  <span className="font-mono text-[10px] font-bold opacity-60">ACTIVE</span>
-                </div>
-                <strong className="text-sm font-bold block">Scholarships</strong>
-              </button>
+              {[
+                { value: '',            label: 'All',          icon: 'ti-grid-dots' },
+                { value: 'fellowship',  label: 'Fellowships',  icon: 'ti-rocket' },
+                { value: 'scholarship', label: 'Scholarships', icon: 'ti-school' },
+                { value: 'grant',       label: 'Grants',       icon: 'ti-currency-euro' },
+                { value: 'accelerator', label: 'Accelerators', icon: 'ti-trending-up' },
+                { value: 'competition', label: 'Competitions', icon: 'ti-trophy' },
+                { value: 'exchange',    label: 'Exchange',     icon: 'ti-world' },
+                { value: 'gov_scheme',  label: 'Gov Schemes',  icon: 'ti-building-community' },
+              ].map(({ value, label, icon }) => {
+                const active = category === value
+                return (
+                  <button
+                    key={value}
+                    className={`rounded-2xl border p-4 text-left flex flex-col justify-between gap-2 transition-all duration-300 ${
+                      active
+                        ? 'border-indigo-600 bg-indigo-950 text-white shadow-lg shadow-indigo-950/20'
+                        : 'border-slate-200 bg-slate-50 text-slate-800 hover:border-slate-400'
+                    }`}
+                    onClick={() => update({ category: value })}
+                  >
+                    <i className={`ti ${icon} text-lg`} />
+                    <strong className="text-xs font-bold block leading-tight">{label}</strong>
+                  </button>
+                )
+              })}
 
             </div>
           </div>
@@ -361,10 +328,10 @@ export default function Explore() {
 
                         {/* Card Body Content */}
                         <div className="space-y-2">
-                          <h3 className="text-base font-extrabold text-slate-950 leading-snug group-hover:text-indigo-600 transition-colors">
+                          <h3 className="text-base font-extrabold text-slate-950 leading-snug group-hover:text-indigo-600 transition-colors line-clamp-2">
                             {opp.title}
                           </h3>
-                          <span className="prism-mono text-[11px] font-bold text-slate-500 block">
+                          <span className="prism-mono text-[11px] font-bold text-slate-500 block truncate">
                             {opp.organizer}
                           </span>
                         </div>
@@ -373,21 +340,25 @@ export default function Explore() {
                           <span className="flex items-center gap-1">
                             <i className="ti ti-map-pin text-indigo-600" /> {opp.country || 'Global'}
                           </span>
-                          <span className="flex items-center gap-1 font-bold text-slate-800">
-                            <i className="ti ti-currency-euro" /> {opp.funding_amount || 'Fully Funded'}
-                          </span>
+                          {opp.funding_amount ? (
+                            <span className="flex items-center gap-1 font-bold text-slate-800 truncate max-w-[140px]">
+                              <i className="ti ti-cash text-emerald-500" /> {opp.funding_amount}
+                            </span>
+                          ) : (
+                            <span className="text-slate-400 font-mono text-[10px]">Rolling</span>
+                          )}
                         </div>
 
                         {/* Card Footer Actions */}
                         <div className="pt-3 flex items-center justify-between gap-3" onClick={(e) => e.stopPropagation()}>
                           <a
-                            href={applyUrl(opp.id)}
+                            href={applyUrl(opp)}
                             onClick={applyHandler(opp, `/explore?${params.toString()}`)}
                             target="_blank"
                             rel="noopener noreferrer"
                             className="bg-[#0A0A0A] text-white px-4 py-2 rounded-xl font-bold text-xs flex items-center gap-1 hover:bg-indigo-600 transition-colors"
                           >
-                            <span>Apply Specs</span>
+                            <span>Apply</span>
                             <i className="ti ti-arrow-up-right text-xs" />
                           </a>
 
