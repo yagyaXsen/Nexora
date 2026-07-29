@@ -19,31 +19,24 @@ export default function Profile() {
 
   // Profile Identity State
   const [fullName, setFullName] = useState('')
-  const [dob, setDob] = useState('1998-05-14')
-  const [residence, setResidence] = useState('Switzerland')
-  const [citizenship, setCitizenship] = useState('Switzerland, India')
-  const [timezone, setTimezone] = useState('Europe/Zurich (UTC+1)')
-  const [languages, setLanguages] = useState('English (Native), German (Fluent), French (Basic)')
+  const [residence, setResidence] = useState('')
+  const [citizenship, setCitizenship] = useState('')
 
   // Academic Credentials
   const [academicDegree, setAcademicDegree] = useState('')
   const [institution, setInstitution] = useState('')
-  const [fieldOfStudy, setFieldOfStudy] = useState('Computer Science & Artificial Intelligence')
-  const [currentRole, setCurrentRole] = useState('Postdoctoral Research Fellow')
+  const [fieldOfStudy, setFieldOfStudy] = useState('')
 
   // Skills & Preferences
   const [interestsText, setInterestsText] = useState('')
   const [skillsText, setSkillsText] = useState('')
-  const [certificationsText, setCertificationsText] = useState('AWS Machine Learning Specialty, Deep Learning Institute Certified')
-  const [targetCountries, setTargetCountries] = useState('Switzerland, Germany, United States, United Kingdom')
-  const [workMode, setWorkMode] = useState('Hybrid')
+  const [targetCountries, setTargetCountries] = useState('')
 
   // Embedded Settings Module State
-  const [emailInput, setEmailInput] = useState(user?.email || 'rdxweapon6@gmail.com')
+  const [emailInput, setEmailInput] = useState(user?.email || '')
   const [twoFactor, setTwoFactor] = useState(false)
-  const [activeSessions, setActiveSessions] = useState([
-    { id: 1, device: 'macOS Sonoma · Zurich, Switzerland', isCurrent: true },
-    { id: 2, device: 'iOS Safari · Geneva, Switzerland', isCurrent: false },
+  const [activeSessions] = useState([
+    { id: 1, device: 'Current session', isCurrent: true },
   ])
 
   const [privacy, setPrivacy] = useState({
@@ -71,10 +64,10 @@ export default function Profile() {
   })
 
   const [connected, setConnected] = useState({
-    linkedin: true,
-    github: true,
-    orcid: true,
-    google: true,
+    linkedin: false,
+    github: false,
+    orcid: false,
+    google: !!(user?.google_id),
   })
 
   useEffect(() => {
@@ -86,11 +79,14 @@ export default function Profile() {
         if (cancelled) return
         setProfile(data)
         setFullName(data.full_name || user?.name || '')
-        setAcademicDegree(data.academic_degree || 'Postdoctoral Fellow')
-        setInstitution(data.institution || 'ETH Zurich')
-        setCitizenship(data.citizenship || 'Switzerland, India')
-        setInterestsText(Array.isArray(data.interests) ? data.interests.join(', ') : 'Artificial Intelligence, Robotics, Quantum Computing, Deeptech')
-        setSkillsText(Array.isArray(data.skills) ? data.skills.join(', ') : 'PyTorch, ROS2, Distributed Systems, LaTeX, C++, Computer Vision')
+        setAcademicDegree(data.academic_degree || '')
+        setInstitution(data.institution || '')
+        setCitizenship(data.citizenship || '')
+        setResidence(data.residence || '')
+        setFieldOfStudy(data.field_of_study || '')
+        setInterestsText(Array.isArray(data.interests) ? data.interests.join(', ') : '')
+        setSkillsText(Array.isArray(data.skills) ? data.skills.join(', ') : '')
+        setTargetCountries(Array.isArray(data.target_countries) ? data.target_countries.join(', ') : '')
       })
       .catch((e) => !cancelled && setError(e.message))
       .finally(() => !cancelled && setLoading(false))
@@ -113,9 +109,12 @@ export default function Profile() {
       full_name: fullName,
       academic_degree: academicDegree,
       institution: institution,
+      field_of_study: fieldOfStudy,
       citizenship: citizenship,
+      residence: residence,
       interests: interestsText.split(',').map((s) => s.trim()).filter(Boolean),
       skills: skillsText.split(',').map((s) => s.trim()).filter(Boolean),
+      target_countries: targetCountries.split(',').map((s) => s.trim()).filter(Boolean),
     }
 
     try {
@@ -337,31 +336,41 @@ export default function Profile() {
               {/* Vector Health Status Card */}
               <div className="bg-white border border-slate-200 p-6 rounded-3xl shadow-xl space-y-4">
                 <div className="font-mono text-xs text-indigo-600 font-bold uppercase tracking-widest pb-3 border-b border-slate-200">
-                  [ VECTOR HEALTH ]
+                  [ PROFILE COMPLETENESS ]
                 </div>
-                <div className="text-3xl font-extrabold text-slate-950 font-sans">98.4%</div>
+                <div className="text-3xl font-extrabold text-slate-950 font-sans">
+                  {profile ? (
+                    (() => {
+                      const fields = [fullName, academicDegree, institution, fieldOfStudy, citizenship, residence, skillsText, interestsText]
+                      const filled = fields.filter(f => f && f.trim().length > 0).length
+                      return `${Math.round((filled / fields.length) * 100)}%`
+                    })()
+                  ) : '—'}
+                </div>
                 <p className="text-xs text-slate-500 font-serif leading-relaxed">
-                  Your candidate profile vector is active across 1,420 indexed research portals.
+                  Complete your profile to improve AI recommendation accuracy.
                 </p>
               </div>
 
-              {/* Connected Academic Portals */}
+              {/* Connected Profiles — real state only */}
               <div className="bg-white border border-slate-200 p-6 rounded-3xl shadow-xl space-y-4 font-mono text-xs">
                 <div className="font-bold text-slate-900 uppercase pb-2 border-b border-slate-200">
                   [ CONNECTED PROFILES ]
                 </div>
                 <div className="space-y-2">
                   <div className="p-3 bg-slate-50 rounded-xl flex items-center justify-between border border-slate-200">
+                    <span>Google</span>
+                    {connected.google
+                      ? <span className="text-emerald-600 font-bold">✓ CONNECTED</span>
+                      : <span className="text-slate-400 font-bold">— NOT LINKED</span>}
+                  </div>
+                  <div className="p-3 bg-slate-50 rounded-xl flex items-center justify-between border border-slate-200">
                     <span>ORCID iD</span>
-                    <span className="text-emerald-600 font-bold">✓ VERIFIED</span>
+                    <span className="text-slate-400 font-bold">— COMING SOON</span>
                   </div>
                   <div className="p-3 bg-slate-50 rounded-xl flex items-center justify-between border border-slate-200">
-                    <span>GitHub Research</span>
-                    <span className="text-emerald-600 font-bold">✓ SYNCED</span>
-                  </div>
-                  <div className="p-3 bg-slate-50 rounded-xl flex items-center justify-between border border-slate-200">
-                    <span>LinkedIn Academic</span>
-                    <span className="text-emerald-600 font-bold">✓ SYNCED</span>
+                    <span>LinkedIn</span>
+                    <span className="text-slate-400 font-bold">— COMING SOON</span>
                   </div>
                 </div>
               </div>
