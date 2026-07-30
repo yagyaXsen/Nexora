@@ -260,19 +260,20 @@ def backfill_slugs() -> int:
 
 
 def _clear_dummy_profile_defaults() -> None:
-    """One-time migration: clear the old dummy column defaults on existing profiles.
+    """One-time migration: clear any profile fields that still hold old dummy defaults.
 
     Before commit 5dc90d0, the Profile model had hardcoded dummy SQLAlchemy
-    defaults for every text column ("Postdoctoral Research Fellow",
-    "ETH Zurich", "Computer Science & Artificial Intelligence",
-    "Switzerland, India", "Zurich, Switzerland"). Any profile that was
-    auto-created for a new Google user (before the onboarding fix) has
-    these values permanently stored.
+    defaults for every text column. Any auto-created profile (e.g. from a
+    Google sign-up before the onboarding fix) may still have a mix of these
+    values — even if the user later changed some fields.
 
-    This function only clears rows where ALL five fields match the exact
-    old defaults, so it won't touch legitimate data (e.g. a real ETH Zurich
-    student). It is safe to run every boot — after the first pass no rows
-    will match the query.
+    This version checks each of the five recognized dummy strings individually
+    and clears only the fields that still match. To avoid false positives
+    (e.g. a real ETH Zurich student), we require **at least 2 fields** to match
+    before clearing any, which catches all auto-created Google profiles while
+    sparing legitimate partial matches.
+
+    Idempotent — after the first pass no rows will have old defaults.
     """
     from app.models import Profile
 
@@ -286,23 +287,31 @@ def _clear_dummy_profile_defaults() -> None:
 
     db = SessionLocal()
     try:
-        q = db.query(Profile)
-        for col, val in old_defaults.items():
-            q = q.filter(getattr(Profile, col) == val)
+        # Fetch every profile and check each field individually
+        all_profiles = db.query(Profile).all()
 
-        matches = q.all()
-        if not matches:
+        cleared_any = False
+        for prof in all_profiles:
+            matching_fields = []
+            for col, val in old_defaults.items():
+                if getattr(prof, col) == val:
+                    matching_fields.append(col)
+
+            # Require at least 2 matches to avoid false positives
+            # (a real ETH Zurich student with legitimate data won't match 2+)
+            if len(matching_fields) >= 2:
+                for col in matching_fields:
+                    setattr(prof, col, "")
+                cleared_any = True
+                logger.info(
+                    f"  Cleared {len(matching_fields)} field(s) for profile ID {prof.id}: {matching_fields}"
+                )
+
+        if not cleared_any:
             logger.info("Dummy profile cleanup: no stale profiles found.")
-            return
-
-        cleared = 0
-        for prof in matches:
-            for col in old_defaults:
-                setattr(prof, col, "")
-            cleared += 1
-
-        db.commit()
-        logger.info(f"Dummy profile cleanup: cleared {cleared} profile(s) with old defaults.")
+        else:
+            db.commit()
+            logger.info("Dummy profile cleanup complete.")
     except Exception:
         db.rollback()
         logger.exception("Dummy profile cleanup failed (non-fatal, will retry on next boot)")
