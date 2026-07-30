@@ -146,6 +146,35 @@ export default function Profile() {
 
       <div className="max-w-[1240px] mx-auto px-6 relative z-10 space-y-8">
 
+        {/* Empty-State Guidance Banner */}
+        {profile && !loading && (() => {
+          const fieldChecks = [
+            { name: 'name', value: fullName },
+            { name: 'degree', value: academicDegree },
+            { name: 'institution', value: institution },
+            { name: 'field of study', value: fieldOfStudy },
+            { name: 'citizenship', value: citizenship },
+            { name: 'residence', value: residence },
+          ]
+          const emptyFieldNames = fieldChecks.filter(f => !f.value || !f.value.trim()).map(f => f.name)
+          if (emptyFieldNames.length === 0) return null
+          return (
+            <div className="bg-amber-50 border border-amber-200 rounded-3xl p-5 flex items-start gap-4 shadow-sm">
+              <div className="w-10 h-10 bg-amber-100 rounded-xl flex items-center justify-center shrink-0">
+                <span className="text-amber-600 text-lg font-bold">!</span>
+              </div>
+              <div className="space-y-1">
+                <h3 className="font-bold text-sm text-amber-900">Complete your profile for better AI matching</h3>
+                <p className="text-xs text-amber-700 font-serif leading-relaxed">
+                  {emptyFieldNames.length === 1
+                    ? `1 field is empty — fill in "${emptyFieldNames[0]}" to improve opportunity recommendations.`
+                    : `${emptyFieldNames.length} fields are empty — fill in your ${emptyFieldNames.slice(0, -1).join(', ')} & ${emptyFieldNames.slice(-1)} to unlock full AI matching.`}
+                </p>
+              </div>
+            </div>
+          )
+        })()}
+
         {/* 1. Header Profile Banner */}
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 pb-6 border-b border-slate-200">
           <div className="flex items-center gap-4">
@@ -162,7 +191,7 @@ export default function Profile() {
 
           <div className="flex items-center gap-3 shrink-0">
             <button
-              onClick={() => logout().then(() => navigate('/login'))}
+              onClick={async () => { await logout(); navigate('/login'); }}
               className="bg-slate-100 hover:bg-slate-200 text-slate-800 px-5 py-2.5 rounded-2xl text-xs font-bold transition-all border border-slate-200"
             >
               Sign Out

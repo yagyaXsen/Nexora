@@ -107,8 +107,36 @@ def ensure_tables() -> bool:
     return True
 
 
+def _seed_organizations() -> int:
+    """Seed organizations from seed_data.py if the table is empty."""
+    from app.models import Organization
+    from app.seed_data import ORGANIZATIONS
+
+    db = SessionLocal()
+    try:
+        existing = db.query(Organization).count()
+        if existing > 0:
+            return 0
+
+        inserted = 0
+        for org_data in ORGANIZATIONS:
+            existing_org = db.query(Organization).filter(
+                Organization.slug == org_data["slug"]
+            ).first()
+            if not existing_org:
+                db.add(Organization(**org_data))
+                inserted += 1
+
+        if inserted:
+            db.commit()
+            logger.info(f"Seeded {inserted} organization(s).")
+        return inserted
+    finally:
+        db.close()
+
+
 def seed_initial_data() -> int:
-    """Insert seed sources and seed opportunities if the DB is empty.
+    """Insert seed sources, organizations, and opportunities if the DB is empty.
 
     Returns the number of seed opportunities inserted.
     """
@@ -183,11 +211,12 @@ def seed_initial_data() -> int:
                     slug = f"{base_slug}-{counter}"
                     counter += 1
 
+                # Organizations are seeded by _seed_organizations() before
+                # seed_initial_data(), so they should exist in the DB.
                 org_slug = slugify(opp_data.get("organizer", "unknown"))
                 org = db.query(Organization).filter(
                     Organization.slug == org_slug
                 ).first()
-                org_id = org.id if org else None
 
                 deadline = None
                 if "deadline" in opp_data and opp_data["deadline"]:
@@ -213,7 +242,7 @@ def seed_initial_data() -> int:
                     status="active",
                     confidence=opp_data.get("confidence", 0.95),
                     dedupe_key=slug,
-                    organization_id=org_id,
+                    organization_id=org.id if org else None,
                     source_id=None,
                     raw_document_id=None,
                 )
@@ -333,6 +362,14 @@ def run_startup():
         logger.info("Tables: ready")
     except Exception:
         logger.exception("FATAL: Table creation failed")
+        raise
+
+    try:
+        org_count = _seed_organizations()
+        if org_count:
+            logger.info(f"Organizations: {org_count} seeded")
+    except Exception:
+        logger.exception("FATAL: Organization seeding failed")
         raise
 
     try:
