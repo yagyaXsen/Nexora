@@ -259,6 +259,57 @@ def backfill_slugs() -> int:
         db.close()
 
 
+def _clear_dummy_profile_defaults() -> None:
+    """One-time migration: clear the old dummy column defaults on existing profiles.
+
+    Before commit 5dc90d0, the Profile model had hardcoded dummy SQLAlchemy
+    defaults for every text column ("Postdoctoral Research Fellow",
+    "ETH Zurich", "Computer Science & Artificial Intelligence",
+    "Switzerland, India", "Zurich, Switzerland"). Any profile that was
+    auto-created for a new Google user (before the onboarding fix) has
+    these values permanently stored.
+
+    This function only clears rows where ALL five fields match the exact
+    old defaults, so it won't touch legitimate data (e.g. a real ETH Zurich
+    student). It is safe to run every boot — after the first pass no rows
+    will match the query.
+    """
+    from app.models import Profile
+
+    old_defaults = {
+        "academic_degree": "Postdoctoral Research Fellow",
+        "institution": "ETH Zurich",
+        "field_of_study": "Computer Science & Artificial Intelligence",
+        "citizenship": "Switzerland, India",
+        "residence": "Zurich, Switzerland",
+    }
+
+    db = SessionLocal()
+    try:
+        q = db.query(Profile)
+        for col, val in old_defaults.items():
+            q = q.filter(getattr(Profile, col) == val)
+
+        matches = q.all()
+        if not matches:
+            logger.info("Dummy profile cleanup: no stale profiles found.")
+            return
+
+        cleared = 0
+        for prof in matches:
+            for col in old_defaults:
+                setattr(prof, col, "")
+            cleared += 1
+
+        db.commit()
+        logger.info(f"Dummy profile cleanup: cleared {cleared} profile(s) with old defaults.")
+    except Exception:
+        db.rollback()
+        logger.exception("Dummy profile cleanup failed (non-fatal, will retry on next boot)")
+    finally:
+        db.close()
+
+
 def run_startup():
     """Call once at process boot. Idempotent — safe to call on every restart.
 
@@ -288,6 +339,9 @@ def run_startup():
     except Exception:
         logger.exception("FATAL: Slug backfill failed")
         raise
+
+    # One-time cleanup of old dummy profile defaults
+    _clear_dummy_profile_defaults()
 
     logger.info("Nexora startup lifecycle complete.")
     logger.info("─" * 50)
