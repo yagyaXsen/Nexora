@@ -78,15 +78,17 @@ export default function Profile() {
       .then((data) => {
         if (cancelled) return
         setProfile(data)
-        setFullName(data.full_name || user?.name || '')
-        setAcademicDegree(data.academic_degree || '')
-        setInstitution(data.institution || '')
-        setCitizenship(data.citizenship || '')
-        setResidence(data.residence || '')
-        setFieldOfStudy(data.field_of_study || '')
-        setInterestsText(Array.isArray(data.interests) ? data.interests.join(', ') : '')
-        setSkillsText(Array.isArray(data.skills) ? data.skills.join(', ') : '')
-        setTargetCountries(Array.isArray(data.target_countries) ? data.target_countries.join(', ') : '')
+        // data is a UserRead with nested profile: { name, email, profile: { academic_degree, ... } }
+        const prof = data.profile || {}
+        setFullName(data.name || user?.name || '')
+        setAcademicDegree(prof.academic_degree || '')
+        setInstitution(prof.institution || '')
+        setCitizenship(prof.citizenship || '')
+        setResidence(prof.residence || '')
+        setFieldOfStudy(prof.field_of_study || '')
+        setInterestsText(Array.isArray(prof.interests) ? prof.interests.join(', ') : '')
+        setSkillsText(Array.isArray(prof.skills) ? prof.skills.join(', ') : '')
+        setTargetCountries(Array.isArray(prof.target_countries) ? prof.target_countries.join(', ') : '')
       })
       .catch((e) => !cancelled && setError(e.message))
       .finally(() => !cancelled && setLoading(false))
@@ -130,8 +132,8 @@ export default function Profile() {
     }
   }
 
-  const handleRevokeSession = (id) => {
-    setActiveSessions(activeSessions.filter((s) => s.id !== id))
+  const handleRevokeSession = () => {
+    // Session management not yet implemented — placeholder
   }
 
   return (
@@ -213,15 +215,7 @@ export default function Profile() {
                     <input
                       value={fullName}
                       onChange={(e) => setFullName(e.target.value)}
-                      className="w-full bg-slate-50 border border-slate-200 p-3 rounded-2xl text-slate-900 outline-none focus:border-indigo-400 font-sans"
-                    />
-                  </div>
-                  <div className="space-y-1.5">
-                    <label className="text-slate-500 font-bold block uppercase">Date of Birth</label>
-                    <input
-                      type="date"
-                      value={dob}
-                      onChange={(e) => setDob(e.target.value)}
+                      placeholder="Your full name"
                       className="w-full bg-slate-50 border border-slate-200 p-3 rounded-2xl text-slate-900 outline-none focus:border-indigo-400 font-sans"
                     />
                   </div>
@@ -230,14 +224,25 @@ export default function Profile() {
                     <input
                       value={residence}
                       onChange={(e) => setResidence(e.target.value)}
+                      placeholder="e.g. Germany"
                       className="w-full bg-slate-50 border border-slate-200 p-3 rounded-2xl text-slate-900 outline-none focus:border-indigo-400 font-sans"
                     />
                   </div>
                   <div className="space-y-1.5">
-                    <label className="text-slate-500 font-bold block uppercase">Citizenship &amp; Passports</label>
+                    <label className="text-slate-500 font-bold block uppercase">Citizenship / Nationality</label>
                     <input
                       value={citizenship}
                       onChange={(e) => setCitizenship(e.target.value)}
+                      placeholder="e.g. India, Germany"
+                      className="w-full bg-slate-50 border border-slate-200 p-3 rounded-2xl text-slate-900 outline-none focus:border-indigo-400 font-sans"
+                    />
+                  </div>
+                  <div className="space-y-1.5">
+                    <label className="text-slate-500 font-bold block uppercase">Target Locations</label>
+                    <input
+                      value={targetCountries}
+                      onChange={(e) => setTargetCountries(e.target.value)}
+                      placeholder="e.g. USA, EU, Global"
                       className="w-full bg-slate-50 border border-slate-200 p-3 rounded-2xl text-slate-900 outline-none focus:border-indigo-400 font-sans"
                     />
                   </div>
