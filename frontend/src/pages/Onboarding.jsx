@@ -77,22 +77,22 @@ export default function Onboarding() {
   const [step, setStep] = useState(1)
 
   // Step 1: Opportunity Focus
-  const [selectedTypes, setSelectedTypes] = useState(['Fellowships', 'Research Grants'])
+  const [selectedTypes, setSelectedTypes] = useState([])
 
   // Step 2: About You
-  const [residence, setResidence] = useState('Switzerland')
-  const [citizenship, setCitizenship] = useState('Switzerland')
-  const [educationLevel, setEducationLevel] = useState('Master of Science')
-  const [institution, setInstitution] = useState('ETH Zurich')
-  const [fieldOfStudy, setFieldOfStudy] = useState('Computer Science & Robotics')
+  const [residence, setResidence] = useState('')
+  const [citizenship, setCitizenship] = useState('')
+  const [educationLevel, setEducationLevel] = useState('')
+  const [institution, setInstitution] = useState('')
+  const [fieldOfStudy, setFieldOfStudy] = useState('')
 
   // Step 3: Domains
   const [selectedDomains, setSelectedDomains] = useState(['AI & Machine Learning'])
 
   // Step 4: Skills & Goals
-  const [skillsInput, setSkillsInput] = useState('PyTorch, ROS2, C++, Distributed Systems')
-  const [careerGoal, setCareerGoal] = useState('Fund Research')
-  const [preferredLocations, setPreferredLocations] = useState('Switzerland, USA, EU, Global Remote')
+  const [skillsInput, setSkillsInput] = useState('')
+  const [careerGoal, setCareerGoal] = useState('')
+  const [preferredLocations, setPreferredLocations] = useState('')
 
   // Step 5: CV / LinkedIn
   const [linkedinUrl, setLinkedinUrl] = useState('')
