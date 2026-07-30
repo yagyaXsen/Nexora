@@ -85,7 +85,7 @@ def get_dashboard_summary(
     ).count()
 
     return DashboardSummary(
-        ai_matched_count=min(saved_count + 6, 18),
+        ai_matched_count=saved_count,
         saved_count=saved_count,
         applied_count=applied_count,
         upcoming_deadlines_count=upcoming_count,

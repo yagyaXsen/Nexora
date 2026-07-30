@@ -60,7 +60,7 @@ class ProfileRead(BaseModel):
     interests: List[str] = []
     target_countries: List[str] = []
     bio: Optional[str] = None
-    vector_confidence: float = 98.4
+    vector_confidence: float = 0.0
 
     class Config:
         from_attributes = True
