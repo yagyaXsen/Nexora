@@ -77,10 +77,11 @@ export default function Profile() {
       .getProfile()
       .then((data) => {
         if (cancelled) return
-        setProfile(data)
-        // data is a UserRead with nested profile: { name, email, profile: { academic_degree, ... } }
+        // data is UserRead: { id, name, email, google_id, profile: { academic_degree, ... } }
         const prof = data.profile || {}
-        setFullName(data.name || user?.name || '')
+        setProfile(prof)
+        setFullName(data.name || '')
+        setEmailInput(data.email || '')
         setAcademicDegree(prof.academic_degree || '')
         setInstitution(prof.institution || '')
         setCitizenship(prof.citizenship || '')
@@ -89,6 +90,7 @@ export default function Profile() {
         setInterestsText(Array.isArray(prof.interests) ? prof.interests.join(', ') : '')
         setSkillsText(Array.isArray(prof.skills) ? prof.skills.join(', ') : '')
         setTargetCountries(Array.isArray(prof.target_countries) ? prof.target_countries.join(', ') : '')
+        setConnected(prev => ({ ...prev, google: !!(data.google_id) }))
       })
       .catch((e) => !cancelled && setError(e.message))
       .finally(() => !cancelled && setLoading(false))
