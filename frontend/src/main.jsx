@@ -6,6 +6,7 @@ import App from './App.jsx'
 import { AuthProvider } from './lib/auth.jsx'
 import './styles/tailwind.css'
 import './styles/base.css'
+import './styles/prism.css'
 
 // GoogleOAuthProvider initialises fine with any non-empty string — sign-in
 // simply fails gracefully if the client ID is invalid (handled by onError in

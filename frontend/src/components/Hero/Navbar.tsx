@@ -1,5 +1,6 @@
 import { motion, useScroll, useTransform, useMotionValue, useSpring } from 'framer-motion'
 import { useRef, useEffect, useState } from 'react'
+import { Link } from 'react-router-dom'
 import { NexoraLogoIcon } from '../common/NexoraLogo.jsx'
 
 const navLinks = [
@@ -82,45 +83,52 @@ export default function Navbar() {
         }`}
       >
         {/* Left: Official Nexora SVG Brand Logo */}
-        <a href="/" className="flex items-center gap-2.5 pl-2 group">
+        <Link to="/" className="flex items-center gap-2.5 pl-2 group">
           <NexoraLogoIcon className="w-7 h-7 shadow-md group-hover:scale-105 transition-transform" fillSquare="#FFFFFF" fillN="#000000" />
           <span className="text-white font-extrabold tracking-tight text-lg">Nexora</span>
-        </a>
+        </Link>
 
         {/* Center: Links */}
         <div className="hidden lg:flex items-center gap-1">
           {navLinks.map((item, i) => (
-            <motion.a
+            <motion.div
               key={item.label}
-              href={item.path}
               initial={{ opacity: 0, y: -10 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.2 + i * 0.1, duration: 0.5 }}
-              className="text-slate-300 hover:text-white px-4 py-2 rounded-full text-sm font-medium transition-colors hover:bg-white/10"
             >
-              {item.label}
-            </motion.a>
+              <Link
+                to={item.path}
+                className="text-slate-300 hover:text-white px-4 py-2 rounded-full text-sm font-medium transition-colors hover:bg-white/10 block"
+              >
+                {item.label}
+              </Link>
+            </motion.div>
           ))}
         </div>
 
         {/* Right: Actions */}
         <div className="flex items-center gap-2">
-          <motion.a
-            href="/login"
+          <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             transition={{ delay: 0.7 }}
-            className="hidden sm:block text-slate-300 hover:text-white px-4 py-2 text-sm font-medium transition-colors"
+            className="hidden sm:block"
           >
-            Log in
-          </motion.a>
+            <Link
+              to="/login"
+              className="text-slate-300 hover:text-white px-4 py-2 text-sm font-medium transition-colors block"
+            >
+              Log in
+            </Link>
+          </motion.div>
           
           <motion.div
             initial={{ opacity: 0, scale: 0.8 }}
             animate={{ opacity: 1, scale: 1 }}
             transition={{ delay: 0.8, type: 'spring' }}
           >
-            <a href="/signup">
+            <Link to="/signup">
               <MagneticButton className={`font-semibold px-5 py-2.5 rounded-full text-sm shadow-md transition-all ${
                 isScrolled 
                   ? 'bg-blue-600 text-white hover:bg-blue-500' 
@@ -128,7 +136,7 @@ export default function Navbar() {
               }`}>
                 Start Free
               </MagneticButton>
-            </a>
+            </Link>
           </motion.div>
         </div>
       </motion.nav>
