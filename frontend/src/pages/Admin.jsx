@@ -7,7 +7,21 @@ import { isLocalhost, ADMIN_NO_LOGIN } from '../lib/env.js'
 // ── Dev-only admin API client ─────────────────────────────────────────────
 // This file is lazy-loaded and registered ONLY in dev builds (see App.jsx),
 // so these endpoints never ship in the production bundle.
-const ADMIN_KEY = import.meta.env.VITE_ADMIN_KEY || ''
+//
+// Zero-config no-login: when the dev server runs on localhost with no
+// VITE_API_BASE_URL and no VITE_ADMIN_KEY, fall back to the backend's public
+// dev-default admin key (DEV_ADMIN_KEY in app/config.py). That exact situation
+// means the browser talks to the local backend via the vite proxy (same-origin
+// /api → localhost:8000), so the dev key is never transmitted to a remote host
+// and never grants access against a deployed API (which uses a real secret).
+const hasUserKey = !!import.meta.env.VITE_ADMIN_KEY
+const ADMIN_KEY =
+  import.meta.env.VITE_ADMIN_KEY ||
+  (!import.meta.env.VITE_API_BASE_URL &&
+    import.meta.env.DEV &&
+    isLocalhost()
+    ? 'nexora_admin_secret_dev_key'
+    : '')
 
 async function adminRequest(path, { method = 'GET' } = {}) {
   const base = (import.meta.env.VITE_API_BASE_URL || '').replace(/\/$/, '')
@@ -73,10 +87,11 @@ export default function Admin() {
       setStats(statsRes?.data ?? statsRes ?? null)
       setUsers(usersRes?.data ?? usersRes ?? [])
     } catch (e) {
-      if (!ADMIN_KEY && e?.status === 403) {
+      if (!hasUserKey && e?.status === 403) {
         setError(
-          "The API rejected the request. Set VITE_ADMIN_KEY in frontend/.env.local " +
-          'to match ADMIN_SECRET_KEY on the server to use the no-login console.'
+          "The API rejected the request. Point VITE_API_BASE_URL at a local backend " +
+          'or set VITE_ADMIN_KEY in frontend/.env.local to match ADMIN_SECRET_KEY ' +
+          'on the server to use the no-login console.'
         )
       } else {
         setError(e.message || 'Failed to load admin data')
