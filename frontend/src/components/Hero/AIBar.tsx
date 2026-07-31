@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Sparkles, ArrowRight } from 'lucide-react'
+import { Link } from 'react-router-dom'
 
 const opportunities = [
   "Searching worldwide...",
@@ -58,10 +59,12 @@ export default function AIBar() {
       </div>
 
       {/* Right side: Action Button */}
-      <button className="w-full sm:w-auto group relative flex items-center justify-center gap-2 bg-white text-nx-dark font-semibold px-6 py-3 rounded-xl overflow-hidden hover:bg-gray-100 transition-colors">
-        <span className="relative z-10 text-sm">Explore Opportunities</span>
-        <ArrowRight size={16} className="relative z-10 group-hover:translate-x-1 transition-transform" />
-      </button>
+      <Link to="/explore" className="w-full sm:w-auto">
+        <button className="w-full group relative flex items-center justify-center gap-2 bg-white text-nx-dark font-semibold px-6 py-3 rounded-xl overflow-hidden hover:bg-gray-100 transition-colors cursor-pointer">
+          <span className="relative z-10 text-sm">Explore Opportunities</span>
+          <ArrowRight size={16} className="relative z-10 group-hover:translate-x-1 transition-transform" />
+        </button>
+      </Link>
 
     </motion.div>
   )
