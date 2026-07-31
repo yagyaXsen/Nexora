@@ -1,36 +1,16 @@
 import { motion } from 'framer-motion'
-import { useState } from 'react'
 
 export default function HeroBackground() {
-  // Video starts invisible; the poster renders instantly and the video fades
-  // in only when it is actually playable, so the hero never shows a black void
-  // while the clip downloads.
-  const [videoReady, setVideoReady] = useState(false)
-
   return (
     <div className="absolute inset-0 overflow-hidden bg-nx-dark pointer-events-none">
-      {/* Always-visible instant poster layer — the hero looks complete the moment
-          it paints, even before any video data arrives. */}
-      <img
-        src="/assets/hero_main.png"
-        alt=""
-        aria-hidden="true"
-        className="absolute inset-0 w-full h-full object-cover"
-      />
-
-      {/* Background Video — local compressed copy (~2.7 MB vs 11.8 MB remote).
-          Fades in over the poster only when actually playable. */}
+      {/* Background Video from Hero */}
       <video
         autoPlay
         muted
         loop
         playsInline
-        preload="auto"
-        onCanPlay={() => setVideoReady(true)}
-        className={`absolute inset-0 w-full h-full object-cover transition-opacity duration-1000 ease-out ${
-          videoReady ? 'opacity-85' : 'opacity-0'
-        }`}
-        src="/assets/hero_bg.mp4"
+        className="absolute inset-0 w-full h-full object-cover opacity-85"
+        src="https://d8j0ntlcm91z4.cloudfront.net/user_38xzZboKViGWJOttwIXH07lWA1P/hf_20260711_090308_1dd0cea7-f9ba-4db4-8147-c7d746061c9e.mp4"
       />
 
       {/* Subtle overlay for contrast */}
