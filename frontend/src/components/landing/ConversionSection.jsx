@@ -1,5 +1,6 @@
 import { motion } from 'framer-motion'
 import { ArrowRight, Sparkles } from 'lucide-react'
+import { Link } from 'react-router-dom'
 
 export default function ConversionSection() {
   return (
@@ -24,19 +25,19 @@ export default function ConversionSection() {
           </p>
 
           <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
-            <a
-              href="/signup"
+            <Link
+              to="/signup"
               className="w-full sm:w-auto px-8 py-4 rounded-xl bg-slate-900 text-white font-bold text-sm hover:bg-slate-800 transition-colors flex items-center justify-center gap-2 shadow-lg"
             >
               <span>Create Free Account</span>
               <ArrowRight size={16} />
-            </a>
-            <a
-              href="/explore"
+            </Link>
+            <Link
+              to="/explore"
               className="w-full sm:w-auto px-8 py-4 rounded-xl bg-white text-slate-900 font-bold text-sm hover:bg-slate-100 border border-slate-200 transition-colors shadow-sm"
             >
               Browse All Programs
-            </a>
+            </Link>
           </div>
         </motion.div>
       </div>

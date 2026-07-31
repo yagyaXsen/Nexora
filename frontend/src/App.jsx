@@ -21,6 +21,7 @@ import Profile from './pages/Profile.jsx'
 import Settings from './pages/Settings.jsx'
 import Notifications from './pages/Notifications.jsx'
 import AiAssistantPage from './pages/AiAssistantPage.jsx'
+import Privacy from './pages/Privacy.jsx'
 import { ADMIN_NO_LOGIN } from './lib/env.js'
 
 // The admin console is a localhost-only tool. It is lazy-loaded and registered
@@ -75,7 +76,8 @@ export default function App() {
             />
             <Route path="/organizations/:slug" element={<OrganizationDetail />} />
             <Route path="/ai-assistant" element={<AiAssistantPage />} />
-            
+            <Route path="/privacy" element={<Privacy />} />
+
             {/* Auth Routes */}
             <Route path="/login" element={<Login />} />
             <Route path="/signup" element={<Signup />} />

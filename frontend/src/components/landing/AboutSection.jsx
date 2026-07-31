@@ -1,4 +1,5 @@
 import { Search, Sparkles } from 'lucide-react'
+import { Link } from 'react-router-dom'
 
 export default function AboutSection() {
   return (
@@ -12,25 +13,25 @@ export default function AboutSection() {
           </p>
           
           <div className="flex flex-wrap justify-center gap-4">
-            <a
-              href="/explore"
+            <Link
+              to="/explore"
               className="flex items-center gap-3 bg-slate-900 text-white rounded-full pl-2 pr-6 py-2 hover:bg-slate-800 transition-colors shadow-md text-xs md:text-sm font-bold"
             >
               <span className="bg-white text-slate-900 rounded-full p-1.5 flex items-center justify-center shadow-sm">
                 <Search size={16} />
               </span>
               <span>EXPLORE OPPORTUNITIES</span>
-            </a>
+            </Link>
 
-            <a
-              href="/ai-assistant"
+            <Link
+              to="/ai-assistant"
               className="flex items-center gap-3 bg-white text-slate-900 border border-slate-200/80 rounded-full pl-2 pr-6 py-2 hover:bg-slate-100 transition-colors shadow-sm text-xs md:text-sm font-bold"
             >
               <span className="bg-blue-50 text-blue-600 rounded-full p-1.5 flex items-center justify-center shadow-sm">
                 <Sparkles size={16} />
               </span>
               <span>TRY AI MATCH ENGINE</span>
-            </a>
+            </Link>
           </div>
         </div>
 

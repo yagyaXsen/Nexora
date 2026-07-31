@@ -1,4 +1,5 @@
 import { useEffect, useState, useRef } from 'react'
+import { Link } from 'react-router-dom'
 
 const features = [
   {
@@ -160,12 +161,12 @@ export default function FeaturesSection() {
               <p className="text-slate-500 text-xs font-medium mb-4">
                 No noise. No complicated systems. Just your path, gently sorted.
               </p>
-              <a
-                href="/explore"
+              <Link
+                to="/explore"
                 className="inline-block bg-[#0A0A0A] hover:bg-slate-800 text-white text-xs font-extrabold px-5 py-3 rounded-xl transition-all shadow-md active:scale-98"
               >
                 Start for free
-              </a>
+              </Link>
             </div>
           </div>
 
