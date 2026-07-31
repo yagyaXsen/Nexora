@@ -15,11 +15,18 @@ import { isLocalhost, ADMIN_NO_LOGIN } from '../lib/env.js'
 // /api → localhost:8000), so the dev key is never transmitted to a remote host
 // and never grants access against a deployed API (which uses a real secret).
 const hasUserKey = !!import.meta.env.VITE_ADMIN_KEY
+// The dev key may only ever be sent to a LOCAL backend. It applies when
+// VITE_API_BASE_URL is empty (vite proxy → localhost:8000) OR when it
+// explicitly points at localhost/127.0.0.1 — the common .env setup. A
+// remote API base (e.g. the deployed API with a real ADMIN_SECRET_KEY)
+// never receives the dev key.
+const ADMIN_BASE = (import.meta.env.VITE_API_BASE_URL || '').replace(/\/$/, '')
+const adminBaseIsLocal =
+  !ADMIN_BASE ||
+  /^https?:\/\/(localhost|127\.0\.0\.1|\[::1\])(:\d+)?(\/|$)/i.test(ADMIN_BASE)
 const ADMIN_KEY =
   import.meta.env.VITE_ADMIN_KEY ||
-  (!import.meta.env.VITE_API_BASE_URL &&
-    import.meta.env.DEV &&
-    isLocalhost()
+  (adminBaseIsLocal && import.meta.env.DEV && isLocalhost()
     ? 'nexora_admin_secret_dev_key'
     : '')
 
