@@ -24,7 +24,7 @@ export default function AboutSection() {
             </Link>
 
             <Link
-              to="/ai-assistant"
+              to="/explore"
               className="flex items-center gap-3 bg-white text-slate-900 border border-slate-200/80 rounded-full pl-2 pr-6 py-2 hover:bg-slate-100 transition-colors shadow-sm text-xs md:text-sm font-bold"
             >
               <span className="bg-blue-50 text-blue-600 rounded-full p-1.5 flex items-center justify-center shadow-sm">
