@@ -15,7 +15,6 @@ export default function PrismFooter() {
         <div className="flex items-center gap-6 text-slate-300 font-bold">
           <Link to="/explore" className="hover:text-white transition-colors">Opportunities</Link>
           <Link to="/tracker" className="hover:text-white transition-colors">Tracker</Link>
-          <Link to="/ai-assistant" className="hover:text-white transition-colors">AI Copilot</Link>
           <Link to="/privacy" className="hover:text-white transition-colors">Privacy Policy</Link>
         </div>
 

@@ -5,7 +5,6 @@ import { NexoraLogoIcon } from '../common/NexoraLogo.jsx'
 
 const navLinks = [
   { label: 'Explore', path: '/explore' },
-  { label: 'AI Intelligence', path: '/ai-assistant' },
   { label: 'Tracker', path: '/tracker' },
   { label: 'Features', path: '/explore' }
 ]
