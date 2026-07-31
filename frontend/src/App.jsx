@@ -82,12 +82,12 @@ export default function App() {
             <Route path="/forgot-password" element={<ForgotPassword />} />
             <Route path="/reset-password" element={<ResetPassword />} />
 
-            {/* Phase 2: Onboarding (Deferred for Phase 1 launch - directs to Dashboard) */}
+            {/* Onboarding onboarding setup wizard for new users */}
             <Route
               path="/onboarding"
               element={
                 <ProtectedRoute>
-                  <Dashboard />
+                  <Onboarding />
                 </ProtectedRoute>
               }
             />
