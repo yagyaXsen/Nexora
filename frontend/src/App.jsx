@@ -21,6 +21,7 @@ import Profile from './pages/Profile.jsx'
 import Settings from './pages/Settings.jsx'
 import Notifications from './pages/Notifications.jsx'
 import AiAssistantPage from './pages/AiAssistantPage.jsx'
+import Admin from './pages/Admin.jsx'
 
 function ScrollToTop() {
   const { pathname } = useLocation()
@@ -122,6 +123,14 @@ export default function App() {
               element={
                 <ProtectedRoute>
                   <Notifications />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/admin"
+              element={
+                <ProtectedRoute>
+                  <Admin />
                 </ProtectedRoute>
               }
             />

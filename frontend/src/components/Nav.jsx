@@ -74,6 +74,17 @@ export default function Nav() {
               >
                 Settings
               </NavLink>
+
+              {user.role === 'admin' && (
+                <NavLink
+                  to="/admin"
+                  className={({ isActive }) =>
+                    `px-3.5 py-2 rounded-xl transition-all ${isActive ? 'bg-red-50 text-red-600' : 'text-slate-600 hover:text-red-600 hover:bg-red-50'}`
+                  }
+                >
+                  <i className="ti ti-shield-lock mr-1" /> Admin
+                </NavLink>
+              )}
             </>
           )}
         </nav>
@@ -153,6 +164,15 @@ export default function Nav() {
               >
                 Settings
               </NavLink>
+              {user.role === 'admin' && (
+                <NavLink
+                  to="/admin"
+                  onClick={() => setMobileOpen(false)}
+                  className="block py-2 text-sm font-bold text-red-600"
+                >
+                  Admin Console
+                </NavLink>
+              )}
             </>
           )}
         </div>
