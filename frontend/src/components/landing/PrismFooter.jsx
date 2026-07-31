@@ -1,3 +1,4 @@
+import { Link } from 'react-router-dom'
 import { NexoraLogoIcon } from '../common/NexoraLogo.jsx'
 
 export default function PrismFooter() {
@@ -12,10 +13,10 @@ export default function PrismFooter() {
         </div>
 
         <div className="flex items-center gap-6 text-slate-300 font-bold">
-          <a href="/explore" className="hover:text-white transition-colors">Opportunities</a>
-          <a href="/tracker" className="hover:text-white transition-colors">Tracker</a>
-          <a href="/ai-assistant" className="hover:text-white transition-colors">AI Copilot</a>
-          <a href="/privacy" className="hover:text-white transition-colors">Privacy Policy</a>
+          <Link to="/explore" className="hover:text-white transition-colors">Opportunities</Link>
+          <Link to="/tracker" className="hover:text-white transition-colors">Tracker</Link>
+          <Link to="/ai-assistant" className="hover:text-white transition-colors">AI Copilot</Link>
+          <Link to="/privacy" className="hover:text-white transition-colors">Privacy Policy</Link>
         </div>
 
 

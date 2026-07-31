@@ -1,5 +1,6 @@
 import { motion } from 'framer-motion'
 import { Building2, Globe2, Layers, Award } from 'lucide-react'
+import { Link } from 'react-router-dom'
 
 const regions = [
   { name: 'Europe & UK', count: '6,400+ Calls', top: 'Humboldt, CERN, ETH Zurich, Horizon Europe' },
@@ -53,12 +54,12 @@ export default function EcosystemSection() {
               Our scrapers check listing pages every 4 hours to verify active application forms before deadlines pass.
             </p>
           </div>
-          <a
-            href="/explore"
+          <Link
+            to="/explore"
             className="px-6 py-3 rounded-xl bg-white text-slate-900 font-bold text-sm hover:bg-slate-100 transition-colors shrink-0"
           >
             Explore Global Database
-          </a>
+          </Link>
         </div>
 
       </div>
