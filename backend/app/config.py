@@ -1,6 +1,6 @@
 import logging
 from typing import List
-
+from pydantic import field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 logger = logging.getLogger(__name__)
@@ -18,6 +18,13 @@ class Settings(BaseSettings):
     # give you an ephemeral filesystem, so a SQLite file is wiped on every
     # redeploy, restart, and idle spin-down. See _assert_production_safe().
     DATABASE_URL: str = "sqlite:///./nexora.db"
+
+    @field_validator("DATABASE_URL", mode="before")
+    @classmethod
+    def assemble_db_connection(cls, v: str) -> str:
+        if isinstance(v, str) and v.startswith("postgres://"):
+            return v.replace("postgres://", "postgresql://", 1)
+        return v
 
     GROQ_API_KEY: str = ""
     USE_MOCK_AI: bool = True
