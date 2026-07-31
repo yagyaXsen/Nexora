@@ -4,6 +4,7 @@ import { BrowserRouter } from 'react-router-dom'
 import { GoogleOAuthProvider } from '@react-oauth/google'
 import App from './App.jsx'
 import { AuthProvider } from './lib/auth.jsx'
+import './styles/tailwind.css'
 import './styles/base.css'
 
 // GoogleOAuthProvider initialises fine with any non-empty string — sign-in

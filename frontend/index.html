@@ -16,39 +16,9 @@
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=IBM+Plex+Serif:ital,wght@0,400;0,500;0,600;1,400&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@latest/tabler-icons.min.css">
 
-    <!-- Tailwind CSS Play CDN -->
-    <script src="https://cdn.tailwindcss.com"></script>
-    <script>
-      tailwind.config = {
-        theme: {
-          extend: {
-            fontFamily: {
-              sans: ['Inter', 'Plus Jakarta Sans', '-apple-system', 'BlinkMacSystemFont', 'sans-serif'],
-              serif: ['IBM Plex Serif', 'Georgia', 'serif'],
-              mono: ['ui-monospace', 'SFMono-Regular', 'Menlo', 'Monaco', 'Consolas', 'monospace'],
-            },
-            colors: {
-              nx: {
-                dark: '#09090B',
-                accent: '#4F7CFF',
-                violet: '#8B7FFF',
-                muted: 'rgba(255,255,255,0.72)',
-                glass: 'rgba(255,255,255,0.08)',
-                border: 'rgba(255,255,255,0.12)',
-              },
-              swiss: {
-                red: '#960018',
-                'red-hover': '#7a0013',
-                canvas: '#FAFAF8',
-                surface: '#F0F0EA',
-                border: '#E2E2DC',
-                ink: '#1A1110',
-              }
-            }
-          }
-        }
-      }
-    </script>
+    <!-- Tailwind is compiled at build time (see src/styles/tailwind.css) —
+         no runtime CDN, so the page renders immediately without waiting for
+         the browser to generate the stylesheet. -->
   </head>
   <body>
     <div id="root"></div>
