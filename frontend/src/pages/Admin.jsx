@@ -1,7 +1,38 @@
 import { useEffect, useState, useCallback } from 'react'
-import { api } from '../lib/api'
+import { getToken, clearToken, ApiError } from '../lib/api'
 import { useAuth } from '../lib/auth.jsx'
 import { CountUp } from '../components/CountUp.jsx'
+import { isLocalhost } from '../lib/env.js'
+
+// ── Dev-only admin API client ─────────────────────────────────────────────
+// This file is lazy-loaded and registered ONLY in dev builds (see App.jsx),
+// so these endpoints never ship in the production bundle.
+const ADMIN_KEY = import.meta.env.VITE_ADMIN_KEY || ''
+
+async function adminRequest(path, { method = 'GET' } = {}) {
+  const base = (import.meta.env.VITE_API_BASE_URL || '').replace(/\/$/, '')
+  const headers = {}
+  const token = getToken()
+  if (token) headers.Authorization = `Bearer ${token}`
+  if (ADMIN_KEY) headers['X-Admin-Key'] = ADMIN_KEY
+  const res = await fetch(`${base}${path}`, { method, headers })
+  let data = null
+  try {
+    data = await res.json()
+  } catch {
+    /* non-JSON body */
+  }
+  if (res.status === 401 && token) {
+    // Same hand-off as the shared client: token is dead (e.g. after a wipe) →
+    // clear it and send the user to login so they can sign up fresh.
+    clearToken()
+    if (window.location.pathname !== '/login') window.location.assign('/login')
+  }
+  if (!res.ok) {
+    throw new ApiError(res.status, data?.detail ?? `HTTP ${res.status}`)
+  }
+  return data
+}
 
 const fmtDate = (iso) => {
   if (!iso) return '—'
@@ -26,14 +57,15 @@ export default function Admin() {
   const [notice, setNotice] = useState(null)
 
   const isAdmin = user?.role === 'admin'
+  const localOnly = isLocalhost()
 
   const load = useCallback(async () => {
     setLoading(true)
     setError(null)
     try {
       const [statsRes, usersRes] = await Promise.all([
-        api.adminStats(),
-        api.adminUsers(),
+        adminRequest('/api/admin/stats'),
+        adminRequest('/api/admin/users'),
       ])
       setStats(statsRes?.data ?? statsRes ?? null)
       setUsers(usersRes?.data ?? usersRes ?? [])
@@ -45,15 +77,15 @@ export default function Admin() {
   }, [])
 
   useEffect(() => {
-    if (isAdmin) load()
-  }, [isAdmin, load])
+    if (isAdmin && localOnly) load()
+  }, [isAdmin, localOnly, load])
 
   const handleWipe = async () => {
     if (wipeTyped.trim().toLowerCase() !== 'reset') return
     setBusy(true)
     setNotice(null)
     try {
-      const res = await api.adminResetUsers()
+      const res = await adminRequest('/api/admin/reset-users', { method: 'POST' })
       setNotice(res?.data?.message || 'All user data cleared.')
       setWipeConfirmOpen(false)
       setWipeTyped('')
@@ -81,6 +113,26 @@ export default function Admin() {
               Your account (<span className="font-mono">{user.email}</span>) does not have the{' '}
               <code className="bg-slate-100 px-1.5 py-0.5 rounded text-xs">admin</code> role.
               Contact the platform owner to be promoted.
+            </p>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
+  if (!localOnly) {
+    return (
+      <div className="min-h-screen bg-white pt-32 pb-20 font-sans">
+        <div className="max-w-[680px] mx-auto px-6">
+          <div className="border border-amber-200 bg-amber-50 rounded-3xl p-10 text-center space-y-4">
+            <div className="w-14 h-14 mx-auto rounded-2xl bg-amber-100 flex items-center justify-center text-amber-600">
+              <i className="ti ti-shield-lock text-2xl" />
+            </div>
+            <h1 className="text-2xl font-extrabold text-slate-900">Admin console is private</h1>
+            <p className="text-sm text-slate-600">
+              The admin console is only available from{' '}
+              <code className="bg-slate-100 px-1.5 py-0.5 rounded text-xs">localhost</code> during
+              development — it is intentionally disabled on the live site.
             </p>
           </div>
         </div>

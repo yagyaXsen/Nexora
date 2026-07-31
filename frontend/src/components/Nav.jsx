@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { Link, NavLink } from 'react-router-dom'
 import { useAuth } from '../lib/auth.jsx'
+import { isLocalhost } from '../lib/env.js'
 import { NexoraLogoIcon } from './common/NexoraLogo.jsx'
 import './Nav.css'
 
@@ -75,7 +76,7 @@ export default function Nav() {
                 Settings
               </NavLink>
 
-              {user.role === 'admin' && (
+              {user.role === 'admin' && isLocalhost() && (
                 <NavLink
                   to="/admin"
                   className={({ isActive }) =>
@@ -164,7 +165,7 @@ export default function Nav() {
               >
                 Settings
               </NavLink>
-              {user.role === 'admin' && (
+              {user.role === 'admin' && isLocalhost() && (
                 <NavLink
                   to="/admin"
                   onClick={() => setMobileOpen(false)}

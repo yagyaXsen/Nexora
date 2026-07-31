@@ -1,9 +1,10 @@
 import hmac
+import ipaddress
 import logging
 from datetime import datetime, timedelta, timezone
 from typing import Optional
 
-from fastapi import APIRouter, Depends, Header, HTTPException, status
+from fastapi import APIRouter, Depends, Header, HTTPException, Request, status
 from sqlalchemy import func, text
 from sqlalchemy.orm import Session
 
@@ -19,21 +20,51 @@ router = APIRouter(prefix="/api/admin", tags=["Admin"])
 logger = logging.getLogger(__name__)
 
 
+def _is_loopback(host: str) -> bool:
+    """True for 127.0.0.1, ::1, and localhost."""
+    if not host:
+        return False
+    host = host.strip().lower()
+    if host in {"localhost", "::1"}:
+        return True
+    try:
+        return ipaddress.ip_address(host).is_loopback
+    except ValueError:
+        return False
+
+
 def require_admin(
+    request: Request,
     current_user: User = Depends(get_current_user),
     x_admin_key: Optional[str] = Header(None),
 ) -> User:
-    """Admin guard: a user with role == 'admin', or anyone holding the
-    X-Admin-Key secret (configured via ADMIN_SECRET_KEY env var)."""
-    if current_user.role == "admin":
-        return current_user
+    """Admin guard — private by default.
+
+    Access is granted only when:
+      * the request originates from localhost (loopback) AND the user has
+        role == 'admin', or
+      * the caller holds the X-Admin-Key secret (ADMIN_SECRET_KEY env var),
+        which is the escape hatch for remote/ops access.
+
+    A remote client with role == 'admin' alone is rejected — the console
+    stays localhost-only unless the secret key is explicitly provided.
+    """
+    client_host = (request.client.host if request.client else "") or ""
+    is_loopback = _is_loopback(client_host)
+
+    # Secret-key bypass works from anywhere (used for remote ops tooling).
     if settings.ADMIN_SECRET_KEY and x_admin_key and hmac.compare_digest(
         x_admin_key, settings.ADMIN_SECRET_KEY
     ):
         return current_user
+
+    # Role check only counts when the request comes from the local machine.
+    if is_loopback and current_user.role == "admin":
+        return current_user
+
     raise HTTPException(
         status_code=status.HTTP_403_FORBIDDEN,
-        detail="Admin access required",
+        detail="Admin access restricted to localhost (or provide X-Admin-Key)",
     )
 
 

@@ -153,13 +153,6 @@ export const api = {
     request(`/api/notifications/${id}/read`, { method: 'PATCH' }),
   markAllNotificationsRead: () =>
     request('/api/notifications/read-all', { method: 'PATCH' }),
-
-  // ─────────────────────────────────────────────
-  // Admin (role='admin' or X-Admin-Key required)
-  // ─────────────────────────────────────────────
-  adminStats: () => request('/api/admin/stats'),
-  adminUsers: () => request('/api/admin/users'),
-  adminResetUsers: () => request('/api/admin/reset-users', { method: 'POST' }),
 }
 
 export function applyUrl(opp) {
