@@ -1,5 +1,5 @@
 import { Routes, Route, useLocation } from 'react-router-dom'
-import { useEffect } from 'react'
+import { useEffect, lazy, Suspense } from 'react'
 import Nav from './components/Nav.jsx'
 import Footer from './components/Footer.jsx'
 import ProtectedRoute from './components/ProtectedRoute.jsx'
@@ -21,7 +21,11 @@ import Profile from './pages/Profile.jsx'
 import Settings from './pages/Settings.jsx'
 import Notifications from './pages/Notifications.jsx'
 import AiAssistantPage from './pages/AiAssistantPage.jsx'
-import Admin from './pages/Admin.jsx'
+
+// The admin console is a localhost-only tool. It is lazy-loaded and registered
+// ONLY in dev builds (import.meta.env.DEV → replaced with `false` at build
+// time), so the production bundle never contains the route or the Admin chunk.
+const AdminPage = import.meta.env.DEV ? lazy(() => import('./pages/Admin.jsx')) : null
 
 function ScrollToTop() {
   const { pathname } = useLocation()
@@ -126,14 +130,18 @@ export default function App() {
                 </ProtectedRoute>
               }
             />
-            <Route
-              path="/admin"
-              element={
-                <ProtectedRoute>
-                  <Admin />
-                </ProtectedRoute>
-              }
-            />
+            {AdminPage && (
+              <Route
+                path="/admin"
+                element={
+                  <ProtectedRoute>
+                    <Suspense fallback={null}>
+                      <AdminPage />
+                    </Suspense>
+                  </ProtectedRoute>
+                }
+              />
+            )}
             {/* Catch-all route */}
             <Route path="*" element={<Landing />} />
           </Routes>
