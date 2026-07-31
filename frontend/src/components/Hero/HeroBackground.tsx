@@ -1,15 +1,26 @@
 import { motion } from 'framer-motion'
+import { useState } from 'react'
 
 export default function HeroBackground() {
+  const [videoLoaded, setVideoLoaded] = useState(false)
+
   return (
     <div className="absolute inset-0 overflow-hidden bg-nx-dark pointer-events-none">
-      {/* Background Video from Hero */}
+      {/* Instant Ambient Gradient Fallback (renders in 0ms while video streams) */}
+      <div className="absolute inset-0 bg-gradient-to-b from-[#090d16] via-[#05070c] to-nx-dark z-0" />
+      <div className="absolute top-1/4 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[800px] h-[500px] bg-indigo-600/15 rounded-full blur-[160px] pointer-events-none z-0" />
+
+      {/* Background Video */}
       <video
         autoPlay
         muted
         loop
         playsInline
-        className="absolute inset-0 w-full h-full object-cover opacity-85"
+        preload="auto"
+        onLoadedData={() => setVideoLoaded(true)}
+        className={`absolute inset-0 w-full h-full object-cover transition-opacity duration-1000 ${
+          videoLoaded ? 'opacity-85' : 'opacity-0'
+        }`}
         src="https://d8j0ntlcm91z4.cloudfront.net/user_38xzZboKViGWJOttwIXH07lWA1P/hf_20260711_090308_1dd0cea7-f9ba-4db4-8147-c7d746061c9e.mp4"
       />
 
