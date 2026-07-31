@@ -2,7 +2,7 @@ import { useEffect, useState, useCallback } from 'react'
 import { getToken, clearToken, ApiError } from '../lib/api'
 import { useAuth } from '../lib/auth.jsx'
 import { CountUp } from '../components/CountUp.jsx'
-import { isLocalhost } from '../lib/env.js'
+import { isLocalhost, ADMIN_NO_LOGIN } from '../lib/env.js'
 
 // ── Dev-only admin API client ─────────────────────────────────────────────
 // This file is lazy-loaded and registered ONLY in dev builds (see App.jsx),
@@ -56,8 +56,11 @@ export default function Admin() {
   const [wipeTyped, setWipeTyped] = useState('')
   const [notice, setNotice] = useState(null)
 
-  const isAdmin = user?.role === 'admin'
+  // In dev-only no-login mode the console is accessible without a session;
+  // otherwise it still requires role === 'admin'.
   const localOnly = isLocalhost()
+  const noLoginMode = ADMIN_NO_LOGIN && localOnly
+  const isAdmin = noLoginMode || user?.role === 'admin'
 
   const load = useCallback(async () => {
     setLoading(true)
@@ -70,7 +73,14 @@ export default function Admin() {
       setStats(statsRes?.data ?? statsRes ?? null)
       setUsers(usersRes?.data ?? usersRes ?? [])
     } catch (e) {
-      setError(e.message || 'Failed to load admin data')
+      if (!ADMIN_KEY && e?.status === 403) {
+        setError(
+          "The API rejected the request. Set VITE_ADMIN_KEY in frontend/.env.local " +
+          'to match ADMIN_SECRET_KEY on the server to use the no-login console.'
+        )
+      } else {
+        setError(e.message || 'Failed to load admin data')
+      }
     } finally {
       setLoading(false)
     }
@@ -98,7 +108,7 @@ export default function Admin() {
     }
   }
 
-  if (!user) return null
+  if (!user && !noLoginMode) return null
 
   if (!isAdmin) {
     return (

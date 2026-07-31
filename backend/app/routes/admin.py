@@ -14,7 +14,7 @@ from app.models import (
     User, Profile, Application, Notification, OrganizationFollower,
     PasswordResetToken, AuditEvent,
 )
-from app.auth import get_current_user
+from app.auth import get_optional_current_user
 
 router = APIRouter(prefix="/api/admin", tags=["Admin"])
 logger = logging.getLogger(__name__)
@@ -35,31 +35,34 @@ def _is_loopback(host: str) -> bool:
 
 def require_admin(
     request: Request,
-    current_user: User = Depends(get_current_user),
+    current_user: Optional[User] = Depends(get_optional_current_user),
     x_admin_key: Optional[str] = Header(None),
-) -> User:
+) -> Optional[User]:
     """Admin guard — private by default.
 
-    Access is granted only when:
+    Access is granted when ANY of these hold:
+      * the caller holds the X-Admin-Key secret (ADMIN_SECRET_KEY env var) —
+        this works without a login session, which is how the dev-only
+        no-login console on localhost reaches the API, or
       * the request originates from localhost (loopback) AND the user has
-        role == 'admin', or
-      * the caller holds the X-Admin-Key secret (ADMIN_SECRET_KEY env var),
-        which is the escape hatch for remote/ops access.
+        role == 'admin'.
 
-    A remote client with role == 'admin' alone is rejected — the console
-    stays localhost-only unless the secret key is explicitly provided.
+    A remote client without the secret key is always rejected, even with
+    role == 'admin' — the console stays localhost-only unless the secret
+    key is explicitly provided.
     """
     client_host = (request.client.host if request.client else "") or ""
     is_loopback = _is_loopback(client_host)
 
-    # Secret-key bypass works from anywhere (used for remote ops tooling).
+    # Secret-key bypass works from anywhere and does not require a session
+    # (constant-time compare). This is the sole path for no-login access.
     if settings.ADMIN_SECRET_KEY and x_admin_key and hmac.compare_digest(
         x_admin_key, settings.ADMIN_SECRET_KEY
     ):
         return current_user
 
     # Role check only counts when the request comes from the local machine.
-    if is_loopback and current_user.role == "admin":
+    if is_loopback and current_user and current_user.role == "admin":
         return current_user
 
     raise HTTPException(
@@ -70,7 +73,7 @@ def require_admin(
 
 @router.get("/stats")
 def admin_stats(
-    admin: User = Depends(require_admin),
+    admin: Optional[User] = Depends(require_admin),
     db: Session = Depends(get_db),
 ):
     """Aggregate platform metrics: signups, active users, profiles, applications."""
@@ -117,7 +120,7 @@ def admin_stats(
 
 @router.get("/users")
 def admin_users(
-    admin: User = Depends(require_admin),
+    admin: Optional[User] = Depends(require_admin),
     db: Session = Depends(get_db),
 ):
     """List every user with their profile summary and activity counts."""
@@ -154,7 +157,7 @@ def admin_users(
 
 @router.post("/reset-users")
 def admin_reset_users(
-    admin: User = Depends(require_admin),
+    admin: Optional[User] = Depends(require_admin),
     db: Session = Depends(get_db),
 ):
     """Wipe ALL user-generated data (users, profiles, applications,
@@ -174,7 +177,8 @@ def admin_reset_users(
                       OrganizationFollower, PasswordResetToken, Profile, User):
             db.query(model).delete()
     db.commit()
-    logger.warning("Admin %s wiped all user data", admin.email)
+    actor = admin.email if admin else "admin-key (no session)"
+    logger.warning("Admin %s wiped all user data", actor)
     return {
         "success": True,
         "data": {"message": "All user data cleared. The database is ready for fresh signups."},

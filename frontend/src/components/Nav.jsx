@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { Link, NavLink } from 'react-router-dom'
 import { useAuth } from '../lib/auth.jsx'
-import { isLocalhost } from '../lib/env.js'
+import { isLocalhost, ADMIN_NO_LOGIN } from '../lib/env.js'
 import { NexoraLogoIcon } from './common/NexoraLogo.jsx'
 import './Nav.css'
 
@@ -17,6 +17,8 @@ export function Logo() {
 export default function Nav() {
   const { user } = useAuth()
   const [mobileOpen, setMobileOpen] = useState(false)
+  // Dev-only: expose the Admin link without a session when no-login mode is on.
+  const showAdmin = isLocalhost() && (user?.role === 'admin' || ADMIN_NO_LOGIN)
 
   return (
     <header className="sticky top-0 z-50 bg-white/80 backdrop-blur-xl border-b border-slate-200/80 font-sans transition-all">
@@ -76,7 +78,7 @@ export default function Nav() {
                 Settings
               </NavLink>
 
-              {user.role === 'admin' && isLocalhost() && (
+              {showAdmin && (
                 <NavLink
                   to="/admin"
                   className={({ isActive }) =>
@@ -165,7 +167,7 @@ export default function Nav() {
               >
                 Settings
               </NavLink>
-              {user.role === 'admin' && isLocalhost() && (
+              {showAdmin && (
                 <NavLink
                   to="/admin"
                   onClick={() => setMobileOpen(false)}

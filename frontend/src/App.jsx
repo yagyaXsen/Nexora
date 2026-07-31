@@ -21,6 +21,7 @@ import Profile from './pages/Profile.jsx'
 import Settings from './pages/Settings.jsx'
 import Notifications from './pages/Notifications.jsx'
 import AiAssistantPage from './pages/AiAssistantPage.jsx'
+import { ADMIN_NO_LOGIN } from './lib/env.js'
 
 // The admin console is a localhost-only tool. It is lazy-loaded and registered
 // ONLY in dev builds (import.meta.env.DEV → replaced with `false` at build
@@ -134,11 +135,18 @@ export default function App() {
               <Route
                 path="/admin"
                 element={
-                  <ProtectedRoute>
+                  ADMIN_NO_LOGIN ? (
+                    // No-login mode (dev-only): open the console without a session.
                     <Suspense fallback={null}>
                       <AdminPage />
                     </Suspense>
-                  </ProtectedRoute>
+                  ) : (
+                    <ProtectedRoute>
+                      <Suspense fallback={null}>
+                        <AdminPage />
+                      </Suspense>
+                    </ProtectedRoute>
+                  )
                 }
               />
             )}
