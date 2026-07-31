@@ -3,7 +3,11 @@ import { useRef, useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { NexoraLogoIcon } from '../common/NexoraLogo.jsx'
 
-const navLinks: { label: string; path: string }[] = []
+const navLinks = [
+  { label: 'Explore', path: '/explore' },
+  { label: 'Tracker', path: '/tracker' },
+  { label: 'Features', path: '/explore' }
+]
 
 function MagneticButton({ children, className, onClick }: { children: React.ReactNode, className?: string, onClick?: () => void }) {
   const ref = useRef<HTMLButtonElement>(null)
