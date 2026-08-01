@@ -12,22 +12,29 @@ const DEFAULT_TITLE = 'Nexora — Global Opportunity Intelligence'
 
 let jsonLdEl = null
 let createdTags = []
+// Adopted (pre-existing) tags whose content we temporarily overwrite, keyed by
+// selector -> original content so resetSEO can restore them.
+let adoptedOriginals = []
 
-/** Create a meta tag; returns the element. Only newly-created tags are tracked. */
+/** Create/update a meta tag. Newly-created tags are tracked for removal;
+ *  adopted tags are tracked so their original content can be restored. */
 function ensureMeta(attr, key, content) {
   if (!content) return null
-  let el = document.head.querySelector(`meta[${attr}="${key}"]`)
+  const selector = `meta[${attr}="${key}"]`
+  let el = document.head.querySelector(selector)
   if (!el) {
     el = document.createElement('meta')
     el.setAttribute(attr, key)
     document.head.appendChild(el)
     createdTags.push(el)
+  } else if (!adoptedOriginals.some((a) => a.selector === selector)) {
+    adoptedOriginals.push({ selector, original: el.getAttribute('content') })
   }
   el.setAttribute('content', content)
   return el
 }
 
-/** Create/update a link tag; only newly-created links are tracked. */
+/** Create/update a link tag. Newly-created links are tracked for removal. */
 function ensureLink(rel, href) {
   if (!href) return null
   let el = document.head.querySelector(`link[rel="${rel}"]`)
@@ -76,12 +83,19 @@ export function resetSEO() {
     jsonLdEl.remove()
     jsonLdEl = null
   }
-  // Remove only the tags this module created — pre-existing tags (e.g. the
-  // description meta in index.html) are adopted and updated, never destroyed.
+  // Remove only tags this module created — never destroy index.html's own tags.
   for (const el of createdTags) {
     el.remove()
   }
   createdTags = []
+  // Restore original content of any adopted meta tags we overwrote.
+  for (const { selector, original } of adoptedOriginals) {
+    const el = document.head.querySelector(selector)
+    if (!el) continue
+    if (original === null) el.remove()
+    else el.setAttribute('content', original)
+  }
+  adoptedOriginals = []
   document.title = DEFAULT_TITLE
 }
 

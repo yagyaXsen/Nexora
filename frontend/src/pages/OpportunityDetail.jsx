@@ -40,6 +40,29 @@ function buildICS(opp) {
   return URL.createObjectURL(new Blob([ics], { type: 'text/calendar' }))
 }
 
+function downloadICS(opp) {
+  const url = buildICS(opp)
+  if (!url) return
+  const a = document.createElement('a')
+  a.href = url
+  a.download = `${opp.slug}-deadline.ics`
+  a.click()
+  // Revoke after the download starts so we don't leak blob URLs.
+  setTimeout(() => URL.revokeObjectURL(url), 1000)
+}
+
+const BOOKMARKS_KEY = 'nexora_bookmarks'
+
+/** Read the local bookmark stub safely — never throw on corrupt storage. */
+function readBookmarks() {
+  try {
+    const current = JSON.parse(localStorage.getItem(BOOKMARKS_KEY) || '[]')
+    return Array.isArray(current) ? current : []
+  } catch {
+    return []
+  }
+}
+
 export default function OpportunityDetail() {
   const { idOrSlug } = useParams()
   const navigate = useNavigate()
@@ -104,6 +127,7 @@ export default function OpportunityDetail() {
         // published catalog) should fall through to the legacy category match.
         if (list && list.length > 0) {
           setRelated(list.map(normalizeOpportunity).filter((r) => r.slug !== opp.slug))
+          if (!cancelled) setRelatedLoading(false)
           return
         }
       } catch {
@@ -129,16 +153,21 @@ export default function OpportunityDetail() {
     return () => {
       cancelled = true
     }
-  }, [opp?.slug, opp?.type, rawId])
+  }, [opp, rawId])
 
-  // Saved state (only meaningful for legacy DB records).
+  // Saved state. Legacy DB records check the tracker API; published
+  // (non-DB) records use the localStorage bookmark stub — hydrate it on mount.
   useEffect(() => {
-    if (!user || !rawId) return
+    if (!user) return
+    if (rawId == null) {
+      setSaved(readBookmarks().includes(opp?.slug))
+      return
+    }
     api
       .applications()
       .then((apps) => setSaved(apps.some((a) => a.opportunity.id === rawId)))
       .catch(() => {})
-  }, [user, rawId])
+  }, [user, rawId, opp?.slug])
 
   // SEO: dynamic title, meta, canonical, OG, structured data.
   useEffect(() => {
@@ -151,7 +180,13 @@ export default function OpportunityDetail() {
       description: opp.seoDescription || opp.summary || opp.eligibilitySummary || undefined,
       canonicalPath: `/opportunities/${opp.slug}`,
       image: opp.featuredImage || undefined,
-      jsonLd: opportunityJSONLD(opp),
+      jsonLd: (() => {
+        try {
+          return opportunityJSONLD(opp)
+        } catch {
+          return null // never let JSON-LD break the page
+        }
+      })(),
     })
     return resetSEO
   }, [opp])
@@ -163,12 +198,11 @@ export default function OpportunityDetail() {
     }
     if (rawId == null) {
       // Published (non-DB) record: local bookmark stub — no tracker row yet.
-      const key = `nexora_bookmarks`
-      const current = JSON.parse(localStorage.getItem(key) || '[]')
+      const current = readBookmarks()
       const next = current.includes(opp.slug)
         ? current.filter((s) => s !== opp.slug)
         : [...current, opp.slug]
-      localStorage.setItem(key, JSON.stringify(next))
+      localStorage.setItem(BOOKMARKS_KEY, JSON.stringify(next))
       setSaved(next.includes(opp.slug))
       return
     }
@@ -334,15 +368,7 @@ export default function OpportunityDetail() {
           {opp.deadlineISO && (
             <button
               type="button"
-              onClick={() => {
-                const url = buildICS(opp)
-                if (url) {
-                  const a = document.createElement('a')
-                  a.href = url
-                  a.download = `${opp.slug}-deadline.ics`
-                  a.click()
-                }
-              }}
+              onClick={() => downloadICS(opp)}
               className="flex items-center gap-1.5 px-3 py-2 rounded-xl border border-slate-200 hover:border-indigo-400 hover:text-indigo-600 transition-colors"
             >
               <i className="ti ti-calendar-plus" /> Add deadline to calendar
