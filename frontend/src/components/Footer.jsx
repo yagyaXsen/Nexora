@@ -34,6 +34,12 @@ export default function Footer() {
             <Link to="/signup">Sign up</Link>
             <Link to="/profile">Profile</Link>
           </div>
+          <div className="footer-col">
+            <h4>Trust & Legal</h4>
+            <Link to="/privacy">Privacy Policy</Link>
+            <Link to="/terms">Terms of Service</Link>
+            <Link to="/contact">Contact & Support</Link>
+          </div>
         </div>
       </div>
 

@@ -12,10 +12,12 @@ export default function PrismFooter() {
           <span className="text-slate-500">© {new Date().getFullYear()} Nexora Inc. All rights reserved.</span>
         </div>
 
-        <div className="flex items-center gap-6 text-slate-300 font-bold">
+        <div className="flex flex-wrap items-center gap-6 text-slate-300 font-bold">
           <Link to="/explore" className="hover:text-white transition-colors">Opportunities</Link>
           <Link to="/tracker" className="hover:text-white transition-colors">Tracker</Link>
           <Link to="/privacy" className="hover:text-white transition-colors">Privacy Policy</Link>
+          <Link to="/terms" className="hover:text-white transition-colors">Terms</Link>
+          <Link to="/contact" className="hover:text-white transition-colors">Contact</Link>
         </div>
 
 

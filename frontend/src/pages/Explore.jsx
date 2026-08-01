@@ -8,6 +8,38 @@ import { useApply } from '../hooks/useApply'
 import './Explore.css'
 
 const PAGE_SIZE = 12
+const BOOKMARKS_KEY = 'nexora_bookmarks'
+
+/** Map a published (verified/enriched) record into the card shape the grid uses.
+ *  Published records have no DB id, so id stays null and navigation/save use slug. */
+function toCardShape(r) {
+  return {
+    id: null,
+    slug: r.slug,
+    title: r.title,
+    category: r.opportunity_type,
+    organizer: r.provider_organization,
+    country: r.country_or_region,
+    funding_amount: r.benefits_summary || null,
+    deadline: r.deadline || null,
+    eligibility_text: r.eligibility_summary || null,
+    status: r.status,
+    confidence: (r.confidence_score ?? 0) / 100,
+    needs_review: false,
+    apply_url: r.application_url || r.official_source_url || null,
+    published_verification: r.verification_status || null,
+  }
+}
+
+/** Read the local bookmark stub safely — never throw on corrupt storage. */
+function readBookmarks() {
+  try {
+    const cur = JSON.parse(localStorage.getItem(BOOKMARKS_KEY) || '[]')
+    return Array.isArray(cur) ? cur : []
+  } catch {
+    return []
+  }
+}
 
 export default function Explore() {
   const [params, setParams] = useSearchParams()
@@ -25,6 +57,7 @@ export default function Explore() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
   const [savedIds, setSavedIds] = useState(new Set())
+  const [savedSlugs, setSavedSlugs] = useState(() => new Set(readBookmarks()))
 
   // Comparison State
   const [compareItems, setCompareItems] = useState([])
@@ -41,11 +74,17 @@ export default function Explore() {
       .catch(() => {})
   }, [user])
 
+  useEffect(() => setSavedSlugs(new Set(readBookmarks())), [])
+
   useEffect(() => {
     let cancelled = false
     setLoading(true)
     setError(null)
 
+    // Browse mode prefers the published catalog (only genuinely verified +
+    // enriched records) and falls back to the legacy DB when the catalog has
+    // no records for the selected filter (e.g. gov_scheme) or is unreachable.
+    const publishedCat = category === 'exchange' ? 'exchange_program' : category
     const fetcher = q
       ? api.search(q).then((r) => ({
           items: r.items,
@@ -54,8 +93,20 @@ export default function Explore() {
           degraded: r.degraded,
         }))
       : api
-          .opportunities({ category, country, page, page_size: PAGE_SIZE })
-          .then((r) => ({ items: r.items, total: r.total }))
+          .published({ category: publishedCat, country, page, page_size: PAGE_SIZE })
+          .then((r) =>
+            r.items && r.items.length > 0
+              ? { items: r.items.map(toCardShape), total: r.total }
+              : null
+          )
+          .catch(() => null)
+          .then((published) =>
+            published
+              ? published
+              : api
+                  .opportunities({ category, country, page, page_size: PAGE_SIZE })
+                  .then((r) => ({ items: r.items, total: r.total }))
+          )
 
     fetcher
       .then((r) => !cancelled && setResult(r))
@@ -86,9 +137,24 @@ export default function Explore() {
     setParams(query ? { q: query } : {})
   }
 
+  const isOppSaved = useCallback(
+    (opp) => (opp.id != null ? savedIds.has(opp.id) : savedSlugs.has(opp.slug)),
+    [savedIds, savedSlugs]
+  )
+
   const save = async (opp) => {
     if (!user) {
       navigate('/login', { state: { from: `/explore?${params.toString()}` } })
+      return
+    }
+    // Published (non-DB) records: local bookmark stub — no tracker row exists.
+    if (opp.id == null) {
+      const cur = readBookmarks()
+      const next = cur.includes(opp.slug)
+        ? cur.filter((s) => s !== opp.slug)
+        : [...cur, opp.slug]
+      localStorage.setItem(BOOKMARKS_KEY, JSON.stringify(next))
+      setSavedSlugs(new Set(next))
       return
     }
     const isSaved = savedIds.has(opp.id)
@@ -129,9 +195,12 @@ export default function Explore() {
     setSavedIds((prev) => new Set(prev).add(opp.id))
   )
 
+  const compareKey = (opp) => (opp.id != null ? `id:${opp.id}` : `slug:${opp.slug}`)
+
   const toggleCompare = (opp) => {
-    if (compareItems.some((item) => item.id === opp.id)) {
-      setCompareItems(compareItems.filter((item) => item.id !== opp.id))
+    const key = compareKey(opp)
+    if (compareItems.some((item) => compareKey(item) === key)) {
+      setCompareItems(compareItems.filter((item) => compareKey(item) !== key))
     } else {
       if (compareItems.length >= 3) return
       setCompareItems([...compareItems, opp])
@@ -305,11 +374,12 @@ export default function Explore() {
               <>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
                   {result.items.map((opp) => {
-                    const isCompared = compareItems.some((item) => item.id === opp.id)
+                    const isCompared = compareItems.some((item) => compareKey(item) === compareKey(opp))
+                    const isSaved = isOppSaved(opp)
 
                     return (
                       <div
-                        key={opp.id}
+                        key={opp.id ?? opp.slug}
                         onClick={() => navigate(`/opportunities/${opp.slug || opp.id}`)}
                         className="bg-white border border-slate-200 rounded-3xl p-6 shadow-sm hover:shadow-xl hover:border-indigo-200 transition-all duration-300 flex flex-col justify-between space-y-5 group cursor-pointer"
                       >
@@ -365,9 +435,9 @@ export default function Explore() {
                           <div className="flex items-center gap-2">
                             <button
                               onClick={() => save(opp)}
-                              className={`px-3 py-2 rounded-xl text-xs font-bold transition-all border ${savedIds.has(opp.id) ? 'bg-indigo-50 text-indigo-600 border-indigo-100' : 'bg-slate-50 text-slate-600 border-slate-200 hover:border-slate-400'}`}
+                              className={`px-3 py-2 rounded-xl text-xs font-bold transition-all border ${isSaved ? 'bg-indigo-50 text-indigo-600 border-indigo-100' : 'bg-slate-50 text-slate-600 border-slate-200 hover:border-slate-400'}`}
                             >
-                              {savedIds.has(opp.id) ? 'Saved' : 'Save'}
+                              {isSaved ? 'Saved' : 'Save'}
                             </button>
 
                             <button
@@ -425,7 +495,7 @@ export default function Explore() {
               {compareItems.length > 0 ? (
                 <div className="space-y-3">
                   {compareItems.map((item) => (
-                    <div key={item.id} className="p-3 bg-slate-50 border border-slate-200 rounded-xl flex items-center justify-between text-xs">
+                    <div key={compareKey(item)} className="p-3 bg-slate-50 border border-slate-200 rounded-xl flex items-center justify-between text-xs">
                       <span className="font-bold truncate text-slate-800 max-w-[180px]">{item.title}</span>
                       <button onClick={() => toggleCompare(item)} className="text-red-500 hover:text-red-700 font-mono font-bold px-1 text-sm">✕</button>
                     </div>
@@ -486,7 +556,7 @@ export default function Explore() {
 
             <div className="grid grid-cols-3 gap-6 divide-x divide-slate-200">
               {compareItems.map((item) => (
-                <div key={item.id} className="space-y-4 px-3 first:pl-0">
+                <div key={compareKey(item)} className="space-y-4 px-3 first:pl-0">
                   <span className="font-mono text-[9px] bg-slate-900 text-white px-2.5 py-0.5 rounded-full font-bold uppercase">{item.category}</span>
                   <h4 className="font-bold text-base text-slate-900 leading-snug">{item.title}</h4>
                   <p className="font-serif text-xs text-slate-500">{item.organizer} · {item.country}</p>

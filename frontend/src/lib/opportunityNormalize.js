@@ -30,7 +30,8 @@ export function normalizeOpportunity(raw) {
   const mode = pick(src.mode, 'unknown')
   const status = computeStatus(src, deadlineISO, daysLeft)
   const fundingType = pick(src.funding_type, null)
-  const verification = computeVerification(src)
+  const confidenceScore = resolveConfidence(src)
+  const verification = computeVerification(src, confidenceScore)
 
   // Enrichment funding details (may be absent) — surfaced in Benefits.
   const fundingDetail = {
@@ -50,7 +51,7 @@ export function normalizeOpportunity(raw) {
     level: verification.level,
     label: verification.label,
     tone: verification.tone,
-    confidenceScore: num(src.confidence_score ?? src.confidence),
+    confidenceScore,
     sourceType: pick(src.source_type, null),
     discoveredVia: pick(src.discovered_via, null),
     verificationNotes: pick(src.verification_notes, null),
@@ -183,8 +184,8 @@ function computeStatus(src, deadlineISO, daysLeft) {
   return 'unclear'
 }
 
-function computeVerification(src) {
-  const score = num(src.confidence_score ?? src.confidence)
+function computeVerification(src, confidenceScore) {
+  const score = confidenceScore
   const vs = String(src.verification_status || '').toLowerCase()
   if (vs.includes('officially') || (score >= 90 && !vs.includes('needs_review'))) {
     return { level: 'verified', label: 'Officially Verified', tone: 'green' }
@@ -351,6 +352,23 @@ function toArray(...groups) {
 function num(v) {
   const n = Number(v)
   return Number.isFinite(n) ? n : null
+}
+
+/**
+ * Resolve a 0-100 confidence score. The legacy DB stores `confidence` on a
+ * 0-1 scale (OpportunityRead.confidence ge=0.0 le=1.0), while the published
+ * catalog uses `confidence_score` on 0-100. Detect the scale and normalize:
+ * any value <= 1 is treated as a fraction and scaled to 0-100.
+ */
+function resolveConfidence(src) {
+  const raw = src.confidence_score ?? src.confidence
+  const n = num(raw)
+  if (n === null) return null
+  if (n <= 1 && src.confidence_score === undefined) {
+    // Legacy 0-1 scale → 0-100
+    return Math.round(n * 100)
+  }
+  return n
 }
 
 function boolish(v, fallback = null) {

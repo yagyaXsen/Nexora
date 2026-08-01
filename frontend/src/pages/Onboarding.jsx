@@ -15,6 +15,7 @@ import {
   AtomIcon,
   FlaskIcon,
   PaletteIcon,
+  UsersIcon,
 } from '../components/common/Icons.jsx'
 import './Onboarding.css'
 
@@ -59,7 +60,7 @@ const OPPORTUNITY_TYPES = [
   { label: 'Scholarships', Icon: SchoolIcon, desc: 'Fully funded master & doctoral degree awards' },
   { label: 'Accelerators', Icon: TrendingIcon, desc: 'Startup batch equity & non-dilutive funds' },
   { label: 'Competitions', Icon: TrophyIcon, desc: 'Global hackathons & innovation prizes' },
-  { label: 'Internships', Icon: BriefcaseIcon, desc: 'Industry research & engineering roles' },
+  { label: 'Conferences & Summits', Icon: UsersIcon, desc: 'Global academic & industry symposiums' },
   { label: 'Exchange Programs', Icon: GlobeIcon, desc: 'International travel & visiting programs' },
   { label: 'Explore Everything', Icon: GridIcon, desc: 'Receive all global opportunity calls' },
 ]
