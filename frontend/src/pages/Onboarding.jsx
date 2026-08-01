@@ -11,8 +11,47 @@ import {
   BriefcaseIcon,
   GlobeIcon,
   GridIcon,
+  BrainIcon,
+  AtomIcon,
+  FlaskIcon,
+  PaletteIcon,
 } from '../components/common/Icons.jsx'
 import './Onboarding.css'
+
+function CodeIcon({ className = "w-3.5 h-3.5" }) {
+  return (
+    <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+      <polyline points="16 18 22 12 16 6" />
+      <polyline points="8 6 2 12 8 18" />
+    </svg>
+  )
+}
+
+function CpuIcon({ className = "w-3.5 h-3.5" }) {
+  return (
+    <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+      <rect x="4" y="4" width="16" height="16" rx="2" />
+      <rect x="9" y="9" width="6" height="6" />
+      <line x1="9" y1="1" x2="9" y2="4" />
+      <line x1="15" y1="1" x2="15" y2="4" />
+      <line x1="9" y1="20" x2="9" y2="23" />
+      <line x1="15" y1="20" x2="15" y2="23" />
+      <line x1="20" y1="9" x2="23" y2="9" />
+      <line x1="20" y1="15" x2="23" y2="15" />
+      <line x1="1" y1="9" x2="4" y2="9" />
+      <line x1="1" y1="15" x2="4" y2="15" />
+    </svg>
+  )
+}
+
+function LeafIcon({ className = "w-3.5 h-3.5" }) {
+  return (
+    <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+      <path strokeLinecap="round" strokeLinejoin="round" d="M11 20A7 7 0 0 1 9.8 6.1C15.5 5 17 4.48 19 2c1 2 2 4.18 2 8 0 5.5-4.78 10-10 10Z" />
+      <path strokeLinecap="round" strokeLinejoin="round" d="M2 21c0-3 1.85-5.36 5.08-6C9.5 14.52 12 13 13 12" />
+    </svg>
+  )
+}
 
 const OPPORTUNITY_TYPES = [
   { label: 'Fellowships', Icon: RocketIcon, desc: 'Postdoc, research & visiting fellow calls' },
@@ -26,22 +65,22 @@ const OPPORTUNITY_TYPES = [
 ]
 
 const DOMAIN_OPTIONS = [
-  { label: 'AI & Machine Learning', Icon: '🤖' },
-  { label: 'Software Engineering', Icon: '💻' },
-  { label: 'Deeptech & Quantum', Icon: '⚛️' },
-  { label: 'Robotics & Hardware', Icon: '🦾' },
-  { label: 'Climate & Clean Energy', Icon: '🌿' },
-  { label: 'Biotech & Healthcare', Icon: '🧬' },
-  { label: 'Business & Finance', Icon: '💼' },
-  { label: 'Product & Design', Icon: '🎨' },
+  { label: 'AI & Machine Learning', Icon: BrainIcon },
+  { label: 'Software Engineering', Icon: CodeIcon },
+  { label: 'Deeptech & Quantum', Icon: AtomIcon },
+  { label: 'Robotics & Hardware', Icon: CpuIcon },
+  { label: 'Climate & Clean Energy', Icon: LeafIcon },
+  { label: 'Biotech & Healthcare', Icon: FlaskIcon },
+  { label: 'Business & Finance', Icon: BriefcaseIcon },
+  { label: 'Product & Design', Icon: PaletteIcon },
 ]
 
 const REGION_OPTIONS = [
-  { label: 'Europe & UK', flag: '🇪🇺' },
-  { label: 'North America (US & Canada)', flag: '🇺🇸' },
-  { label: 'Asia & Pacific', flag: '🌏' },
-  { label: 'Middle East & MENA', flag: '🐪' },
-  { label: 'Global / Remote Only', flag: '🌐' },
+  { label: 'Europe & UK', code: 'EU' },
+  { label: 'North America (US & Canada)', code: 'NA' },
+  { label: 'Asia & Pacific', code: 'APAC' },
+  { label: 'Middle East & MENA', code: 'MENA' },
+  { label: 'Global / Remote Only', code: 'GLOBAL' },
 ]
 
 const TOTAL_STEPS = 2
@@ -239,13 +278,13 @@ export default function Onboarding() {
                       key={label}
                       type="button"
                       onClick={() => toggleDomain(label)}
-                      className={`px-4 py-2.5 rounded-xl border text-xs font-bold transition-all flex items-center gap-2 cursor-pointer ${
+                      className={`px-4 py-2.5 rounded-xl border text-xs font-bold transition-all flex items-center gap-2.5 cursor-pointer ${
                         isSel
                           ? 'border-indigo-600 bg-indigo-600 text-white shadow-xs'
                           : 'border-slate-200 bg-slate-50 text-slate-700 hover:border-slate-300 hover:bg-slate-100'
                       }`}
                     >
-                      <span>{Icon}</span>
+                      <Icon className={`w-3.5 h-3.5 ${isSel ? 'text-white' : 'text-slate-500'}`} />
                       <span>{label}</span>
                     </button>
                   )
@@ -259,20 +298,24 @@ export default function Onboarding() {
                 Target Geographic Regions
               </span>
               <div className="flex flex-wrap gap-2.5">
-                {REGION_OPTIONS.map(({ label, flag }) => {
+                {REGION_OPTIONS.map(({ label, code }) => {
                   const isSel = selectedRegions.includes(label)
                   return (
                     <button
                       key={label}
                       type="button"
                       onClick={() => toggleRegion(label)}
-                      className={`px-4 py-2.5 rounded-xl border text-xs font-bold transition-all flex items-center gap-2 cursor-pointer ${
+                      className={`px-4 py-2.5 rounded-xl border text-xs font-bold transition-all flex items-center gap-2.5 cursor-pointer ${
                         isSel
                           ? 'border-slate-900 bg-slate-900 text-white shadow-xs'
                           : 'border-slate-200 bg-slate-50 text-slate-700 hover:border-slate-300 hover:bg-slate-100'
                       }`}
                     >
-                      <span>{flag}</span>
+                      <span className={`font-mono text-[10px] font-extrabold px-1.5 py-0.5 rounded tracking-wider ${
+                        isSel ? 'bg-white/20 text-white' : 'bg-slate-200 text-slate-700'
+                      }`}>
+                        {code}
+                      </span>
                       <span>{label}</span>
                     </button>
                   )
