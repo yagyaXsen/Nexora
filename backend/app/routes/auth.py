@@ -52,7 +52,12 @@ def login(form_data: OAuth2PasswordRequestForm = Depends(), db: Session = Depend
             detail="Incorrect email or password",
             headers={"WWW-Authenticate": "Bearer"},
         )
-    return TokenResponse(access_token=create_access_token(user.id), user=user)
+    # Serialize through UserRead — TokenResponse.user must be JSON-serializable,
+    # and passing the raw SQLAlchemy ORM object crashes pydantic serialization.
+    return TokenResponse(
+        access_token=create_access_token(user.id),
+        user=UserRead.model_validate(user),
+    )
 
 from app.auth import hash_password, verify_password, create_access_token, get_current_user, get_optional_current_user
 
@@ -153,7 +158,11 @@ def google_auth(payload: GoogleAuthRequest, db: Session = Depends(get_db)):
         user.email_verified = True
         db.commit()
 
-    return TokenResponse(access_token=create_access_token(user.id), is_new_user=is_new_user, user=user)
+    return TokenResponse(
+        access_token=create_access_token(user.id),
+        is_new_user=is_new_user,
+        user=UserRead.model_validate(user),
+    )
 
 @router.post("/logout")
 def logout(current_user: Optional[User] = Depends(get_optional_current_user)):

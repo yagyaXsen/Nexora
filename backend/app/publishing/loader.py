@@ -23,11 +23,26 @@ logger = logging.getLogger(__name__)
 
 DEFAULT_PATH = Path(__file__).resolve().parents[2] / "nexora_verified_opportunities.json"
 
+# Secondary dataset: enriched records rescued from the legacy DB. Loaded and
+# merged with the primary file when present, so the published catalog is the
+# union of both verified sources.
+LEGACY_PATH = Path(__file__).resolve().parents[2] / "nexora_legacy_enriched.json"
+
 # Canonical Nexora opportunity types (frontend contract).
 ALLOWED_TYPES = {
     "scholarship", "fellowship", "grant", "accelerator", "incubator",
     "competition", "hackathon", "conference", "research_program",
     "bootcamp", "workshop", "exchange_program", "global_youth_program",
+}
+
+# Aggregator / low-trust domains that must never be published as the primary
+# official source. Genuine records always point at the organizer's own site.
+AGGREGATOR_DOMAINS = {
+    "opportunitydesk.org", "youthopportunities.in", "youthopportunities.com",
+    "f6s.com", "devpost.com", "scholarshipscafe.com", "wearethefuture.in",
+    "for9a.com", "opportunitiesforyouth.org", "scholarships4dev.com",
+    "abroad4students.com", "opportunitycirclebd.com", "afreeburn.com",
+    "indianscholarshipinfo.com", "topstudyworld.com",
 }
 
 # Fields that may arrive as a comma-separated string and must become arrays.
@@ -154,6 +169,39 @@ def _infer_confidence(rec: dict) -> int:
     return 50
 
 
+def _is_aggregator_url(url: Optional[str]) -> bool:
+    """Match only the real hostname (exact or subdomain) of an aggregator
+    domain — substring matching would false-positive on e.g. f6s.community."""
+    if not url:
+        return False
+    try:
+        from urllib.parse import urlparse
+        host = (urlparse(url).hostname or "").lower().rstrip(".")
+    except Exception:
+        host = url.lower()
+    if not host:
+        return False
+    for d in AGGREGATOR_DOMAINS:
+        if host == d or host.endswith("." + d):
+            return True
+    return False
+
+
+def _passes_quality_gate(rec: dict) -> bool:
+    """A record is only publishable when it is genuinely verified and enriched:
+    decent confidence, an official source, real content, verification notes,
+    and no aggregator domain as the primary source."""
+    if (rec.get("confidence_score") or 0) < 75:
+        return False
+    if not rec.get("official_source_url") or _is_aggregator_url(rec.get("official_source_url")):
+        return False
+    if not (rec.get("eligibility_summary") or rec.get("benefits_summary") or rec.get("short_original_summary")):
+        return False
+    if not rec.get("verification_notes"):
+        return False
+    return True
+
+
 def normalize_record(raw: dict, slug_index: set) -> Optional[Dict]:
     """Validate one raw record and produce a normalized publishable dict.
 
@@ -220,32 +268,38 @@ def normalize_record(raw: dict, slug_index: set) -> Optional[Dict]:
     return out
 
 
+def _read_payload(path: Path):
+    """Read one dataset file and return its raw record list (never raises)."""
+    if not path.exists():
+        logger.warning("Published dataset not found at %s — skipping.", path)
+        return []
+    try:
+        with open(path, "r", encoding="utf-8") as f:
+            payload = json.load(f)
+    except (json.JSONDecodeError, OSError) as e:
+        logger.error("Failed to read published dataset %s: %s", path, e)
+        return []
+    if isinstance(payload, dict):
+        return payload.get("accepted_records") or []
+    if isinstance(payload, list):
+        return payload
+    return []
+
+
 def load_records(
     path: Optional[Path] = None,
 ) -> Tuple[List[Dict], List[PublishedRejection]]:
-    """Load, validate, and normalize the verified dataset.
+    """Load, validate, and normalize the verified datasets.
 
-    Returns (records, rejections). Never raises on bad data — unusable rows
-    are collected as PublishedRejection entries so the pipeline is transparent.
+    Loads the primary verified dataset (nexora_verified_opportunities.json)
+    and, when present, the legacy-enriched dataset
+    (nexora_legacy_enriched.json), then validates and merges both. Returns
+    (records, rejections). Never raises on bad data — unusable rows are
+    collected as PublishedRejection entries so the pipeline is transparent.
     """
     p = Path(path) if path else DEFAULT_PATH
-    if not p.exists():
-        logger.warning("Published dataset not found at %s — publishing empty catalog.", p)
-        return [], []
-
-    try:
-        with open(p, "r", encoding="utf-8") as f:
-            payload = json.load(f)
-    except (json.JSONDecodeError, OSError) as e:
-        logger.error("Failed to read published dataset %s: %s", p, e)
-        return [], []
-
-    if isinstance(payload, dict):
-        raw_records = payload.get("accepted_records") or []
-    elif isinstance(payload, list):
-        raw_records = payload
-    else:
-        raw_records = []
+    raw_records = _read_payload(p)
+    raw_records += _read_payload(LEGACY_PATH)
 
     records: List[Dict] = []
     rejections: List[PublishedRejection] = []
@@ -272,6 +326,18 @@ def load_records(
                 input_url=url,
                 rejection_reason="insufficient_verification",
                 notes="Missing title or both application_url and official_source_url.",
+            ))
+            continue
+
+        # Hard quality gate: only genuinely verified + enriched records ship.
+        if not _passes_quality_gate(normalized):
+            rejections.append(PublishedRejection(
+                input_title=title,
+                input_provider=provider,
+                input_url=url,
+                rejection_reason="low_value_listing",
+                notes=("Failed the publish quality gate: needs confidence >= 75, an official "
+                       "non-aggregator source, real content, and verification notes."),
             ))
             continue
 

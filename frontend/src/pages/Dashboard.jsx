@@ -16,6 +16,7 @@ export default function Dashboard() {
   const [apps, setApps] = useState([])
   const [stats, setStats] = useState(null)
   const [summary, setSummary] = useState(null)
+  const [publishedStats, setPublishedStats] = useState(null)
   const [loading, setLoading] = useState(true)
 
   // Applying creates/updates a tracker row, so add it to the local list too.
@@ -38,7 +39,8 @@ export default function Dashboard() {
       api.applications().catch(() => []),
       api.stats().catch(() => null),
       api.dashboardSummary().catch(() => null),
-    ]).then(([r, tr, rem, a, s, sum]) => {
+      api.publishedStats().catch(() => null),
+    ]).then(([r, tr, rem, a, s, sum, ps]) => {
       if (cancelled) return
       setRecs(r)
       setTrending(tr)
@@ -46,6 +48,7 @@ export default function Dashboard() {
       setApps(a)
       setStats(s)
       setSummary(sum)
+      setPublishedStats(ps)
       setLoading(false)
     })
 
@@ -57,7 +60,12 @@ export default function Dashboard() {
   const appliedCount = summary?.applied_count ?? apps.filter((a) => ['Applied', 'Assessment', 'Interview', 'Offer', 'Accepted'].includes(a.status)).length
   const upcomingCount = summary?.upcoming_deadlines_count ?? reminders.length
   const aiMatchedCount = summary?.ai_matched_count ?? recs.length
-  const totalIndexed = summary?.total_indexed ?? stats?.total_opportunities ?? 0
+  // The published catalog is the source of truth for indexed opportunities —
+  // it only contains genuinely verified + enriched records. Falls back to the
+  // legacy DB count when the catalog is unavailable.
+  const totalIndexed =
+    publishedStats?.total ?? summary?.total_indexed ?? stats?.total_opportunities ?? 0
+  const verifiedCount = publishedStats?.verified_count ?? 0
   const newToday = summary?.new_today ?? 0
 
   const userFirstName = user?.name ? user.name.split(' ')[0] : 'Scholar'
@@ -139,7 +147,11 @@ export default function Dashboard() {
             <div className="text-2xl font-extrabold text-slate-900">
               {totalIndexed > 0 ? totalIndexed.toLocaleString() : '—'} Opportunities
             </div>
-            <p className="text-xs text-slate-500">Continuous background ingestion across research portals worldwide.</p>
+            <p className="text-xs text-slate-500">
+              {verifiedCount > 0
+                ? `${totalIndexed} verified & enriched · ${verifiedCount} officially verified`
+                : 'Continuous background ingestion across research portals worldwide.'}
+            </p>
           </div>
 
         </div>
