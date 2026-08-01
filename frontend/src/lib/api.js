@@ -17,6 +17,14 @@ export function clearToken() {
   localStorage.removeItem(TOKEN_KEY)
 }
 
+// Lightweight In-Memory GET Cache with TTL for instantaneous page navigation
+const cache = new Map()
+const CACHE_TTL_MS = 60 * 1000 // 60 seconds TTL
+
+export function clearApiCache() {
+  cache.clear()
+}
+
 export class ApiError extends Error {
   constructor(status, detail) {
     super(typeof detail === 'string' ? detail : 'Request failed')
@@ -25,9 +33,26 @@ export class ApiError extends Error {
   }
 }
 
-async function request(path, { method = 'GET', body, form } = {}) {
-  const headers = {}
+async function request(path, { method = 'GET', body, form, skipCache = false } = {}) {
   const token = getToken()
+  const isGet = method === 'GET'
+  const cacheKey = isGet ? `${token || 'anon'}:${path}` : null
+
+  // Fast in-memory cache hit for instantaneous tab/page switching
+  if (isGet && !skipCache && cache.has(cacheKey)) {
+    const entry = cache.get(cacheKey)
+    if (Date.now() - entry.timestamp < CACHE_TTL_MS) {
+      return entry.data
+    }
+    cache.delete(cacheKey)
+  }
+
+  // Clear cache on write operations (POST, PUT, PATCH, DELETE)
+  if (!isGet) {
+    cache.clear()
+  }
+
+  const headers = {}
   if (token) headers.Authorization = `Bearer ${token}`
 
   let payload
@@ -53,16 +78,24 @@ async function request(path, { method = 'GET', body, form } = {}) {
   if (!res.ok) {
     if (res.status === 401 && token) {
       clearToken()
+      clearApiCache()
       const returnTo = `${window.location.pathname}${window.location.search}`
       sessionStorage.setItem('nexora_return_to', returnTo)
       if (window.location.pathname !== '/login') window.location.assign('/login')
     }
     throw new ApiError(res.status, data?.detail ?? data?.error?.message ?? `HTTP ${res.status}`)
   }
+
+  // Store in cache for subsequent page visits
+  if (isGet && cacheKey) {
+    cache.set(cacheKey, { data, timestamp: Date.now() })
+  }
+
   return data
 }
 
 export const api = {
+  healthCheck: () => fetch(apiUrl('/api/health')).catch(() => {}),
   // ─────────────────────────────────────────────
   // Auth
   // ─────────────────────────────────────────────
@@ -109,6 +142,20 @@ export const api = {
   // AI Search
   search: (query) =>
     request('/api/opportunities/search', { method: 'POST', body: { query } }),
+
+  // ─────────────────────────────────────────────
+  // Published catalog (verified/enriched dataset)
+  // ─────────────────────────────────────────────
+  published: (params = {}) => {
+    const qs = new URLSearchParams(
+      Object.entries(params).filter(([, v]) => v !== undefined && v !== null && v !== '')
+    ).toString()
+    return request(`/api/published/opportunities${qs ? `?${qs}` : ''}`)
+  },
+  publishedOpportunity: (slug) => request(`/api/published/opportunities/${encodeURIComponent(slug)}`),
+  publishedRelated: (slug, limit = 4) =>
+    request(`/api/published/opportunities/${encodeURIComponent(slug)}/related?limit=${limit}`),
+  publishedStats: () => request('/api/published/stats'),
 
   // ─────────────────────────────────────────────
   // Applications / Tracker

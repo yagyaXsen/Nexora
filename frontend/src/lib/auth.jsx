@@ -24,18 +24,19 @@ export function AuthProvider({ children }) {
   }, [])
 
   const login = useCallback(async (email, password) => {
-    const { access_token } = await api.login(email, password)
+    const data = await api.login(email, password)
+    const { access_token, user: userData } = data
     setToken(access_token)
-    const me = await api.me()
+    const me = userData || (await api.me())
     setUser(me)
     return me
   }, [])
 
   const loginWithGoogle = useCallback(async (payload) => {
     const data = await api.loginWithGoogle(payload)
-    const { access_token, is_new_user } = data
+    const { access_token, is_new_user, user: userData } = data
     setToken(access_token)
-    const me = await api.me()
+    const me = userData || (await api.me())
     setUser(me)
     return { user: me, is_new_user }
   }, [])

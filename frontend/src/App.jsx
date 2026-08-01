@@ -4,6 +4,7 @@ import Nav from './components/Nav.jsx'
 import Footer from './components/Footer.jsx'
 import ProtectedRoute from './components/ProtectedRoute.jsx'
 import { ToastProvider } from './components/Toast.jsx'
+import { api } from './lib/api.js'
 
 // Pages
 import Landing from './pages/Landing.jsx'
@@ -39,6 +40,11 @@ function ScrollToTop() {
 export default function App() {
   const location = useLocation()
   
+  // Pre-warm backend and Neon DB instance immediately on initial app load
+  useEffect(() => {
+    api.healthCheck()
+  }, [])
+
   // Hide standard header and footer on landing & all auth/onboarding pages.
   const isAuthOrLandingPage = [
     '/',

@@ -77,3 +77,20 @@
     grid-template-columns: 1fr;
   }
 }
+
+/* ── Print-friendly layout ─────────────────────────────────────────────── */
+@media print {
+  .print-hide {
+    display: none !important;
+  }
+  body {
+    background: #fff !important;
+  }
+  .detail-print-main {
+    box-shadow: none !important;
+    border: none !important;
+  }
+  a {
+    text-decoration: none;
+  }
+}
