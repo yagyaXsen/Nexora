@@ -4,7 +4,7 @@ import { api } from '../lib/api'
 import { useAuth } from '../lib/auth.jsx'
 import OpportunityCard from '../components/OpportunityCard.jsx'
 import { CountUp } from '../components/CountUp.jsx'
-import { ALL_CATEGORIES, categoryLabel } from '../lib/format'
+import { ALL_CATEGORIES, categoryLabel, formatDate } from '../lib/format'
 import { useApply } from '../hooks/useApply'
 import './Dashboard.css'
 
@@ -69,6 +69,24 @@ export default function Dashboard() {
   const newToday = summary?.new_today ?? 0
 
   const userFirstName = user?.name ? user.name.split(' ')[0] : 'Scholar'
+  const userFocus = user?.profile?.field_of_study || user?.profile?.interests?.[0] || 'Global Programs & Grants'
+
+  // Derive dynamic AI summary text from real application and recommendations state
+  let dynamicSummaryText = ''
+  if (recs.length > 0 && reminders.length > 0) {
+    const topRec = recs[0]
+    const nextRem = reminders[0]
+    const remTitle = nextRem.title || nextRem.opportunity?.title || 'Saved call'
+    const remDue = formatDate(nextRem.due_date || nextRem.opportunity?.deadline) || 'an upcoming date'
+    dynamicSummaryText = `${recs.length} verified opportunities match your profile, led by ${topRec.title} by ${topRec.provider_organization || topRec.organizer || 'the host institution'}. You have an upcoming deadline for ${remTitle} on ${remDue}.`
+  } else if (recs.length > 0) {
+    const topRec = recs[0]
+    dynamicSummaryText = `${recs.length} verified opportunities match your candidate profile, led by ${topRec.title} by ${topRec.provider_organization || topRec.organizer || 'verified organization'}. Explore your personalized feed below.`
+  } else if (apps.length > 0) {
+    dynamicSummaryText = `You are actively tracking ${apps.length} opportunity application${apps.length === 1 ? '' : 's'}. Review requirements and submit before the closing dates.`
+  } else {
+    dynamicSummaryText = `Your opportunity intelligence signal is active across ${totalIndexed > 0 ? totalIndexed : 'all'} verified global calls. Browse scholarships, fellowships, grants, and accelerators to build your pipeline.`
+  }
 
   // Active applications (not Archived/Rejected) for tracker sidebar
   const activeApps = apps.filter(a => !['Archived', 'Rejected'].includes(a.status)).slice(0, 3)
@@ -88,7 +106,9 @@ export default function Dashboard() {
               Welcome back, {userFirstName}
             </h1>
             <p className="text-base text-slate-600 max-w-xl">
-              Your personal AI signal is active. 18 new high-precision opportunities indexed for your profile today.
+              {recs.length > 0
+                ? `Your personal AI signal is active. ${recs.length} verified opportunities matched to your profile.`
+                : `Your personal AI signal is active across ${totalIndexed > 0 ? totalIndexed.toLocaleString() : 'all'} global calls.`}
             </p>
           </div>
 
@@ -122,20 +142,24 @@ export default function Dashboard() {
               <span className="prism-mono text-[11px] font-bold text-indigo-600 bg-indigo-50 px-3 py-1 rounded-full uppercase tracking-wider">
                 <i className="ti ti-sparkles mr-1.5" /> DAILY AI SIGNAL SUMMARY
               </span>
-              <span className="prism-mono text-[10px] text-slate-400 font-bold">UPDATED 10M AGO</span>
+              <span className="prism-mono text-[10px] text-emerald-700 font-bold bg-emerald-50 border border-emerald-200 px-2.5 py-0.5 rounded-full">
+                LIVE SIGNAL
+              </span>
             </div>
 
             <p className="text-base sm:text-lg text-slate-800 leading-relaxed font-serif">
-              “Three new research grants published by the European Research Council align directly with your computer science background. One saved application for <strong className="text-slate-900 font-sans font-bold">ETH AI Center</strong> has a deadline approaching in 4 days.”
+              “{dynamicSummaryText}”
             </p>
 
             <div className="pt-2 flex flex-wrap items-center gap-4 text-xs font-mono text-slate-500 border-t border-slate-100">
               <span className="flex items-center gap-1.5">
                 <span className="w-1.5 h-1.5 rounded-full bg-indigo-500" />
-                Query Focus: Artificial Intelligence &amp; Robotics
+                Focus: {userFocus}
               </span>
               <span>·</span>
-              <span className="text-emerald-600 font-bold">✓ 98.4% Confidence Score</span>
+              <span className="text-emerald-600 font-bold">
+                ✓ {verifiedCount > 0 ? `${verifiedCount} Verified Calls` : 'Official Submission Routing'}
+              </span>
             </div>
           </div>
 
@@ -393,7 +417,9 @@ export default function Dashboard() {
                     <div key={rem.id} className="p-3.5 bg-[#FAFAFA] border border-slate-200 rounded-2xl flex items-center justify-between gap-3">
                       <div>
                         <h4 className="font-bold text-xs text-slate-900">{rem.title || rem.opportunity?.title}</h4>
-                        <span className="prism-mono text-[10px] text-slate-500">{rem.due_date || 'May 14, 2026'}</span>
+                        <span className="prism-mono text-[10px] text-slate-500">
+                          {formatDate(rem.due_date || rem.opportunity?.deadline) || 'Rolling deadline'}
+                        </span>
                       </div>
                       <span className="prism-mono text-[10px] font-bold text-red-600 bg-red-50 px-2.5 py-1 rounded">
                         CLOSING SOON
