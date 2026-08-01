@@ -241,6 +241,7 @@ def seed_initial_data() -> int:
                     tags=opp_data.get("tags", []),
                     status="active",
                     confidence=opp_data.get("confidence", 0.95),
+                    needs_review=opp_data.get("needs_review", False),
                     dedupe_key=slug,
                     organization_id=org.id if org else None,
                     source_id=None,
@@ -348,6 +349,49 @@ def _clear_dummy_profile_defaults() -> None:
         db.close()
 
 
+def _sweep_expired_opportunities() -> None:
+    """Mark past-deadline opportunities as expired and remove dead_link/junk entries."""
+    from app.models import Opportunity, Application, OpportunityStatus
+    from datetime import datetime, timezone
+
+    db = SessionLocal()
+    try:
+        now = datetime.now(timezone.utc)
+
+        # 1. Mark active opportunities whose deadline has passed as expired
+        expired = db.query(Opportunity).filter(
+            Opportunity.status == OpportunityStatus.ACTIVE.value,
+            Opportunity.deadline.isnot(None),
+            Opportunity.deadline < now,
+        ).all()
+        for o in expired:
+            o.status = OpportunityStatus.EXPIRED.value
+        if expired:
+            db.commit()
+            logger.info(f"Lifecycle sweep: marked {len(expired)} opportunity/opportunities as expired.")
+
+        # 2. Remove dead_link entries and junk titles (titles starting with #)
+        junk = db.query(Opportunity).filter(
+            (Opportunity.status == OpportunityStatus.DEAD_LINK.value) |
+            (Opportunity.title.like('#%'))
+        ).all()
+        for o in junk:
+            db.query(Application).filter(Application.opportunity_id == o.id).delete()
+            db.delete(o)
+        if junk:
+            db.commit()
+            logger.info(f"Lifecycle sweep: removed {len(junk)} dead_link/junk opportunities.")
+
+        if not expired and not junk:
+            logger.info("Lifecycle sweep: all opportunities are current.")
+
+    except Exception:
+        db.rollback()
+        logger.exception("Lifecycle sweep failed (non-fatal)")
+    finally:
+        db.close()
+
+
 def run_startup():
     """Call once at process boot. Idempotent — safe to call on every restart.
 
@@ -388,6 +432,9 @@ def run_startup():
 
     # One-time cleanup of old dummy profile defaults
     _clear_dummy_profile_defaults()
+
+    # Mark expired opportunities and remove dead_link / junk title entries
+    _sweep_expired_opportunities()
 
     logger.info("Nexora startup lifecycle complete.")
     logger.info("─" * 50)
