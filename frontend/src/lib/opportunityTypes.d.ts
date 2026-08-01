@@ -89,6 +89,11 @@ export interface NormalizedOpportunity {
   // funding
   fundingType: string | null
   fundingLabel: string
+  stipendAmount: string | null
+  tuitionCoverage: string | null
+  travelSupport: string | null
+  accommodationSupport: string | null
+  fundingAmount: string | null
 
   // requirements
   citizenshipRequirements: string | null

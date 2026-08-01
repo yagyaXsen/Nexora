@@ -180,9 +180,6 @@ function computeStatus(src, deadlineISO, daysLeft) {
   if (raw === 'unclear') return 'unclear'
   if (deadlineISO) return 'open'
   if (src.application_readiness === 'application_not_yet_open') return 'upcoming'
-  // Legacy DB 'active' records with no deadline are live programs — treat as
-  // open rather than mislabeling rolling/ongoing programs as unclear.
-  if (raw === 'active') return 'open'
   return 'unclear'
 }
 
@@ -203,7 +200,7 @@ function computeVerification(src) {
  * application_url; falls back to official_source_url; never points at
  * third-party aggregators.
  */
-function buildCTA(src, status, deadlineISO, daysLeft) {
+function buildCTA(src, status, _deadlineISO, _daysLeft) {
   const appUrl = pickUrl(src.application_url, src.apply_url)
   const srcUrl = pickUrl(src.official_source_url, src.organizer_website, src.source_url)
   const readiness = String(src.application_readiness || '').toLowerCase()
