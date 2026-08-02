@@ -10,19 +10,22 @@ export default function HeroBackground() {
       <div className="absolute inset-0 bg-gradient-to-b from-[#090d16] via-[#05070c] to-nx-dark z-0" />
       <div className="absolute top-1/4 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[800px] h-[500px] bg-indigo-600/15 rounded-full blur-[160px] pointer-events-none z-0" />
 
-      {/* Background Video */}
+      {/* Optimized Background Video with Instant Poster Fallback */}
       <video
         autoPlay
         muted
         loop
         playsInline
         preload="auto"
-        onLoadedData={() => setVideoLoaded(true)}
-        className={`absolute inset-0 w-full h-full object-cover transition-opacity duration-1000 ${
-          videoLoaded ? 'opacity-85' : 'opacity-0'
+        poster="/assets/hero_poster.jpg"
+        onCanPlay={() => setVideoLoaded(true)}
+        className={`absolute inset-0 w-full h-full object-cover transition-opacity duration-700 ${
+          videoLoaded ? 'opacity-85' : 'opacity-70'
         }`}
-        src="https://d8j0ntlcm91z4.cloudfront.net/user_38xzZboKViGWJOttwIXH07lWA1P/hf_20260711_090308_1dd0cea7-f9ba-4db4-8147-c7d746061c9e.mp4"
-      />
+      >
+        <source src="/assets/hero_video.webm" type="video/webm" />
+        <source src="/assets/hero_video.mp4" type="video/mp4" />
+      </video>
 
       {/* Subtle overlay for contrast */}
       <div className="absolute inset-0 bg-black/30 bg-[radial-gradient(circle_at_center,_transparent_0%,_rgba(0,0,0,0.5)_100%)]" />
