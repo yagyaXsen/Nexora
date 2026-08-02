@@ -134,7 +134,7 @@ export default function Signup() {
       }
 
       setStep(3)
-      setTimeout(() => navigate('/dashboard'), 2000)
+      setTimeout(() => navigate('/explore'), 2000)
     } catch (err) {
       setError(
         err.status === 409
@@ -403,7 +403,7 @@ export default function Signup() {
                     </>
                   ) : (
                     <>
-                      <span>Complete &amp; Launch Dashboard</span>
+                      <span>Complete &amp; Discover Opportunities</span>
                       <i className="ti ti-arrow-right text-xs" />
                     </>
                   )}
@@ -422,7 +422,7 @@ export default function Signup() {
             <div className="space-y-2">
               <h2 className="text-2xl font-extrabold text-slate-950 tracking-tight">Account Created!</h2>
               <p className="text-xs text-slate-600 font-serif leading-relaxed max-w-sm mx-auto">
-                Welcome to Nexora. Launching your personalized opportunity intelligence dashboard…
+                Welcome to Nexora. Launching your personalized opportunity discovery feed…
               </p>
             </div>
           </div>
@@ -432,10 +432,10 @@ export default function Signup() {
 
       {/* Footer */}
       <footer className="w-full max-w-6xl mx-auto pt-6 border-t border-slate-100 flex flex-col sm:flex-row items-center justify-between gap-4 font-mono text-[11px] text-slate-400">
-        <div>© 2026 Nexora Intelligence Platform · Swiss Standard</div>
+        <div>© {new Date().getFullYear()} Nexora Intelligence Platform · Swiss Standard</div>
         <div className="flex gap-4">
-          <Link to="/" className="hover:text-slate-600">Privacy Policy</Link>
-          <Link to="/" className="hover:text-slate-600">Terms of Service</Link>
+          <Link to="/privacy" className="hover:text-slate-600">Privacy Policy</Link>
+          <Link to="/terms" className="hover:text-slate-600">Terms of Service</Link>
         </div>
       </footer>
     </div>

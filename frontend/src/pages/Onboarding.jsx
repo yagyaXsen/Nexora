@@ -153,7 +153,7 @@ export default function Onboarding() {
       /* Graceful fallback */
     }
 
-    setTimeout(() => navigate('/dashboard', { replace: true }), 1500)
+    setTimeout(() => navigate('/explore', { replace: true }), 1500)
   }
 
   return (
@@ -337,7 +337,7 @@ export default function Onboarding() {
                 onClick={handleFinish}
                 className="bg-[#0A0A0A] hover:bg-indigo-600 text-white font-bold text-sm px-8 py-3.5 rounded-2xl shadow-xl transition-all flex items-center gap-2 cursor-pointer active:scale-98"
               >
-                <span>Complete Profile &amp; Launch Dashboard</span>
+                <span>Complete Profile &amp; Discover Opportunities</span>
                 <i className="ti ti-sparkles text-xs" />
               </button>
             </div>
