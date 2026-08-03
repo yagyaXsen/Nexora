@@ -321,11 +321,6 @@ export default function Explore() {
         {/* 1. Header & Omnisearch Bar */}
         <header className="space-y-6">
           <div className="max-w-3xl space-y-2">
-            <div className="flex items-center gap-2">
-              <span className="font-mono text-xs text-indigo-600 bg-indigo-50 px-2.5 py-1 rounded-full font-bold border border-indigo-100 flex items-center gap-1.5">
-                <i className="ti ti-sparkles" /> AI OPPORTUNITY DISCOVERY
-              </span>
-            </div>
             <h1 className="text-4xl sm:text-5xl font-extrabold text-slate-900 tracking-tight leading-[1.1]">
               Explore Global Programs
             </h1>
@@ -456,8 +451,8 @@ export default function Explore() {
         {/* 2. Category Quick Filters */}
         <div className="space-y-3">
           <div className="flex items-center justify-between">
-            <span className="font-mono text-[11px] font-bold text-slate-400 uppercase tracking-wider">
-              [ DIRECTORY CATEGORIES ]
+            <span className="font-mono text-xs font-bold text-slate-500 uppercase tracking-wider">
+              Directory Categories
             </span>
             {category && (
               <button
@@ -849,8 +844,8 @@ export default function Explore() {
 
             {/* AI Search Tips Card */}
             <div className="bg-white border border-slate-200 p-6 rounded-3xl shadow-xl space-y-4">
-              <div className="font-mono text-xs text-indigo-600 font-bold uppercase tracking-wider pb-3 border-b border-slate-200 flex items-center gap-1.5">
-                <i className="ti ti-bulb" /> PRO SEARCH TIPS
+              <div className="font-mono text-xs text-slate-700 font-bold uppercase tracking-wider pb-3 border-b border-slate-200 flex items-center gap-1.5">
+                <i className="ti ti-bulb text-indigo-500" /> Search Tips & Suggestions
               </div>
               <ul className="space-y-3 text-xs text-slate-600 leading-relaxed">
                 <li className="flex items-start gap-2">
@@ -886,7 +881,7 @@ export default function Explore() {
           >
             <div className="flex items-start justify-between gap-4 pb-4 border-b border-slate-200">
               <div>
-                <span className="font-mono text-xs text-indigo-600 font-bold">[ SIDE-BY-SIDE MATRIX ]</span>
+                <span className="font-mono text-xs text-slate-500 font-bold uppercase">Side-by-Side Matrix</span>
                 <h2 className="text-xl sm:text-2xl font-extrabold text-slate-950 mt-1">
                   Opportunity Comparison
                 </h2>
