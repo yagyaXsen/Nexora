@@ -1852,6 +1852,19 @@
   .prism-programs__grid { grid-template-columns: 1fr; }
   .prism-program, .prism-program--index-1, .prism-program--index-2, .prism-program--index-3, .prism-program--index-4, .prism-program--custom, .prism-program-skeleton { grid-column: auto; min-height: 350px; }
   .prism-program--index-3, .prism-program--index-4, .prism-program--custom { min-height: 290px; }
+  /* Wide and accent cards are defined after this media query, so they must be
+     reset here too or they keep their desktop spans (8/4) and overflow the
+     1-column mobile grid. Stack the wide card vertically and full-bleed. */
+  .prism-program--wide, .prism-program--accent { grid-column: 1 / -1; min-height: 0; }
+  .prism-program--wide { flex-direction: column; align-items: stretch; gap: 20px; padding: 24px !important; }
+  .prism-program--wide .prism-program__side-meta {
+    width: 100%;
+    min-width: 0;
+    padding-left: 0;
+    border-left: 0;
+    border-top: 1px solid var(--prism-border);
+    padding-top: 16px;
+  }
   .prism-kanban { margin-top: 55px; padding: 22px; border-radius: 22px; }
   .prism-kanban__head { align-items: flex-start; flex-direction: column; }
   .prism-kanban__actions { width: 100%; justify-content: space-between; }

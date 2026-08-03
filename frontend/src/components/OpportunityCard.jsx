@@ -98,7 +98,7 @@ export default function OpportunityCard({ opp, onSave, onApply, saved = false })
 
       {/* ── Footer Actions ── */}
       <div
-        className="pt-3 border-t border-slate-100 flex items-center justify-between gap-3"
+        className="pt-3 border-t border-slate-100 flex flex-wrap items-center justify-between gap-3"
         onClick={(e) => e.stopPropagation()}
       >
         {closed ? (

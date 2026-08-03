@@ -48,7 +48,7 @@ export default function HeroBackground() {
         <div className="absolute bottom-[20%] right-[30%] w-[500px] h-[500px] bg-nx-violet/10 rounded-full blur-[150px]" />
         
         {/* Layer 2: Connecting lines and nodes */}
-        <svg className="absolute inset-0 w-full h-full opacity-30" xmlns="http://www.w3.org/2000/svg">
+        <svg className="absolute inset-0 w-full h-full opacity-30" xmlns="http://www.w3.org/2000/svg" viewBox="-500 -500 1000 1000" preserveAspectRatio="xMidYMid slice">
           <defs>
             <linearGradient id="line-gradient" x1="0%" y1="0%" x2="100%" y2="100%">
               <stop offset="0%" stopColor="#4F7CFF" stopOpacity="0.2" />
@@ -57,7 +57,7 @@ export default function HeroBackground() {
             </linearGradient>
           </defs>
           
-          <g transform="translate(50vw, 50vh)">
+          <g>
             {/* Abstract network paths */}
             <motion.path 
               d="M -300 -200 Q -100 -400 100 -200 T 400 -100" 

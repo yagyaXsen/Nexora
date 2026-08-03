@@ -200,16 +200,16 @@ export default function Profile() {
         </div>
 
         {/* 2. Embedded Navigation Tabs */}
-        <div className="flex gap-3 border-b border-slate-200 pb-3">
+        <div className="flex flex-col sm:flex-row gap-3 border-b border-slate-200 pb-3">
           <button
             onClick={() => setActiveTab('identity')}
-            className={`px-5 py-2.5 rounded-2xl text-xs font-bold transition-all border ${activeTab === 'identity' ? 'bg-[#0A0A0A] text-white border-[#0A0A0A] shadow-md' : 'bg-slate-50 text-slate-600 border-slate-200 hover:border-slate-400'}`}
+            className={`px-5 py-2.5 rounded-2xl text-xs font-bold transition-all border text-left sm:text-center ${activeTab === 'identity' ? 'bg-[#0A0A0A] text-white border-[#0A0A0A] shadow-md' : 'bg-slate-50 text-slate-600 border-slate-200 hover:border-slate-400'}`}
           >
             Candidate Credentials &amp; Vector Data
           </button>
           <button
             onClick={() => setActiveTab('settings')}
-            className={`px-5 py-2.5 rounded-2xl text-xs font-bold transition-all border ${activeTab === 'settings' ? 'bg-[#0A0A0A] text-white border-[#0A0A0A] shadow-md' : 'bg-slate-50 text-slate-600 border-slate-200 hover:border-slate-400'}`}
+            className={`px-5 py-2.5 rounded-2xl text-xs font-bold transition-all border text-left sm:text-center ${activeTab === 'settings' ? 'bg-[#0A0A0A] text-white border-[#0A0A0A] shadow-md' : 'bg-slate-50 text-slate-600 border-slate-200 hover:border-slate-400'}`}
           >
             System Preferences &amp; Security Settings
           </button>
@@ -303,7 +303,7 @@ export default function Profile() {
                       className="w-full bg-slate-50 border border-slate-200 p-3 rounded-2xl text-slate-900 outline-none focus:border-indigo-400 font-sans"
                     />
                   </div>
-                  <div className="space-y-1.5 col-span-2">
+                  <div className="space-y-1.5 sm:col-span-2">
                     <label className="text-slate-500 font-bold block uppercase">Primary Research Field</label>
                     <input
                       value={fieldOfStudy}
