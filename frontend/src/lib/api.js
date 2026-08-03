@@ -139,9 +139,11 @@ export const api = {
   trending: (limit = 4) => request(`/api/opportunities/trending?limit=${limit}`),
   stats: () => request('/api/opportunities/stats'),
 
-  // AI Search
+  // AI Search & Suggestions
   search: (query) =>
     request('/api/opportunities/search', { method: 'POST', body: { query } }),
+  suggestions: (q) =>
+    request(`/api/opportunities/suggestions?q=${encodeURIComponent(q)}`),
 
   // ─────────────────────────────────────────────
   // Published catalog (verified/enriched dataset)

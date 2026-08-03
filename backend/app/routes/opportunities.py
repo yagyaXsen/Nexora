@@ -14,12 +14,62 @@ from app.ai_service import ai_service
 
 router = APIRouter(prefix="/api/opportunities", tags=["Opportunities"])
 
+import re
+
+def _tokenize_query(q: str) -> List[str]:
+    """Tokenize search query into distinct terms, excluding empty/single-char noise."""
+    tokens = [t.lower() for t in re.findall(r"[a-zA-Z0-9\+\#]+", q)]
+    stopwords = {"a", "an", "the", "in", "on", "at", "for", "to", "of", "and", "or", "is", "with"}
+    meaningful = [t for t in tokens if t not in stopwords or len(tokens) == 1]
+    return meaningful or tokens
+
+def _score_opportunity(opp: Opportunity, terms: List[str], raw_query: str) -> float:
+    """Calculate multi-field relevance score for an opportunity."""
+    score = float(opp.confidence or 1.0) * 10.0
+    raw_lower = raw_query.strip().lower()
+    title_lower = (opp.title or "").lower()
+    desc_lower = (opp.description or "").lower()
+    org_lower = (opp.organizer or "").lower()
+    country_lower = (opp.country or "").lower()
+    elig_lower = (opp.eligibility_text or "").lower()
+    tags_str = str(opp.tags or []).lower()
+    funding_lower = (opp.funding_amount or "").lower()
+
+    # Exact full-phrase match boosts
+    if raw_lower in title_lower:
+        score += 150.0
+    elif raw_lower in org_lower:
+        score += 80.0
+    elif raw_lower in desc_lower:
+        score += 40.0
+
+    for term in terms:
+        if term in title_lower:
+            score += 35.0
+            if title_lower.startswith(term):
+                score += 20.0
+        if term in org_lower:
+            score += 25.0
+        if term in tags_str:
+            score += 20.0
+        if term in country_lower:
+            score += 15.0
+        if term in funding_lower:
+            score += 15.0
+        if term in desc_lower:
+            score += 8.0
+        if term in elig_lower:
+            score += 8.0
+
+    return score
+
 @router.get("", response_model=PaginatedOpportunities)
 def list_opportunities(
     category: Optional[str] = Query(None, description="Filter by category"),
     country: Optional[str] = Query(None, description="Filter by country or region"),
     status: Optional[str] = Query(None, description="Filter by status (default excludes expired/dead_link)"),
     q: Optional[str] = Query(None, description="Search term for title, description, or organizer"),
+    sort: Optional[str] = Query("relevance", description="Sort order: relevance, deadline_asc, created_desc, funding_desc"),
     page: int = Query(1, ge=1, description="Page number"),
     page_size: int = Query(20, ge=1, le=100, description="Items per page"),
     db: Session = Depends(get_db)
@@ -48,19 +98,44 @@ def list_opportunities(
     if country:
         query = query.filter(Opportunity.country.ilike(f"%{country}%"))
 
-    if q:
-        search_pattern = f"%{q}%"
-        query = query.filter(
-            or_(
-                Opportunity.title.ilike(search_pattern),
-                Opportunity.description.ilike(search_pattern),
-                Opportunity.organizer.ilike(search_pattern)
-            )
-        )
+    terms = _tokenize_query(q) if q and q.strip() else []
 
-    total = query.count()
+    if terms:
+        # Build multi-field text conditions for each token
+        token_conditions = []
+        for term in terms:
+            search_pattern = f"%{term}%"
+            token_conditions.append(
+                or_(
+                    Opportunity.title.ilike(search_pattern),
+                    Opportunity.description.ilike(search_pattern),
+                    Opportunity.organizer.ilike(search_pattern),
+                    Opportunity.country.ilike(search_pattern),
+                    Opportunity.funding_amount.ilike(search_pattern),
+                    Opportunity.eligibility_text.ilike(search_pattern),
+                    cast(Opportunity.tags, String).ilike(search_pattern),
+                )
+            )
+        # Broad OR match across tokens to ensure maximum candidate retrieval
+        query = query.filter(or_(*token_conditions))
+
+    all_matched = query.all()
+
+    # Apply sorting and relevance ranking
+    if terms and sort == "relevance":
+        all_matched.sort(key=lambda opp: _score_opportunity(opp, terms, q), reverse=True)
+    elif sort == "deadline_asc":
+        # Sort opportunities with upcoming deadlines first
+        all_matched.sort(key=lambda opp: (opp.deadline is None, opp.deadline or ""))
+    elif sort == "funding_desc":
+        all_matched.sort(key=lambda opp: (opp.funding_amount is None, opp.funding_amount or ""), reverse=True)
+    else:
+        # Default created_at desc
+        all_matched.sort(key=lambda opp: opp.created_at, reverse=True)
+
+    total = len(all_matched)
     offset = (page - 1) * page_size
-    items = query.order_by(Opportunity.created_at.desc()).offset(offset).limit(page_size).all()
+    items = all_matched[offset:offset + page_size]
 
     return PaginatedOpportunities(
         total=total,
@@ -70,36 +145,60 @@ def list_opportunities(
         items=items
     )
 
-@router.get("/stats", response_model=OpportunityStats)
-def get_opportunity_stats(db: Session = Depends(get_db)):
-    total = db.query(Opportunity).count()
-    active_count = db.query(Opportunity).filter(Opportunity.status == OpportunityStatus.ACTIVE.value, Opportunity.needs_review == False).count()
-    expiring_soon_count = db.query(Opportunity).filter(Opportunity.status == OpportunityStatus.EXPIRING_SOON.value, Opportunity.needs_review == False).count()
-    expired_count = db.query(Opportunity).filter(Opportunity.status == OpportunityStatus.EXPIRED.value).count()
-    dead_link_count = db.query(Opportunity).filter(Opportunity.status == OpportunityStatus.DEAD_LINK.value).count()
-    needs_review_count = db.query(Opportunity).filter(Opportunity.needs_review == True).count()
+@router.get("/suggestions")
+def get_search_suggestions(
+    q: str = Query(..., min_length=1, description="Query prefix to suggest completions for"),
+    limit: int = Query(6, ge=1, le=20),
+    db: Session = Depends(get_db)
+):
+    """Provide instantaneous search autocomplete suggestions for titles, host organizations, and tags."""
+    terms = _tokenize_query(q)
+    if not terms:
+        return {"suggestions": []}
 
-    # Category breakdown
-    cat_counts = db.query(Opportunity.category, func.count(Opportunity.id))\
-        .filter(Opportunity.needs_review == False)\
-        .group_by(Opportunity.category).all()
-    categories_breakdown = {cat: count for cat, count in cat_counts}
+    pattern = f"%{terms[0]}%"
+    opps = db.query(Opportunity).filter(
+        Opportunity.needs_review == False,
+        Opportunity.status.in_([OpportunityStatus.ACTIVE.value, OpportunityStatus.EXPIRING_SOON.value]),
+        or_(
+            Opportunity.title.ilike(pattern),
+            Opportunity.organizer.ilike(pattern),
+            Opportunity.country.ilike(pattern),
+            cast(Opportunity.tags, String).ilike(pattern),
+        )
+    ).limit(30).all()
 
-    return OpportunityStats(
-        total_opportunities=total,
-        active_count=active_count,
-        expiring_soon_count=expiring_soon_count,
-        expired_count=expired_count,
-        dead_link_count=dead_link_count,
-        needs_review_count=needs_review_count,
-        categories_breakdown=categories_breakdown
-    )
+    suggestions = []
+    seen = set()
+
+    for opp in opps:
+        # Add matching organizer
+        if opp.organizer and opp.organizer.lower() not in seen:
+            if terms[0] in opp.organizer.lower():
+                suggestions.append({"text": opp.organizer, "type": "organization", "category": opp.category})
+                seen.add(opp.organizer.lower())
+
+        # Add matching title
+        if opp.title and opp.title.lower() not in seen:
+            if terms[0] in opp.title.lower():
+                suggestions.append({"text": opp.title, "type": "opportunity", "category": opp.category})
+                seen.add(opp.title.lower())
+
+        # Add matching tags
+        if opp.tags and isinstance(opp.tags, list):
+            for tag in opp.tags:
+                if isinstance(tag, str) and tag.lower() not in seen and terms[0] in tag.lower():
+                    suggestions.append({"text": tag, "type": "tag", "category": opp.category})
+                    seen.add(tag.lower())
+
+        if len(suggestions) >= limit:
+            break
+
+    return {"suggestions": suggestions[:limit]}
 
 @router.post("/search", response_model=SearchResponse)
 def ai_search(payload: SearchRequest, db: Session = Depends(get_db)):
-    """AI-powered natural language search. Parses the query into structured
-    intent (category, country, tags, keywords, funding) and builds SQL filters.
-    Falls back to a broad keyword search when the strict filters yield nothing."""
+    """AI-powered natural language search with multi-field intent extraction and relevance ranking."""
     intent = ai_service.parse_search_query(payload.query)
 
     base = db.query(Opportunity).filter(
@@ -126,9 +225,10 @@ def ai_search(payload: SearchRequest, db: Session = Depends(get_db)):
             Opportunity.description.ilike(pattern),
             Opportunity.organizer.ilike(pattern),
             Opportunity.eligibility_text.ilike(pattern),
+            Opportunity.funding_amount.ilike(pattern),
+            Opportunity.country.ilike(pattern),
         ])
     for tag in intent.tags:
-        # tags stored as JSON list; quoted match avoids partial-token hits
         text_conditions.append(cast(Opportunity.tags, String).ilike(f'%"{tag}"%'))
 
     # --- Strict pass ---
@@ -145,9 +245,9 @@ def ai_search(payload: SearchRequest, db: Session = Depends(get_db)):
     if text_conditions:
         query = query.filter(or_(*text_conditions))
 
-    items = query.order_by(Opportunity.created_at.desc()).limit(20).all()
+    items = query.all()
 
-    # --- Broad fallback pass ---
+    # --- Broad fallback pass if strict yields 0 ---
     degraded = False
     if not items:
         degraded = True
@@ -157,10 +257,14 @@ def ai_search(payload: SearchRequest, db: Session = Depends(get_db)):
         if intent.country:
             broad_conditions.append(Opportunity.country.ilike(f"%{intent.country}%"))
         if broad_conditions:
-            items = base.filter(or_(*broad_conditions))\
-                .order_by(Opportunity.created_at.desc()).limit(20).all()
+            items = base.filter(or_(*broad_conditions)).all()
         else:
-            items = base.order_by(Opportunity.created_at.desc()).limit(20).all()
+            items = base.all()
+
+    # Sort results by relevance score
+    terms = _tokenize_query(payload.query)
+    items.sort(key=lambda opp: _score_opportunity(opp, terms, payload.query), reverse=True)
+    items = items[:20]
 
     return SearchResponse(
         query=payload.query,

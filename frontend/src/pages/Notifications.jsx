@@ -109,9 +109,9 @@ export default function Notifications() {
           {filteredItems.map((item) => (
             <div
               key={item.id}
-              className={`p-6 rounded-3xl border transition-all duration-300 flex items-start justify-between gap-6 ${item.is_read ? 'bg-white border-slate-200 opacity-80' : 'bg-white border-slate-300 shadow-lg hover:border-indigo-300'}`}
+              className={`p-5 sm:p-6 rounded-3xl border transition-all duration-300 flex flex-col sm:flex-row items-start justify-between gap-4 sm:gap-6 ${item.is_read ? 'bg-white border-slate-200 opacity-80' : 'bg-white border-slate-300 shadow-lg hover:border-indigo-300'}`}
             >
-              <div className="flex items-start gap-4">
+              <div className="flex items-start gap-4 min-w-0">
                 <div className={`w-10 h-10 rounded-2xl flex items-center justify-center text-base shrink-0 font-bold ${item.priority === 'critical' ? 'bg-red-50 text-red-600' : 'bg-indigo-50 text-indigo-600'}`}>
                   <i className={item.priority === 'critical' ? 'ti ti-bell-ringing-filled' : 'ti ti-sparkles'} />
                 </div>

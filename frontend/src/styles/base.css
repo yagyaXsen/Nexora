@@ -13,6 +13,9 @@
 html {
   scroll-behavior: smooth;
   -webkit-text-size-adjust: 100%;
+  /* Global horizontal-overflow safeguard. `clip` (not `hidden`) is used so
+     the sticky navbar keeps working — clip does not create a scroll container. */
+  overflow-x: clip;
 }
 
 body {
@@ -23,6 +26,7 @@ body {
   background: var(--canvas);
   -webkit-font-smoothing: antialiased;
   text-rendering: optimizeLegibility;
+  overflow-x: clip;
 }
 
 img,
