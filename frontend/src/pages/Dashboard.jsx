@@ -139,12 +139,9 @@ export default function Dashboard() {
 
           <div className="col-span-12 lg:col-span-8 space-y-4 relative z-10">
             <div className="flex items-center justify-between">
-              <span className="prism-mono text-[11px] font-bold text-indigo-600 bg-indigo-50 px-3 py-1 rounded-full uppercase tracking-wider">
-                <i className="ti ti-sparkles mr-1.5" /> DAILY AI SIGNAL SUMMARY
-              </span>
-              <span className="prism-mono text-[10px] text-emerald-700 font-bold bg-emerald-50 border border-emerald-200 px-2.5 py-0.5 rounded-full">
-                LIVE SIGNAL
-              </span>
+              <h2 className="text-xs font-bold text-slate-700 uppercase tracking-wider font-mono">
+                Daily Signal Brief
+              </h2>
             </div>
 
             <p className="text-base sm:text-lg text-slate-800 leading-relaxed font-serif">

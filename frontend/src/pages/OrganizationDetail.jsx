@@ -236,22 +236,22 @@ export default function OrganizationDetail() {
           {/* Left Canvas (7 Cols) */}
           <div className="col-span-12 lg:col-span-8 space-y-6">
 
-            {/* AI Summary Box */}
-            <div className="bg-indigo-50/50 border border-indigo-100 p-6 rounded-2xl space-y-3">
-              <div className="font-mono text-xs text-indigo-600 font-bold uppercase tracking-widest flex items-center gap-2">
-                <i className="ti ti-sparkles" /> AI INSTITUTIONAL SUMMARY
+            {/* Overview Box */}
+            <div className="bg-slate-50 border border-slate-200 p-6 rounded-2xl space-y-3">
+              <div className="font-mono text-xs text-slate-700 font-bold uppercase tracking-wider">
+                Institutional Overview
               </div>
-              <p className="font-serif text-sm text-slate-700 leading-relaxed">
+              <p className="text-sm text-slate-700 leading-relaxed">
                 “{org.ai_summary}”
               </p>
             </div>
 
             {/* About Institution */}
             <div className="bg-white border border-slate-200 p-6 rounded-2xl space-y-3">
-              <div className="font-mono text-xs text-slate-400 font-bold uppercase tracking-widest pb-2 border-b border-slate-100">
-                [ ABOUT INSTITUTION &amp; MANDATE ]
+              <div className="font-mono text-xs text-slate-500 font-bold uppercase tracking-wider pb-2 border-b border-slate-100">
+                About Institution &amp; Mandate
               </div>
-              <p className="font-serif text-sm text-slate-600 leading-relaxed">
+              <p className="text-sm text-slate-600 leading-relaxed">
                 {org.description}
               </p>
             </div>
@@ -259,7 +259,7 @@ export default function OrganizationDetail() {
             {/* Active Opportunities Grid */}
             <div className="space-y-4">
               <div className="flex items-center justify-between pb-2 border-b border-slate-200 font-mono text-xs">
-                <span className="font-bold text-indigo-600">[ ACTIVE OPPORTUNITIES ({opportunities.length}) ]</span>
+                <span className="font-bold text-slate-800">Active Opportunities ({opportunities.length})</span>
                 <span className="text-slate-400 font-bold">UPDATED TODAY</span>
               </div>
 
@@ -276,8 +276,8 @@ export default function OrganizationDetail() {
                   ))}
                 </div>
               ) : (
-                <div className="p-8 bg-slate-50 border border-slate-200 rounded-2xl text-center font-serif text-xs text-slate-500 leading-relaxed">
-                  No active programs currently open for registration. Click "Follow" to receive real-time notifications when new signals publish.
+                <div className="p-8 bg-slate-50 border border-slate-200 rounded-2xl text-center text-slate-500 text-sm">
+                  No active calls at this moment. Subscribe to alerts below.
                 </div>
               )}
             </div>
@@ -289,19 +289,19 @@ export default function OrganizationDetail() {
 
             {/* Candidate Match Index */}
             <div className="bg-white border border-slate-200 p-6 rounded-2xl shadow-sm space-y-3 hover:border-indigo-300 transition-colors">
-              <div className="font-mono text-xs text-indigo-600 font-bold uppercase tracking-widest pb-2 border-b border-slate-100">
-                [ CANDIDATE MATCH RATING ]
+              <div className="font-mono text-xs text-slate-700 font-bold uppercase tracking-wider pb-2 border-b border-slate-100">
+                Candidate Compatibility
               </div>
               <div className="text-3xl font-extrabold text-slate-900 font-sans">98% MATCH</div>
-              <p className="font-serif text-xs text-slate-500 leading-relaxed">
+              <p className="text-xs text-slate-500 leading-relaxed">
                 Your research profile in PyTorch &amp; Robotics has high compatibility with {org.name}'s historical grant focus.
               </p>
             </div>
 
             {/* Similar Institutions */}
             <div className="bg-white border border-slate-200 p-6 rounded-2xl shadow-sm space-y-3">
-              <div className="font-mono text-xs text-slate-400 font-bold uppercase tracking-widest pb-2 border-b border-slate-100">
-                [ SIMILAR INSTITUTIONS ]
+              <div className="font-mono text-xs text-slate-500 font-bold uppercase tracking-wider pb-2 border-b border-slate-100">
+                Similar Institutions
               </div>
               <div className="space-y-2 font-sans font-bold text-xs text-slate-700">
                 <Link to="/organizations/eth-zurich-ai-center" className="p-3.5 bg-slate-50 border border-slate-200 rounded-xl flex items-center justify-between hover:border-indigo-300 transition-colors block">
