@@ -54,6 +54,9 @@ def _sync_missing_columns() -> None:
             ("opp_id", "INTEGER"),
             ("organizer", "VARCHAR(255) NOT NULL DEFAULT 'Nexora Intelligence'"),
         ],
+        "profiles": [
+            ("phone", "VARCHAR(50) NOT NULL DEFAULT ''"),
+        ],
     }
 
     try:

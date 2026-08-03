@@ -57,6 +57,7 @@ class ProfileRead(BaseModel):
     field_of_study: str
     citizenship: str
     residence: str
+    phone: Optional[str] = ""
     skills: List[str] = []
     interests: List[str] = []
     target_countries: List[str] = []
@@ -73,6 +74,7 @@ class ProfileUpdate(BaseModel):
     field_of_study: Optional[str] = None
     citizenship: Optional[str] = None
     residence: Optional[str] = None
+    phone: Optional[str] = None
     skills: Optional[List[str]] = None
     interests: Optional[List[str]] = None
     target_countries: Optional[List[str]] = None

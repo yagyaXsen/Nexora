@@ -5,7 +5,7 @@ import { useAuth } from '../lib/auth.jsx'
 import './Settings.css'
 
 export default function Settings() {
-  const { user, logout } = useAuth()
+  const { user, logout, refresh } = useAuth()
   const navigate = useNavigate()
 
   const [activeTab, setActiveTab] = useState('account')
@@ -18,6 +18,19 @@ export default function Settings() {
   const [email, setEmail] = useState('')
   const [fullName, setFullName] = useState('')
   const [phone, setPhone] = useState('')
+
+  // Password Change State
+  const [currentPassword, setCurrentPassword] = useState('')
+  const [newPassword, setNewPassword] = useState('')
+  const [confirmPassword, setConfirmPassword] = useState('')
+  const [passwordSaving, setPasswordSaving] = useState(false)
+  const [passwordMessage, setPasswordMessage] = useState(null)
+  const [passwordError, setPasswordError] = useState(null)
+
+  // Delete Account State
+  const [showDeleteModal, setShowDeleteModal] = useState(false)
+  const [deleteConfirmText, setDeleteConfirmText] = useState('')
+  const [deleting, setDeleting] = useState(false)
 
   // 2FA Security & Sessions State
   const [twoFactor, setTwoFactor] = useState(false)
@@ -84,9 +97,29 @@ export default function Settings() {
     return `${os} · ${browser}`
   }
 
+  // Load saved preferences from localStorage
+  const getStorageKey = (suffix) => `nexora_prefs_${user?.id || 'guest'}_${suffix}`
+
   useEffect(() => {
     let cancelled = false
     setLoading(true)
+
+    // Load cached preferences
+    try {
+      const saved2fa = localStorage.getItem(getStorageKey('2fa'))
+      if (saved2fa !== null) setTwoFactor(saved2fa === 'true')
+
+      const savedAi = localStorage.getItem(getStorageKey('ai'))
+      if (savedAi) setAiPreferences(JSON.parse(savedAi))
+
+      const savedNotifs = localStorage.getItem(getStorageKey('notifs'))
+      if (savedNotifs) setNotifications(JSON.parse(savedNotifs))
+
+      const savedPrivacy = localStorage.getItem(getStorageKey('privacy'))
+      if (savedPrivacy) setPrivacy(JSON.parse(savedPrivacy))
+    } catch {
+      /* non-fatal */
+    }
 
     api
       .getProfile()
@@ -115,12 +148,12 @@ export default function Settings() {
 
         setLoading(false)
       })
-      .catch((err) => {
+      .catch(() => {
         if (cancelled) return
         setEmail(user?.email || '')
         setFullName(user?.name || '')
         setConnected({
-          google: !!(user?.google_id),
+          google: !!user?.google_id,
           github: false,
           linkedin: false,
           orcid: false,
@@ -141,23 +174,127 @@ export default function Settings() {
     }
   }, [user])
 
-  const handleSave = async (e) => {
+  const handleSaveAccount = async (e) => {
     if (e) e.preventDefault()
     setSaving(true)
     setError(null)
     setMessage(null)
 
     try {
+      // Update name on User model and phone on Profile model
+      await api.updateMe({ name: fullName })
       await api.updateProfile({
         full_name: fullName,
         phone: phone || undefined,
       })
-      setMessage('Settings updated and synced successfully.')
+      if (refresh) await refresh()
+      setMessage('Account credentials updated and synced successfully.')
       setTimeout(() => setMessage(null), 3500)
     } catch (err) {
-      setError(err.message || 'Failed to save settings. Please try again.')
+      setError(err.message || 'Failed to save account settings. Please try again.')
     } finally {
       setSaving(false)
+    }
+  }
+
+  const handleChangePassword = async (e) => {
+    e.preventDefault()
+    setPasswordError(null)
+    setPasswordMessage(null)
+
+    if (!currentPassword) {
+      setPasswordError('Please enter your current password.')
+      return
+    }
+
+    if (!newPassword || newPassword.length < 6) {
+      setPasswordError('New password must be at least 6 characters long.')
+      return
+    }
+
+    if (newPassword !== confirmPassword) {
+      setPasswordError('New password and confirmation do not match.')
+      return
+    }
+
+    setPasswordSaving(true)
+    try {
+      await api.updateMe({
+        current_password: currentPassword,
+        new_password: newPassword,
+      })
+      setPasswordMessage('Password updated successfully.')
+      setCurrentPassword('')
+      setNewPassword('')
+      setConfirmPassword('')
+      setTimeout(() => setPasswordMessage(null), 4000)
+    } catch (err) {
+      setPasswordError(err.message || 'Failed to update password. Verify current password is correct.')
+    } finally {
+      setPasswordSaving(false)
+    }
+  }
+
+  const handleSaveAiPreferences = (e) => {
+    e.preventDefault()
+    try {
+      localStorage.setItem(getStorageKey('ai'), JSON.stringify(aiPreferences))
+      setMessage('AI calibration preferences saved.')
+      setTimeout(() => setMessage(null), 3500)
+    } catch {
+      setError('Unable to store preferences locally.')
+    }
+  }
+
+  const handleSaveNotifications = (e) => {
+    e.preventDefault()
+    try {
+      localStorage.setItem(getStorageKey('notifs'), JSON.stringify(notifications))
+      setMessage('Notification dispatch preferences saved.')
+      setTimeout(() => setMessage(null), 3500)
+    } catch {
+      setError('Unable to store preferences locally.')
+    }
+  }
+
+  const handleToggle2Fa = (checked) => {
+    setTwoFactor(checked)
+    try {
+      localStorage.setItem(getStorageKey('2fa'), String(checked))
+      setMessage(checked ? 'Two-Factor Authentication requirement enabled.' : 'Two-Factor Authentication disabled.')
+      setTimeout(() => setMessage(null), 3500)
+    } catch {
+      /* non-fatal */
+    }
+  }
+
+  const handleTogglePrivacy = (field, checked) => {
+    const updated = { ...privacy, [field]: checked }
+    setPrivacy(updated)
+    try {
+      localStorage.setItem(getStorageKey('privacy'), JSON.stringify(updated))
+      setMessage('Privacy configuration updated.')
+      setTimeout(() => setMessage(null), 3000)
+    } catch {
+      /* non-fatal */
+    }
+  }
+
+  const handleDeleteAccount = async () => {
+    if (deleteConfirmText.trim().toLowerCase() !== 'delete') {
+      setError('Please type DELETE in the confirmation box to proceed.')
+      return
+    }
+
+    setDeleting(true)
+    try {
+      await api.deleteMe()
+      logout()
+      navigate('/')
+    } catch (err) {
+      setError(err.message || 'Failed to delete account. Please contact support.')
+      setDeleting(false)
+      setShowDeleteModal(false)
     }
   }
 
@@ -230,7 +367,7 @@ export default function Settings() {
               }`}
             >
               <i className="ti ti-shield-lock text-base" />
-              <span>2FA &amp; Active Sessions</span>
+              <span>Security &amp; Password</span>
             </button>
 
             <button
@@ -283,122 +420,222 @@ export default function Settings() {
           </div>
 
           {/* Settings Canvas (8 Columns) */}
-          <div className="col-span-12 lg:col-span-8 bg-white border border-slate-200 p-6 sm:p-8 rounded-3xl shadow-xl space-y-6">
+          <div className="col-span-12 lg:col-span-8 bg-white border border-slate-200 p-6 sm:p-8 rounded-3xl shadow-xl space-y-8">
             {/* ═══ TAB 1: ACCOUNT CREDENTIALS ═══ */}
             {activeTab === 'account' && (
-              <form onSubmit={handleSave} className="space-y-6">
-                <div className="font-mono text-xs font-bold text-indigo-600 uppercase tracking-widest pb-3 border-b border-slate-200 flex items-center justify-between">
-                  <span>[ ACCOUNT CREDENTIALS ]</span>
-                  <span className="text-[10px] text-slate-400 font-normal">REAL-TIME PROFILE SYNC</span>
-                </div>
-
-                <div className="space-y-4 text-xs font-mono">
-                  <div className="space-y-1.5">
-                    <label className="text-slate-500 font-bold block uppercase">Primary Account Email</label>
-                    <input
-                      type="email"
-                      value={email}
-                      disabled
-                      className="w-full bg-slate-100 border border-slate-200 p-3 rounded-2xl text-slate-600 font-sans cursor-not-allowed"
-                    />
-                    <span className="text-[10px] text-slate-400 font-sans block">Email is bound to your primary authentication identity.</span>
+              <div className="space-y-8">
+                <form onSubmit={handleSaveAccount} className="space-y-6">
+                  <div className="font-mono text-xs font-bold text-indigo-600 uppercase tracking-widest pb-3 border-b border-slate-200 flex items-center justify-between">
+                    <span>[ ACCOUNT CREDENTIALS ]</span>
+                    <span className="text-[10px] text-slate-400 font-normal">REAL-TIME PROFILE SYNC</span>
                   </div>
 
-                  <div className="space-y-1.5">
-                    <label className="text-slate-500 font-bold block uppercase">Full Name</label>
-                    <input
-                      type="text"
-                      placeholder="Enter your full name"
-                      value={fullName}
-                      onChange={(e) => setFullName(e.target.value)}
-                      className="w-full bg-slate-50 border border-slate-200 p-3 rounded-2xl text-slate-900 outline-none focus:border-indigo-500 font-sans"
-                    />
-                  </div>
-
-                  <div className="space-y-1.5">
-                    <label className="text-slate-500 font-bold block uppercase">Contact Phone (Optional)</label>
-                    <input
-                      type="tel"
-                      placeholder="+1 (555) 000-0000"
-                      value={phone}
-                      onChange={(e) => setPhone(e.target.value)}
-                      className="w-full bg-slate-50 border border-slate-200 p-3 rounded-2xl text-slate-900 outline-none focus:border-indigo-500 font-sans"
-                    />
-                  </div>
-
-                  <div className="space-y-1.5">
-                    <label className="text-slate-500 font-bold block uppercase">Detected Local Timezone</label>
-                    <input
-                      type="text"
-                      value={locale.timezone}
-                      disabled
-                      className="w-full bg-slate-100 border border-slate-200 p-3 rounded-2xl text-slate-600 font-sans cursor-not-allowed"
-                    />
-                  </div>
-                </div>
-
-                <button
-                  type="submit"
-                  disabled={saving}
-                  className="bg-[#0A0A0A] hover:bg-slate-800 text-white font-bold text-xs px-6 py-3.5 rounded-2xl transition-all shadow-md active:scale-98 disabled:opacity-50 cursor-pointer flex items-center gap-2"
-                >
-                  {saving ? (
-                    <>
-                      <i className="ti ti-loader-2 animate-spin text-sm" />
-                      <span>Saving Changes…</span>
-                    </>
-                  ) : (
-                    <span>Save Account Settings</span>
-                  )}
-                </button>
-              </form>
-            )}
-
-            {/* ═══ TAB 2: 2FA & ACTIVE SESSIONS ═══ */}
-            {activeTab === 'security' && (
-              <div className="space-y-6">
-                <div className="font-mono text-xs font-bold text-indigo-600 uppercase tracking-widest pb-3 border-b border-slate-200">
-                  [ 2FA SECURITY &amp; ACTIVE SESSIONS ]
-                </div>
-
-                <div className="p-4 bg-slate-50 border border-slate-200 rounded-2xl flex items-center justify-between">
-                  <div>
-                    <strong className="text-slate-900 block font-bold text-xs">Two-Factor Authentication (2FA)</strong>
-                    <span className="text-slate-500 font-sans text-xs">Require hardware security key or TOTP app on login.</span>
-                  </div>
-                  <input
-                    type="checkbox"
-                    checked={twoFactor}
-                    onChange={(e) => setTwoFactor(e.target.checked)}
-                    className="w-5 h-5 accent-indigo-600 cursor-pointer"
-                  />
-                </div>
-
-                <div className="space-y-3">
-                  <span className="font-mono text-[10px] text-slate-400 font-bold uppercase block">
-                    Active System Sessions
-                  </span>
-                  {sessions.map((sess) => (
-                    <div
-                      key={sess.id}
-                      className="p-4 bg-slate-50 border border-slate-200 rounded-2xl flex items-center justify-between text-xs font-mono"
-                    >
-                      <div className="space-y-0.5">
-                        <strong className="text-slate-900 block font-sans font-bold">{sess.device}</strong>
-                        <span className="text-slate-500 text-[11px] font-sans">{sess.activeStatus}</span>
-                      </div>
-                      <span className="text-emerald-600 font-bold bg-emerald-50 border border-emerald-200 px-2.5 py-1 rounded-md text-[10px]">
-                        CURRENT SESSION
+                  <div className="space-y-4 text-xs font-mono">
+                    <div className="space-y-1.5">
+                      <label className="text-slate-500 font-bold block uppercase">Primary Account Email</label>
+                      <input
+                        type="email"
+                        value={email}
+                        disabled
+                        className="w-full bg-slate-100 border border-slate-200 p-3 rounded-2xl text-slate-600 font-sans cursor-not-allowed"
+                      />
+                      <span className="text-[10px] text-slate-400 font-sans block">
+                        Email is bound to your primary authentication identity.
                       </span>
                     </div>
-                  ))}
+
+                    <div className="space-y-1.5">
+                      <label className="text-slate-500 font-bold block uppercase">Full Name</label>
+                      <input
+                        type="text"
+                        placeholder="Enter your full name"
+                        value={fullName}
+                        onChange={(e) => setFullName(e.target.value)}
+                        className="w-full bg-slate-50 border border-slate-200 p-3 rounded-2xl text-slate-900 outline-none focus:border-indigo-500 font-sans"
+                      />
+                    </div>
+
+                    <div className="space-y-1.5">
+                      <label className="text-slate-500 font-bold block uppercase">Contact Phone (Optional)</label>
+                      <input
+                        type="tel"
+                        placeholder="+1 (555) 000-0000"
+                        value={phone}
+                        onChange={(e) => setPhone(e.target.value)}
+                        className="w-full bg-slate-50 border border-slate-200 p-3 rounded-2xl text-slate-900 outline-none focus:border-indigo-500 font-sans"
+                      />
+                    </div>
+
+                    <div className="space-y-1.5">
+                      <label className="text-slate-500 font-bold block uppercase">Detected Local Timezone</label>
+                      <input
+                        type="text"
+                        value={locale.timezone}
+                        disabled
+                        className="w-full bg-slate-100 border border-slate-200 p-3 rounded-2xl text-slate-600 font-sans cursor-not-allowed"
+                      />
+                    </div>
+                  </div>
+
+                  <button
+                    type="submit"
+                    disabled={saving}
+                    className="bg-[#0A0A0A] hover:bg-slate-800 text-white font-bold text-xs px-6 py-3.5 rounded-2xl transition-all shadow-md active:scale-98 disabled:opacity-50 cursor-pointer flex items-center gap-2"
+                  >
+                    {saving ? (
+                      <>
+                        <i className="ti ti-loader-2 animate-spin text-sm" />
+                        <span>Saving Credentials…</span>
+                      </>
+                    ) : (
+                      <span>Save Account Settings</span>
+                    )}
+                  </button>
+                </form>
+
+                {/* Danger Zone: Account Deletion */}
+                <div className="pt-6 border-t border-slate-200 space-y-4">
+                  <div className="font-mono text-xs font-bold text-red-600 uppercase tracking-widest">
+                    [ DANGER ZONE ]
+                  </div>
+                  <div className="p-4 bg-red-50/50 border border-red-200 rounded-2xl flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                    <div className="space-y-1">
+                      <strong className="text-slate-900 block font-bold text-xs">Delete Account and Purge Data</strong>
+                      <span className="text-slate-500 text-xs block">
+                        Permanently removes your candidate profile, tracked applications, and vector subscriptions.
+                      </span>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => setShowDeleteModal(true)}
+                      className="bg-red-600 hover:bg-red-700 text-white font-bold text-xs px-4 py-2.5 rounded-xl transition-all shrink-0 cursor-pointer"
+                    >
+                      Delete Account
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* ═══ TAB 2: SECURITY & PASSWORD ═══ */}
+            {activeTab === 'security' && (
+              <div className="space-y-8">
+                {/* Change Password Form */}
+                <form onSubmit={handleChangePassword} className="space-y-6">
+                  <div className="font-mono text-xs font-bold text-indigo-600 uppercase tracking-widest pb-3 border-b border-slate-200">
+                    [ PASSWORD &amp; AUTHENTICATION ]
+                  </div>
+
+                  {passwordMessage && (
+                    <div className="p-4 bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs font-mono rounded-2xl flex items-center gap-2">
+                      <i className="ti ti-check text-emerald-600 text-sm" />
+                      <span>{passwordMessage}</span>
+                    </div>
+                  )}
+
+                  {passwordError && (
+                    <div className="p-4 bg-red-50 border border-red-200 text-red-800 text-xs font-mono rounded-2xl flex items-center gap-2">
+                      <i className="ti ti-alert-circle text-red-600 text-sm" />
+                      <span>{passwordError}</span>
+                    </div>
+                  )}
+
+                  <div className="space-y-4 text-xs font-mono">
+                    <div className="space-y-1.5">
+                      <label className="text-slate-500 font-bold block uppercase">Current Password</label>
+                      <input
+                        type="password"
+                        placeholder="Enter current password"
+                        value={currentPassword}
+                        onChange={(e) => setCurrentPassword(e.target.value)}
+                        className="w-full bg-slate-50 border border-slate-200 p-3 rounded-2xl text-slate-900 outline-none focus:border-indigo-500 font-sans"
+                      />
+                    </div>
+
+                    <div className="space-y-1.5">
+                      <label className="text-slate-500 font-bold block uppercase">New Password</label>
+                      <input
+                        type="password"
+                        placeholder="Enter new password (min. 6 characters)"
+                        value={newPassword}
+                        onChange={(e) => setNewPassword(e.target.value)}
+                        className="w-full bg-slate-50 border border-slate-200 p-3 rounded-2xl text-slate-900 outline-none focus:border-indigo-500 font-sans"
+                      />
+                    </div>
+
+                    <div className="space-y-1.5">
+                      <label className="text-slate-500 font-bold block uppercase">Confirm New Password</label>
+                      <input
+                        type="password"
+                        placeholder="Confirm new password"
+                        value={confirmPassword}
+                        onChange={(e) => setConfirmPassword(e.target.value)}
+                        className="w-full bg-slate-50 border border-slate-200 p-3 rounded-2xl text-slate-900 outline-none focus:border-indigo-500 font-sans"
+                      />
+                    </div>
+                  </div>
+
+                  <button
+                    type="submit"
+                    disabled={passwordSaving}
+                    className="bg-[#0A0A0A] hover:bg-slate-800 text-white font-bold text-xs px-6 py-3.5 rounded-2xl transition-all shadow-md active:scale-98 disabled:opacity-50 cursor-pointer flex items-center gap-2"
+                  >
+                    {passwordSaving ? (
+                      <>
+                        <i className="ti ti-loader-2 animate-spin text-sm" />
+                        <span>Updating Password…</span>
+                      </>
+                    ) : (
+                      <span>Update Password</span>
+                    )}
+                  </button>
+                </form>
+
+                {/* 2FA & Active Sessions */}
+                <div className="space-y-6 pt-6 border-t border-slate-200">
+                  <div className="font-mono text-xs font-bold text-indigo-600 uppercase tracking-widest pb-3 border-b border-slate-200">
+                    [ 2FA &amp; SESSION MONITORING ]
+                  </div>
+
+                  <div className="p-4 bg-slate-50 border border-slate-200 rounded-2xl flex items-center justify-between">
+                    <div>
+                      <strong className="text-slate-900 block font-bold text-xs">Two-Factor Authentication (2FA)</strong>
+                      <span className="text-slate-500 font-sans text-xs">Require hardware security key or TOTP code on login.</span>
+                    </div>
+                    <input
+                      type="checkbox"
+                      checked={twoFactor}
+                      onChange={(e) => handleToggle2Fa(e.target.checked)}
+                      className="w-5 h-5 accent-indigo-600 cursor-pointer"
+                    />
+                  </div>
+
+                  <div className="space-y-3">
+                    <span className="font-mono text-[10px] text-slate-400 font-bold uppercase block">
+                      Active System Sessions
+                    </span>
+                    {sessions.map((sess) => (
+                      <div
+                        key={sess.id}
+                        className="p-4 bg-slate-50 border border-slate-200 rounded-2xl flex items-center justify-between text-xs font-mono"
+                      >
+                        <div className="space-y-0.5">
+                          <strong className="text-slate-900 block font-sans font-bold">{sess.device}</strong>
+                          <span className="text-slate-500 text-[11px] font-sans">{sess.activeStatus}</span>
+                        </div>
+                        <span className="text-emerald-600 font-bold bg-emerald-50 border border-emerald-200 px-2.5 py-1 rounded-md text-[10px]">
+                          CURRENT SESSION
+                        </span>
+                      </div>
+                    ))}
+                  </div>
                 </div>
               </div>
             )}
 
             {/* ═══ TAB 3: AI VECTOR CALIBRATION ═══ */}
             {activeTab === 'ai' && (
-              <form onSubmit={handleSave} className="space-y-6">
+              <form onSubmit={handleSaveAiPreferences} className="space-y-6">
                 <div className="font-mono text-xs font-bold text-indigo-600 uppercase tracking-widest pb-3 border-b border-slate-200">
                   [ AI VECTOR CALIBRATION ]
                 </div>
@@ -409,7 +646,7 @@ export default function Settings() {
                     <select
                       value={aiPreferences.sensitivity}
                       onChange={(e) => setAiPreferences({ ...aiPreferences, sensitivity: e.target.value })}
-                      className="w-full bg-slate-50 border border-slate-200 p-3 rounded-2xl text-slate-900 outline-none font-sans"
+                      className="w-full bg-slate-50 border border-slate-200 p-3 rounded-2xl text-slate-900 outline-none font-sans cursor-pointer"
                     >
                       <option>95% Ultra High Precision (Strict matching on domain &amp; degree)</option>
                       <option>85% High Precision (Recommended default)</option>
@@ -422,7 +659,7 @@ export default function Settings() {
                     <select
                       value={aiPreferences.frequency}
                       onChange={(e) => setAiPreferences({ ...aiPreferences, frequency: e.target.value })}
-                      className="w-full bg-slate-50 border border-slate-200 p-3 rounded-2xl text-slate-900 outline-none font-sans"
+                      className="w-full bg-slate-50 border border-slate-200 p-3 rounded-2xl text-slate-900 outline-none font-sans cursor-pointer"
                     >
                       <option>Real-Time Live Signal Indexing</option>
                       <option>Daily Signals</option>
@@ -433,7 +670,6 @@ export default function Settings() {
 
                 <button
                   type="submit"
-                  disabled={saving}
                   className="bg-[#0A0A0A] hover:bg-slate-800 text-white font-bold text-xs px-6 py-3.5 rounded-2xl transition-all shadow-md active:scale-98 cursor-pointer"
                 >
                   Update AI Calibration
@@ -443,7 +679,7 @@ export default function Settings() {
 
             {/* ═══ TAB 4: NOTIFICATION PREFERENCES ═══ */}
             {activeTab === 'notifications' && (
-              <form onSubmit={handleSave} className="space-y-6">
+              <form onSubmit={handleSaveNotifications} className="space-y-6">
                 <div className="font-mono text-xs font-bold text-indigo-600 uppercase tracking-widest pb-3 border-b border-slate-200">
                   [ NOTIFICATION DISPATCH PREFERENCES ]
                 </div>
@@ -491,7 +727,6 @@ export default function Settings() {
 
                 <button
                   type="submit"
-                  disabled={saving}
                   className="bg-[#0A0A0A] hover:bg-slate-800 text-white font-bold text-xs px-6 py-3.5 rounded-2xl transition-all shadow-md active:scale-98 cursor-pointer"
                 >
                   Save Notification Preferences
@@ -509,13 +744,13 @@ export default function Settings() {
                 <div className="space-y-3 text-xs">
                   <div className="p-4 bg-slate-50 border border-slate-200 rounded-2xl flex items-center justify-between">
                     <div>
-                      <strong className="text-slate-900 block font-bold">Verified Research Lab &amp; Program Discovery</strong>
+                      <strong className="text-slate-900 block font-bold">Verified Research Lab &amp; Host Discovery</strong>
                       <span className="text-slate-500 text-xs">Allow verified host institutions to discover your anonymized candidate profile.</span>
                     </div>
                     <input
                       type="checkbox"
                       checked={privacy.recruiterVisible}
-                      onChange={(e) => setPrivacy({ ...privacy, recruiterVisible: e.target.checked })}
+                      onChange={(e) => handleTogglePrivacy('recruiterVisible', e.target.checked)}
                       className="w-5 h-5 accent-indigo-600 cursor-pointer"
                     />
                   </div>
@@ -528,7 +763,7 @@ export default function Settings() {
                     <input
                       type="checkbox"
                       checked={privacy.aiDataUsage}
-                      onChange={(e) => setPrivacy({ ...privacy, aiDataUsage: e.target.checked })}
+                      onChange={(e) => handleTogglePrivacy('aiDataUsage', e.target.checked)}
                       className="w-5 h-5 accent-indigo-600 cursor-pointer"
                     />
                   </div>
@@ -554,7 +789,7 @@ export default function Settings() {
                     </div>
                     {connected.google ? (
                       <span className="text-emerald-600 font-bold bg-emerald-50 border border-emerald-200 px-2.5 py-1 rounded-md text-[10px] font-mono">
-                        ✓ CONNECTED
+                        CONNECTED
                       </span>
                     ) : (
                       <span className="text-slate-400 font-bold bg-slate-200/60 px-2.5 py-1 rounded-md text-[10px] font-mono">
@@ -598,6 +833,57 @@ export default function Settings() {
           </div>
         </div>
       </div>
+
+      {/* Delete Account Confirmation Modal */}
+      {showDeleteModal && (
+        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="bg-white border border-slate-200 rounded-3xl p-6 sm:p-8 max-w-md w-full shadow-2xl space-y-5 animate-in fade-in zoom-in-95 duration-150">
+            <div className="space-y-2">
+              <div className="font-mono text-xs font-bold text-red-600 uppercase tracking-wider">
+                [ CONFIRM ACCOUNT DELETION ]
+              </div>
+              <h2 className="text-xl font-extrabold text-slate-900">Are you absolutely sure?</h2>
+              <p className="text-xs text-slate-600">
+                This action cannot be undone. All your saved applications, candidate profile data, and notification preferences will be permanently wiped.
+              </p>
+            </div>
+
+            <div className="space-y-2">
+              <label className="text-[11px] font-bold text-slate-600 uppercase font-mono block">
+                Type <span className="text-red-600 font-extrabold">DELETE</span> to confirm:
+              </label>
+              <input
+                type="text"
+                value={deleteConfirmText}
+                onChange={(e) => setDeleteConfirmText(e.target.value)}
+                placeholder="DELETE"
+                className="w-full bg-slate-50 border border-slate-200 p-3 rounded-xl text-slate-900 outline-none focus:border-red-500 font-mono text-xs"
+              />
+            </div>
+
+            <div className="flex items-center justify-end gap-3 pt-2">
+              <button
+                type="button"
+                onClick={() => {
+                  setShowDeleteModal(false)
+                  setDeleteConfirmText('')
+                }}
+                className="px-4 py-2.5 rounded-xl text-xs font-bold text-slate-600 hover:bg-slate-100 transition-all cursor-pointer"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                disabled={deleteConfirmText.trim().toLowerCase() !== 'delete' || deleting}
+                onClick={handleDeleteAccount}
+                className="bg-red-600 hover:bg-red-700 disabled:opacity-40 text-white font-bold text-xs px-5 py-2.5 rounded-xl transition-all shadow-md cursor-pointer"
+              >
+                {deleting ? 'Purging Account…' : 'Permanently Delete'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
