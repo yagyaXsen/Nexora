@@ -102,7 +102,6 @@ export default function Explore() {
   const country = params.get('country') ?? ''
   const sort = params.get('sort') ?? 'relevance'
   const page = Math.max(1, Number(params.get('page') ?? 1))
-  const pageSize = Number(params.get('page_size') ?? 12)
 
   const [searchInput, setSearchInput] = useState(q)
   const [suggestions, setSuggestions] = useState([])
@@ -145,7 +144,7 @@ export default function Explore() {
           next.delete(k)
         }
       }
-      if (!('page' in patch) && !('page_size' in patch)) {
+      if (!('page' in patch)) {
         next.delete('page')
       }
       setParams(next)
@@ -162,10 +161,6 @@ export default function Explore() {
     } else {
       window.scrollTo({ top: 320, behavior: 'smooth' })
     }
-  }
-
-  const handlePageSizeChange = (newSize) => {
-    update({ page_size: String(newSize), page: 1 })
   }
 
   // ⚡ AUTO-SYNC & LIVE SEARCH:
@@ -214,7 +209,7 @@ export default function Explore() {
 
   useEffect(() => setSavedSlugs(new Set(readBookmarks())), [])
 
-  // Fetch opportunities whenever q, category, country, sort, page, or pageSize changes
+  // Fetch opportunities whenever q, category, country, sort, or page changes
   useEffect(() => {
     let cancelled = false
     setLoading(true)
@@ -227,7 +222,7 @@ export default function Explore() {
         country,
         sort,
         page,
-        page_size: pageSize,
+        page_size: PAGE_SIZE,
       })
       .then((r) => ({
         items: r.items,
@@ -340,9 +335,9 @@ export default function Explore() {
   }
 
   const totalItems = result?.total ?? 0
-  const totalPages = Math.max(1, Math.ceil(totalItems / pageSize))
-  const startItem = totalItems > 0 ? (page - 1) * pageSize + 1 : 0
-  const endItem = Math.min(page * pageSize, totalItems)
+  const totalPages = Math.max(1, Math.ceil(totalItems / PAGE_SIZE))
+  const startItem = totalItems > 0 ? (page - 1) * PAGE_SIZE + 1 : 0
+  const endItem = Math.min(page * PAGE_SIZE, totalItems)
   const activeFiltersCount = (q ? 1 : 0) + (category ? 1 : 0) + (country ? 1 : 0) + (sort !== 'relevance' ? 1 : 0)
 
   return (
@@ -610,14 +605,14 @@ export default function Explore() {
           {/* Main Feed Column (8 Columns) */}
           <div className="col-span-12 lg:col-span-8 space-y-6">
             
-            {/* Status & count banner with quick page controls */}
+            {/* Clean results status banner */}
             {!loading && !error && result && (
-              <div id="opportunities-feed-top" className="flex flex-wrap items-center justify-between gap-3 p-4 bg-slate-50 border border-slate-200 rounded-2xl text-xs font-mono text-slate-600 shadow-xs">
+              <div id="opportunities-feed-top" className="flex items-center justify-between text-xs font-mono text-slate-500 pb-3 border-b border-slate-200">
                 <div className="flex items-center gap-2">
-                  <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-                  <span className="font-semibold text-slate-800">
-                    SHOWING <strong className="text-slate-950">{startItem}–{endItem}</strong> OF{' '}
-                    <strong className="text-slate-950">{totalItems}</strong> OPPORTUNITIES
+                  <span className="w-2 h-2 rounded-full bg-emerald-500" />
+                  <span className="font-semibold text-slate-700">
+                    SHOWING <strong className="text-slate-900">{startItem}–{endItem}</strong> OF{' '}
+                    <strong className="text-slate-900">{totalItems}</strong> OPPORTUNITIES
                     {q && ` FOR "${q}"`}
                   </span>
                   {totalPages > 1 && (
@@ -626,60 +621,11 @@ export default function Explore() {
                     </span>
                   )}
                 </div>
-
-                {/* Quick Page Size & Mini Navigation */}
-                <div className="flex items-center gap-3">
-                  <div className="flex items-center gap-1">
-                    <span className="text-slate-400 uppercase font-bold text-[10px] mr-1 hidden md:inline">Per Page:</span>
-                    {[12, 24, 48].map((size) => (
-                      <button
-                        key={size}
-                        onClick={() => handlePageSizeChange(size)}
-                        className={`px-2 py-0.5 rounded-lg text-xs font-bold transition-all ${
-                          pageSize === size
-                            ? 'bg-slate-900 text-white shadow-xs'
-                            : 'bg-white border border-slate-200 text-slate-600 hover:border-slate-400'
-                        }`}
-                      >
-                        {size}
-                      </button>
-                    ))}
-                    <button
-                      onClick={() => handlePageSizeChange(100)}
-                      className={`px-2 py-0.5 rounded-lg text-xs font-bold transition-all ${
-                        pageSize >= 100
-                          ? 'bg-slate-900 text-white shadow-xs'
-                          : 'bg-white border border-slate-200 text-slate-600 hover:border-slate-400'
-                      }`}
-                    >
-                      All
-                    </button>
-                  </div>
-
-                  {totalPages > 1 && (
-                    <div className="flex items-center gap-1 pl-2 border-l border-slate-200">
-                      <button
-                        disabled={page <= 1}
-                        onClick={() => goToPage(page - 1)}
-                        aria-label="Previous Page"
-                        className="p-1 bg-white border border-slate-200 rounded-lg disabled:opacity-30 hover:border-slate-800 disabled:hover:border-slate-200 transition-colors text-slate-700 font-bold"
-                      >
-                        <i className="ti ti-chevron-left" />
-                      </button>
-                      <span className="px-1.5 font-bold text-slate-800 text-xs">
-                        {page}/{totalPages}
-                      </span>
-                      <button
-                        disabled={page >= totalPages}
-                        onClick={() => goToPage(page + 1)}
-                        aria-label="Next Page"
-                        className="p-1 bg-white border border-slate-200 rounded-lg disabled:opacity-30 hover:border-slate-800 disabled:hover:border-slate-200 transition-colors text-slate-700 font-bold"
-                      >
-                        <i className="ti ti-chevron-right" />
-                      </button>
-                    </div>
-                  )}
-                </div>
+                {sort && (
+                  <span className="text-slate-400">
+                    Sorted by: <strong className="text-indigo-600 uppercase">{sort.replace('_', ' ')}</strong>
+                  </span>
+                )}
               </div>
             )}
 
