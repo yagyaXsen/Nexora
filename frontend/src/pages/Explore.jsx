@@ -79,6 +79,19 @@ function HighlightText({ text, query }) {
   )
 }
 
+function getPageNumbers(currentPage, totalPages) {
+  if (totalPages <= 7) {
+    return Array.from({ length: totalPages }, (_, i) => i + 1)
+  }
+  if (currentPage <= 4) {
+    return [1, 2, 3, 4, 5, '...', totalPages]
+  }
+  if (currentPage >= totalPages - 3) {
+    return [1, '...', totalPages - 4, totalPages - 3, totalPages - 2, totalPages - 1, totalPages]
+  }
+  return [1, '...', currentPage - 1, currentPage, currentPage + 1, '...', totalPages]
+}
+
 export default function Explore() {
   const [params, setParams] = useSearchParams()
   const navigate = useNavigate()
@@ -88,7 +101,8 @@ export default function Explore() {
   const category = params.get('category') ?? ''
   const country = params.get('country') ?? ''
   const sort = params.get('sort') ?? 'relevance'
-  const page = Number(params.get('page') ?? 1)
+  const page = Math.max(1, Number(params.get('page') ?? 1))
+  const pageSize = Number(params.get('page_size') ?? 12)
 
   const [searchInput, setSearchInput] = useState(q)
   const [suggestions, setSuggestions] = useState([])
@@ -131,11 +145,28 @@ export default function Explore() {
           next.delete(k)
         }
       }
-      if (!('page' in patch)) next.delete('page')
+      if (!('page' in patch) && !('page_size' in patch)) {
+        next.delete('page')
+      }
       setParams(next)
     },
     [params, setParams]
   )
+
+  const goToPage = (newPage) => {
+    if (newPage < 1) return
+    update({ page: String(newPage) })
+    const anchor = document.getElementById('opportunities-feed-top')
+    if (anchor) {
+      anchor.scrollIntoView({ behavior: 'smooth', block: 'start' })
+    } else {
+      window.scrollTo({ top: 320, behavior: 'smooth' })
+    }
+  }
+
+  const handlePageSizeChange = (newSize) => {
+    update({ page_size: String(newSize), page: 1 })
+  }
 
   // ⚡ AUTO-SYNC & LIVE SEARCH:
   // When user types or deletes from searchInput:
@@ -183,7 +214,7 @@ export default function Explore() {
 
   useEffect(() => setSavedSlugs(new Set(readBookmarks())), [])
 
-  // Fetch opportunities whenever q, category, country, sort, or page changes
+  // Fetch opportunities whenever q, category, country, sort, page, or pageSize changes
   useEffect(() => {
     let cancelled = false
     setLoading(true)
@@ -196,7 +227,7 @@ export default function Explore() {
         country,
         sort,
         page,
-        page_size: PAGE_SIZE,
+        page_size: pageSize,
       })
       .then((r) => ({
         items: r.items,
@@ -308,7 +339,10 @@ export default function Explore() {
     }
   }
 
-  const totalPages = Math.max(1, Math.ceil((result?.total ?? 0) / PAGE_SIZE))
+  const totalItems = result?.total ?? 0
+  const totalPages = Math.max(1, Math.ceil(totalItems / pageSize))
+  const startItem = totalItems > 0 ? (page - 1) * pageSize + 1 : 0
+  const endItem = Math.min(page * pageSize, totalItems)
   const activeFiltersCount = (q ? 1 : 0) + (category ? 1 : 0) + (country ? 1 : 0) + (sort !== 'relevance' ? 1 : 0)
 
   return (
@@ -576,19 +610,76 @@ export default function Explore() {
           {/* Main Feed Column (8 Columns) */}
           <div className="col-span-12 lg:col-span-8 space-y-6">
             
-            {/* Status & count banner */}
+            {/* Status & count banner with quick page controls */}
             {!loading && !error && result && (
-              <div className="flex items-center justify-between text-xs font-mono text-slate-500 pb-2 border-b border-slate-200">
-                <span className="font-semibold">
-                  SHOWING <strong className="text-slate-900">{result.items.length}</strong> OF{' '}
-                  <strong className="text-slate-900">{result.total}</strong> OPPORTUNITIES
-                  {q && ` FOR "${q}"`}
-                </span>
-                {sort && (
-                  <span className="text-slate-400">
-                    Sorted by: <strong className="text-indigo-600 uppercase">{sort.replace('_', ' ')}</strong>
+              <div id="opportunities-feed-top" className="flex flex-wrap items-center justify-between gap-3 p-4 bg-slate-50 border border-slate-200 rounded-2xl text-xs font-mono text-slate-600 shadow-xs">
+                <div className="flex items-center gap-2">
+                  <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+                  <span className="font-semibold text-slate-800">
+                    SHOWING <strong className="text-slate-950">{startItem}–{endItem}</strong> OF{' '}
+                    <strong className="text-slate-950">{totalItems}</strong> OPPORTUNITIES
+                    {q && ` FOR "${q}"`}
                   </span>
-                )}
+                  {totalPages > 1 && (
+                    <span className="text-slate-400 font-medium hidden sm:inline">
+                      • PAGE {page} OF {totalPages}
+                    </span>
+                  )}
+                </div>
+
+                {/* Quick Page Size & Mini Navigation */}
+                <div className="flex items-center gap-3">
+                  <div className="flex items-center gap-1">
+                    <span className="text-slate-400 uppercase font-bold text-[10px] mr-1 hidden md:inline">Per Page:</span>
+                    {[12, 24, 48].map((size) => (
+                      <button
+                        key={size}
+                        onClick={() => handlePageSizeChange(size)}
+                        className={`px-2 py-0.5 rounded-lg text-xs font-bold transition-all ${
+                          pageSize === size
+                            ? 'bg-slate-900 text-white shadow-xs'
+                            : 'bg-white border border-slate-200 text-slate-600 hover:border-slate-400'
+                        }`}
+                      >
+                        {size}
+                      </button>
+                    ))}
+                    <button
+                      onClick={() => handlePageSizeChange(100)}
+                      className={`px-2 py-0.5 rounded-lg text-xs font-bold transition-all ${
+                        pageSize >= 100
+                          ? 'bg-slate-900 text-white shadow-xs'
+                          : 'bg-white border border-slate-200 text-slate-600 hover:border-slate-400'
+                      }`}
+                    >
+                      All
+                    </button>
+                  </div>
+
+                  {totalPages > 1 && (
+                    <div className="flex items-center gap-1 pl-2 border-l border-slate-200">
+                      <button
+                        disabled={page <= 1}
+                        onClick={() => goToPage(page - 1)}
+                        aria-label="Previous Page"
+                        className="p-1 bg-white border border-slate-200 rounded-lg disabled:opacity-30 hover:border-slate-800 disabled:hover:border-slate-200 transition-colors text-slate-700 font-bold"
+                      >
+                        <i className="ti ti-chevron-left" />
+                      </button>
+                      <span className="px-1.5 font-bold text-slate-800 text-xs">
+                        {page}/{totalPages}
+                      </span>
+                      <button
+                        disabled={page >= totalPages}
+                        onClick={() => goToPage(page + 1)}
+                        aria-label="Next Page"
+                        className="p-1 bg-white border border-slate-200 rounded-lg disabled:opacity-30 hover:border-slate-800 disabled:hover:border-slate-200 transition-colors text-slate-700 font-bold"
+                      >
+                        <i className="ti ti-chevron-right" />
+                      </button>
+                    </div>
+                  )}
+                </div>
               </div>
             )}
 
@@ -772,26 +863,60 @@ export default function Explore() {
                   })}
                 </div>
 
-                {/* Pagination Controls */}
+                {/* Comprehensive Bottom Pagination Controls */}
                 {totalPages > 1 && (
-                  <div className="flex items-center justify-between pt-8 border-t border-slate-200 font-mono text-xs">
-                    <button
-                      disabled={page <= 1}
-                      onClick={() => update({ page: String(page - 1) })}
-                      className="px-4 py-2 border border-slate-200 rounded-xl disabled:opacity-30 hover:border-slate-800 transition-colors font-bold flex items-center gap-1.5"
-                    >
-                      <i className="ti ti-arrow-left" /> Previous
-                    </button>
-                    <span className="font-bold text-slate-600">
-                      PAGE {page} OF {totalPages}
-                    </span>
-                    <button
-                      disabled={page >= totalPages}
-                      onClick={() => update({ page: String(page + 1) })}
-                      className="px-4 py-2 border border-slate-200 rounded-xl disabled:opacity-30 hover:border-slate-800 transition-colors font-bold flex items-center gap-1.5"
-                    >
-                      Next <i className="ti ti-arrow-right" />
-                    </button>
+                  <div className="pt-8 pb-4 border-t border-slate-200 space-y-4">
+                    <div className="flex flex-wrap items-center justify-between gap-3 font-mono text-xs">
+                      <button
+                        disabled={page <= 1}
+                        onClick={() => goToPage(page - 1)}
+                        className="px-4 py-2.5 bg-white border border-slate-200 rounded-xl disabled:opacity-30 hover:border-slate-800 transition-all font-bold flex items-center gap-2 shadow-xs disabled:cursor-not-allowed text-slate-800"
+                      >
+                        <i className="ti ti-arrow-left" /> Previous Page
+                      </button>
+
+                      {/* Numbered Page Buttons */}
+                      <div className="flex items-center gap-1.5 flex-wrap justify-center">
+                        {getPageNumbers(page, totalPages).map((p, idx) => {
+                          if (p === '...') {
+                            return (
+                              <span key={`ellipsis-${idx}`} className="px-2 text-slate-400 font-bold">
+                                …
+                              </span>
+                            )
+                          }
+                          const isCurrent = p === page
+                          return (
+                            <button
+                              key={`page-${p}`}
+                              onClick={() => goToPage(p)}
+                              className={`w-9 h-9 rounded-xl font-bold transition-all flex items-center justify-center text-xs ${
+                                isCurrent
+                                  ? 'bg-slate-900 text-white shadow-md shadow-slate-900/10 scale-105'
+                                  : 'bg-white border border-slate-200 text-slate-700 hover:border-slate-800 hover:bg-slate-50'
+                              }`}
+                            >
+                              {p}
+                            </button>
+                          )
+                        })}
+                      </div>
+
+                      <button
+                        disabled={page >= totalPages}
+                        onClick={() => goToPage(page + 1)}
+                        className="px-4 py-2.5 bg-white border border-slate-200 rounded-xl disabled:opacity-30 hover:border-slate-800 transition-all font-bold flex items-center gap-2 shadow-xs disabled:cursor-not-allowed text-slate-800"
+                      >
+                        Next Page <i className="ti ti-arrow-right" />
+                      </button>
+                    </div>
+
+                    {/* Bottom summary indicator */}
+                    <div className="flex items-center justify-center text-xs text-slate-500 font-mono gap-2 pt-1">
+                      <span>Showing <strong>{startItem}–{endItem}</strong> of <strong>{totalItems}</strong> opportunities</span>
+                      <span>•</span>
+                      <span>Page {page} of {totalPages}</span>
+                    </div>
                   </div>
                 )}
               </>
