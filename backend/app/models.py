@@ -93,6 +93,7 @@ class Profile(Base):
     field_of_study = Column(String(255), default="", nullable=False)
     citizenship = Column(String(255), default="", nullable=False)
     residence = Column(String(255), default="", nullable=False)
+    phone = Column(String(50), default="", nullable=False)
     skills = Column(JSON, default=list, nullable=False)
     interests = Column(JSON, default=list, nullable=False)
     target_countries = Column(JSON, default=list, nullable=False)
