@@ -1,8 +1,23 @@
 const TOKEN_KEY = 'nexora_token'
-const API_BASE_URL = (import.meta.env.VITE_API_BASE_URL || '').replace(/\/$/, '')
 
-function apiUrl(path) {
-  return `${API_BASE_URL}${path}`
+export function getApiBaseUrl() {
+  const isBrowser = typeof window !== 'undefined'
+  const isLocal = isBrowser && /^(localhost|127\.0\.0\.1|\[::1\])$/i.test(window.location.hostname)
+  const envBase = (import.meta.env.VITE_API_BASE_URL || '').replace(/\/$/, '')
+
+  if (isLocal) {
+    return envBase || 'http://localhost:8000'
+  }
+  // On deployed domains (Cloudflare Pages, etc.), if envBase is empty or points to localhost,
+  // automatically route to the live Render backend.
+  if (!envBase || envBase.includes('localhost') || envBase.includes('127.0.0.1')) {
+    return 'https://nexora-vjf8.onrender.com'
+  }
+  return envBase
+}
+
+export function apiUrl(path) {
+  return `${getApiBaseUrl()}${path}`
 }
 
 export function getToken() {
