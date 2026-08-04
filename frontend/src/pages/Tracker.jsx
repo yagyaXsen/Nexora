@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import { api, applyUrl } from '../lib/api'
 import { cleanTitle, formatDate } from '../lib/format'
 import { CountUp } from '../components/CountUp'
@@ -20,6 +20,7 @@ const STAGES = [
 ]
 
 export default function Tracker() {
+  const navigate = useNavigate()
   const [apps, setApps] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
@@ -123,6 +124,18 @@ export default function Tracker() {
         {/* 1. Header Bar */}
         <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 pb-6 border-b border-slate-200/80">
           <div className="space-y-2">
+            <button
+              type="button"
+              onClick={() =>
+                window.history.length > 1
+                  ? navigate(-1)
+                  : navigate('/dashboard', { replace: true })
+              }
+              className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg border border-slate-200 hover:border-slate-400 text-slate-500 font-bold font-mono text-xs transition-colors mb-4"
+              title="Go back to the previous page"
+            >
+              <i className="ti ti-arrow-left text-xs" /> Back
+            </button>
             <h1 className="text-3xl sm:text-4xl lg:text-5xl font-extrabold text-slate-900 tracking-tight leading-[1.1]">
               Opportunity Tracker
             </h1>
