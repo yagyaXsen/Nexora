@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import { api } from '../lib/api'
 import { useAuth } from '../lib/auth.jsx'
 import {
@@ -161,10 +161,12 @@ export default function Onboarding() {
       {/* Top Header Navigation */}
       <header className="w-full max-w-4xl mx-auto flex items-center justify-between pb-6 border-b border-slate-100">
         <div className="flex items-center gap-2.5">
-          <div className="w-9 h-9 bg-[#0A0A0A] text-white rounded-xl flex items-center justify-center font-mono font-black text-sm shadow-xs">
-            N
-          </div>
-          <span className="font-extrabold tracking-tight text-slate-950 text-lg">NEXORA</span>
+          <Link to="/" className="flex items-center gap-2.5 hover:opacity-80 transition-opacity" aria-label="Nexora home">
+            <div className="w-9 h-9 bg-[#0A0A0A] text-white rounded-xl flex items-center justify-center font-mono font-black text-sm shadow-xs">
+              N
+            </div>
+            <span className="font-extrabold tracking-tight text-slate-950 text-lg">NEXORA</span>
+          </Link>
           <span className="font-mono text-[9px] font-bold text-slate-400 bg-slate-100 border border-slate-200 px-2 py-0.5 rounded-md uppercase ml-1">
             2-STEP SETUP
           </span>
@@ -191,6 +193,14 @@ export default function Onboarding() {
                 0{step}/0{TOTAL_STEPS}
               </span>
             </div>
+
+            <button
+              onClick={() => navigate(-1)}
+              className="text-xs font-bold text-slate-500 hover:text-slate-900 transition-colors cursor-pointer flex items-center gap-1"
+            >
+              <i className="ti ti-arrow-left text-[10px]" />
+              <span>Back</span>
+            </button>
 
             <button
               onClick={() => navigate('/explore', { replace: true })}
