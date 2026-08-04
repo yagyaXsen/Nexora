@@ -331,10 +331,29 @@ def apply_redirect(opp_id: int, db: Session = Depends(get_db)):
 # /trending must be matched before a value can be treated as a slug.
 @router.get("/{id_or_slug}", response_model=OpportunityRead)
 def get_opportunity(id_or_slug: str, db: Session = Depends(get_db)):
+    opp = None
     if id_or_slug.isdigit():
         opp = db.query(Opportunity).filter(Opportunity.id == int(id_or_slug)).first()
-    else:
+    
+    if not opp:
         opp = db.query(Opportunity).filter(Opportunity.slug == id_or_slug).first()
+
+    if not opp:
+        # Fallback 1: case-insensitive slug match
+        opp = db.query(Opportunity).filter(Opportunity.slug.ilike(id_or_slug)).first()
+
+    if not opp:
+        # Fallback 2: slug prefix match
+        opp = db.query(Opportunity).filter(Opportunity.slug.ilike(f"{id_or_slug}%")).first()
+
+    if not opp:
+        # Fallback 3: title similarity from slug words
+        clean_title_search = id_or_slug.replace("-", " ")
+        opp = db.query(Opportunity).filter(Opportunity.title.ilike(f"%{clean_title_search}%")).first()
+
+    if not opp:
+        # Fallback 4: dedupe_key match
+        opp = db.query(Opportunity).filter(Opportunity.dedupe_key == id_or_slug).first()
 
     if not opp:
         raise HTTPException(
