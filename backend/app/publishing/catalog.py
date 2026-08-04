@@ -190,6 +190,129 @@ class OpportunityCatalog:
                 best = r
         return best
 
+    # ── personalized matching ────────────────────────────────────────────
+    def match_profile(
+        self,
+        focus_terms=None,
+        skills=None,
+        degree=None,
+        countries=None,
+        limit: int = 6,
+        exclude_statuses=None,
+    ) -> List:
+        """Rank catalog records against a candidate's profile signals.
+
+        Returns a list of (opportunity, score, reasons) tuples, highest score
+        first. Signals are optional — an empty profile simply scores every
+        record on generic quality (funding, verification, freshness) so the
+        feed still returns useful defaults instead of failing.
+
+        Scoring is intentionally transparent: each positive signal adds a
+        human-readable reason, which the API surfaces to the UI.
+        """
+        self._ensure()
+        exclude = set(exclude_statuses or ("closed",))
+
+        focus = [str(t).lower() for t in (focus_terms or []) if t]
+        skill_list = [str(s).lower() for s in (skills or []) if s]
+        degree_tok = _tokenize(str(degree or ""))
+        country_list = [str(c).lower() for c in (countries or []) if c]
+
+        # Build the full set of tokens the candidate cares about.
+        focus_tokens = set()
+        for t in focus + skill_list:
+            focus_tokens |= _tokenize(t)
+
+        matched_focus: set = set()
+        ranked: List = []
+
+        for r in self._records:
+            if r.status in exclude:
+                continue
+
+            score = 0.0
+            reasons: List[str] = []
+
+            # ── 1. Focus/domain fit (title, disciplines, tags, summary) ──
+            opp_haystack = " ".join(
+                [str(r.title or "")]
+                + [str(getattr(r, f) or "") for f in (
+                    "short_original_summary", "target_audience",
+                    "eligibility_summary", "benefits_summary",
+                    "host_institution", "provider_organization",
+                )]
+                + list(r.disciplines or [])
+                + list(r.tags or [])
+                + list(r.study_level or [])
+            ).lower()
+            opp_tokens = _tokenize(opp_haystack)
+            if focus_tokens:
+                hits = focus_tokens & opp_tokens
+                if hits:
+                    score += min(len(hits), 6) * 6.0
+                    matched_focus |= hits
+                    reasons.append(f"Matches your focus areas: {', '.join(sorted(hits)[:4])}")
+
+            # ── 2. Degree / study level fit ──
+            opp_level_tokens = _tokenize(" ".join(r.study_level or []) + " " + str(r.academic_requirements or ""))
+            if degree_tok and (degree_tok & opp_level_tokens):
+                score += 8.0
+                reasons.append("Study level aligns with your degree")
+
+            # ── 3. Country / region fit ──
+            if country_list:
+                country_hay = (str(r.country_or_region or "") + " " + str(r.citizenship_requirements or "")).lower()
+                if any(c in country_hay for c in country_list):
+                    score += 5.0
+                    reasons.append("Location fits your target regions")
+                elif "global" in country_hay or not r.country_or_region:
+                    score += 1.5
+
+            # ── 4. Funding quality ──
+            funding_bonus = {
+                "fully_funded": 10.0,
+                "partially_funded": 7.0,
+                "stipend": 6.0,
+                "tuition_covered": 6.0,
+                "grant_support": 4.0,
+            }
+            if r.funding_type in funding_bonus:
+                score += funding_bonus[r.funding_type]
+
+            # ── 5. Verification / trust ──
+            conf = r.confidence_score or 0
+            score += max(0.0, (conf - 60) / 10.0)  # +0 .. +4
+            if (r.verification_status or "").startswith("officially"):
+                score += 2.0
+
+            # ── 6. Freshness / openness ──
+            if r.status == "open":
+                score += 5.0
+            elif r.status == "rolling":
+                score += 4.0
+            elif r.status == "upcoming":
+                score += 2.0
+
+            ranked.append((score, r, reasons))
+
+        ranked.sort(key=lambda x: (-x[0], -(x[1].confidence_score or 0), (x[1].title or "").lower()))
+
+        # Normalize to the cohort's best score so the top recommendation reads
+        # as a strong match ("100% Match") rather than a raw 46/70 quality
+        # score. Scores of 0 stay 0; a dead tie still yields 100 for the best.
+        best = ranked[0][0] if ranked else 0.0
+        result = []
+        for score, r, reasons in ranked[:limit]:
+            pct = round(score / best * 100) if best > 0 else 0
+            result.append((r, pct, reasons))
+
+        # Drop generic tokens ("ai", "research", "fellowships"…) from the
+        # surfaced focus terms — only distinctive matched words add signal.
+        distinctive_focus = sorted(
+            t for t in matched_focus if t not in self._GENERIC_TOKEN_STOPLIST
+        )
+        return result, distinctive_focus
+
     # ── related ────────────────────────────────────────────────────────────
     def related(self, slug: str, limit: int = 4) -> List[PublishedOpportunity]:
         self._ensure()

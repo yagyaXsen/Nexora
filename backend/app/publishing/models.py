@@ -91,6 +91,21 @@ class PublishedListResponse(BaseModel):
     categories: dict = {}
 
 
+class PublishedMatchItem(BaseModel):
+    """One personalized match: the opportunity plus its computed AI match score
+    and the human-readable reasons behind it."""
+    opportunity: PublishedOpportunity
+    ai_match_score: int = 0
+    ai_match_reasons: List[str] = []
+
+
+class PublishedMatchResponse(BaseModel):
+    items: List[PublishedMatchItem]
+    total: int = 0
+    profile_ready: bool = False
+    matched_focus_terms: List[str] = []
+
+
 class PublishedStats(BaseModel):
     total: int
     by_type: dict

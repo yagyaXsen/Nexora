@@ -3,7 +3,7 @@ from typing import List, Optional
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session, joinedload
 
-from app.auth import get_optional_current_user
+from app.auth import get_current_user
 from app.database import get_db
 from app.models import User
 from app.publishing.catalog import catalog
@@ -18,15 +18,16 @@ router = APIRouter(prefix="/api/published", tags=["Published Opportunities"])
 @router.get("/match", response_model=PublishedMatchResponse)
 def match_published(
     limit: int = Query(6, ge=1, le=24),
-    current_user: Optional[User] = Depends(get_optional_current_user),
+    current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
     """Personalized ranking of the verified catalog against the candidate's
-    profile. Reads the user's Profile (field_of_study, interests, skills,
-    academic_degree, citizenship, residence, target_countries) and scores each
-    live record with catalog.match_profile(). Attaches an ai_match_score and
-    human-readable reasons per item so the Dashboard feed is genuinely
-    personalized rather than a generic page-1 listing.
+    profile. Authenticated: reads the logged-in user's Profile
+    (field_of_study, interests, skills, academic_degree, citizenship,
+    residence, target_countries) and scores each live record with
+    catalog.match_profile(). Attaches an ai_match_score and human-readable
+    reasons per item so the Dashboard feed is genuinely personalized rather
+    than a generic page-1 listing.
 
     Profiles are optional: a candidate with no profile gets a quality-ranked
     default feed (profile_ready=false) instead of an error.

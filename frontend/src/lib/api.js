@@ -177,6 +177,9 @@ export const api = {
     ).toString()
     return request(`/api/published/opportunities${qs ? `?${qs}` : ''}`)
   },
+  // Personalized ranking of the verified catalog against the user's profile.
+  // Returns { items: [{ opportunity, ai_match_score, ai_match_reasons }], ... }
+  publishedMatch: (limit = 6) => request(`/api/published/match?limit=${limit}`),
   publishedOpportunity: (slug) => request(`/api/published/opportunities/${encodeURIComponent(slug)}`),
   publishedRelated: (slug, limit = 4) =>
     request(`/api/published/opportunities/${encodeURIComponent(slug)}/related?limit=${limit}`),

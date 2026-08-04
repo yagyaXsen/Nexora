@@ -34,10 +34,31 @@ export default function Dashboard() {
     let cancelled = false
     setLoading(true)
 
+    // Personalized AI Matched feed: the backend ranks the verified catalog
+    // against this user's profile interests/skills/degree/countries and returns
+    // per-item ai_match_score + reasons. Falls back to the generic published
+    // listing (already slug-keyed, no DB id) if the match endpoint is unavailable.
+    const loadMatches = () =>
+      api
+        .publishedMatch(6)
+        .then((r) => {
+          // Only attach personalized match scores when the backend actually
+          // ranked against this user's profile. Without a profile the feed is
+          // quality-ranked defaults and a "100% Match" badge would mislead.
+          const personalized = Boolean(r.profile_ready)
+          return (r.items || []).map((m) => ({
+            ...toCardShape(m.opportunity),
+            ...(personalized
+              ? { ai_match_score: m.ai_match_score, ai_match_reasons: m.ai_match_reasons || [] }
+              : {}),
+          }))
+        })
+        .catch(() =>
+          api.published({ page_size: 6 }).then((r) => (r.items || []).map(toCardShape)).catch(() => [])
+        )
+
     Promise.all([
-      // AI Matched feed comes from the verified published catalog (slug-keyed,
-      // no DB id) — the legacy /api/opportunities endpoint only holds 13 thin rows.
-      api.published({ page_size: 6 }).then((r) => (r.items || []).map(toCardShape)).catch(() => []),
+      loadMatches(),
       api.published({ page_size: 4 }).then((r) => (r.items || []).map(toCardShape)).catch(() => []),
       api.remindersUpcoming(14).catch(() => []),
       api.applications().catch(() => []),
