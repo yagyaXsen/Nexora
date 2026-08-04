@@ -64,7 +64,15 @@ async function request(path, { method = 'GET', body, form, skipCache = false } =
     payload = JSON.stringify(body)
   }
 
-  const res = await fetch(apiUrl(path), { method, headers, body: payload })
+  let res
+  try {
+    res = await fetch(apiUrl(path), { method, headers, body: payload })
+  } catch (err) {
+    throw new ApiError(
+      0,
+      'Unable to connect to the server. If the server was sleeping, please retry in 10 seconds.'
+    )
+  }
 
   if (res.status === 204) return null
 
