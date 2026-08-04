@@ -7,6 +7,7 @@ from app.database import get_db
 from app.models import (
     Application, ApplicationStatus, Opportunity, OpportunityStatus, User, utc_now
 )
+from app.publishing.catalog import catalog as published_catalog
 from app.schemas import (
     ApplicationCreate, ApplicationUpdate, ApplicationRead, ApplyRequest, ApplyResponse
 )
@@ -83,6 +84,122 @@ def save_opportunity(
     db.commit()
     db.refresh(application)
     return application
+
+def _ensure_catalog_opportunity(db: Session, slug: str) -> Opportunity:
+    """Create (or return) a DB opportunity row backed by the published catalog
+    record for the given slug.
+
+    The verified catalog is JSON-only — published records have no DB `id` — but
+    tracker rows (applications) need a real `opportunity_id` FK. So we hydrate a
+    thin DB row from the catalog record's fields the tracker actually renders
+    (title, organizer, country, deadline, apply_url). The row is marked
+    needs_review=True so it never surfaces on public opportunity lists — it
+    exists purely to back the user's tracker/save state.
+    """
+    opp = db.query(Opportunity).filter(Opportunity.slug == slug).first()
+    if opp:
+        return opp
+
+    rec = published_catalog.get(slug)
+    if not rec:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Published opportunity '{slug}' not found",
+        )
+
+    data = rec.model_dump()
+
+    # Catalog deadlines are normalized to "YYYY-MM-DD" strings by the loader;
+    # hydrate them into a timezone-aware datetime so the tracker's Upcoming
+    # Deadlines widget (/api/applications/upcoming, Dashboard sidebar) which
+    # filters on Opportunity.deadline != None picks saved records up.
+    deadline = None
+    raw_deadline = data.get("deadline")
+    if raw_deadline:
+        try:
+            deadline = datetime.strptime(str(raw_deadline)[:10], "%Y-%m-%d").replace(tzinfo=timezone.utc)
+        except ValueError:
+            deadline = None
+
+    opp = Opportunity(
+        title=data.get("title") or slug.replace("-", " ").title(),
+        slug=slug,
+        description=(
+            data.get("short_original_summary")
+            or data.get("benefits_summary")
+            or data.get("eligibility_summary")
+            or "Verified opportunity."
+        ),
+        category=data.get("opportunity_type") or "grant",
+        organizer=data.get("provider_organization") or "Verified organizer",
+        deadline=deadline,
+        apply_url=data.get("application_url") or data.get("official_source_url") or "",
+        country=data.get("country_or_region"),
+        funding_amount=None,
+        eligibility_text=data.get("eligibility_summary"),
+        tags=data.get("tags") or [],
+        status=OpportunityStatus.ACTIVE.value,
+        confidence=min(1.0, (data.get("confidence_score") or 50) / 100.0),
+        needs_review=True,
+        dedupe_key=f"catalog-{slug}",
+    )
+    db.add(opp)
+    db.commit()
+    db.refresh(opp)
+    return opp
+
+
+@router.post("/by-slug/{slug}", response_model=ApplicationRead, status_code=status.HTTP_201_CREATED)
+def save_published_by_slug(
+    slug: str,
+    response: Response,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Save a published-catalog opportunity (slug-keyed, no DB id) to the
+    tracker. Hydrates a real opportunity row from the catalog record so the
+    applications FK and tracker UI work exactly like legacy saves. Idempotent:
+    returns the existing row instead of duplicating.
+    """
+    opp = _ensure_catalog_opportunity(db, slug)
+
+    existing = db.query(Application).filter(
+        Application.user_id == current_user.id,
+        Application.opportunity_id == opp.id,
+    ).first()
+    if existing:
+        response.status_code = status.HTTP_200_OK
+        return existing
+
+    application = Application(
+        user_id=current_user.id,
+        opportunity_id=opp.id,
+        status=ApplicationStatus.SAVED.value,
+    )
+    db.add(application)
+    db.commit()
+    db.refresh(application)
+    return application
+
+
+@router.delete("/by-slug/{slug}", status_code=status.HTTP_204_NO_CONTENT)
+def unsave_published_by_slug(
+    slug: str,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Remove a published-catalog opportunity from the tracker by slug."""
+    opp = db.query(Opportunity).filter(Opportunity.slug == slug).first()
+    if opp:
+        application = db.query(Application).filter(
+            Application.opportunity_id == opp.id,
+            Application.user_id == current_user.id,
+        ).first()
+        if application:
+            db.delete(application)
+            db.commit()
+    return None
+
 
 @router.post("/apply", response_model=ApplyResponse)
 def apply_to_opportunity(
