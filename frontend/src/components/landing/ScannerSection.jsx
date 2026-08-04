@@ -30,9 +30,9 @@ export default function ScannerSection() {
           <button
             onClick={handleScan}
             disabled={scanning}
-            className="flex items-center gap-3 bg-[#0A0A0A] text-white font-bold px-8 py-4 rounded-2xl hover:bg-indigo-600 transition-all shadow-lg active:scale-98 disabled:opacity-50"
+            className="flex items-center gap-3 bg-[#0A0A0A] text-white font-bold px-8 py-4 rounded-2xl hover:bg-slate-800 transition-all shadow-lg hover:shadow-xl active:scale-[0.98] disabled:opacity-50"
           >
-            <Cpu size={18} className={scanning ? 'animate-spin text-indigo-400' : ''} />
+            <Cpu size={18} className={scanning ? 'animate-spin text-slate-300' : ''} />
             <span>{scanning ? 'Scanning Profile…' : 'Simulate Live Profile Scan'}</span>
             <ArrowRight size={16} />
           </button>

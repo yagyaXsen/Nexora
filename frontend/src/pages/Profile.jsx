@@ -134,10 +134,6 @@ export default function Profile() {
     }
   }
 
-  const handleRevokeSession = () => {
-    // Session management not yet implemented — placeholder
-  }
-
   return (
     <div className="prism-profile bg-white min-h-screen pt-24 pb-20 font-sans relative overflow-hidden">
       

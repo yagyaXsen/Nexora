@@ -65,7 +65,7 @@ export default function OpportunityHero({ opp, saved, saving, onToggleSave, onSh
               className={`px-4 py-2.5 rounded-xl text-xs font-bold transition-all border ${
                 saved
                   ? 'bg-emerald-50 text-emerald-700 border-emerald-200 hover:bg-red-50 hover:text-red-600 hover:border-red-200'
-                  : 'bg-white text-slate-700 border-slate-200 hover:border-indigo-400 hover:bg-indigo-50 hover:text-indigo-700'
+                  : 'bg-white text-slate-700 border-slate-200 hover:border-slate-800 hover:bg-slate-50 hover:text-slate-950'
               }`}
             >
               {saving ? 'Processing…' : saved ? '✓ Saved to Tracker' : '+ Save Opportunity'}
@@ -73,7 +73,7 @@ export default function OpportunityHero({ opp, saved, saving, onToggleSave, onSh
             <button
               type="button"
               onClick={onShare}
-              className="px-4 py-2.5 rounded-xl text-xs font-bold transition-all border border-slate-200 bg-white text-slate-700 hover:border-slate-400 hover:bg-slate-50"
+              className="px-4 py-2.5 rounded-xl text-xs font-bold transition-all border border-slate-200 bg-white text-slate-700 hover:border-slate-800 hover:bg-slate-50 hover:text-slate-950"
             >
               <i className="ti ti-share mr-1" /> Share
             </button>
@@ -81,7 +81,7 @@ export default function OpportunityHero({ opp, saved, saving, onToggleSave, onSh
         </div>
 
         {/* Featured image or graceful placeholder */}
-        <div className="relative rounded-2xl overflow-hidden border border-slate-100 min-h-[160px] bg-gradient-to-br from-indigo-50 via-white to-slate-50 flex items-center justify-center">
+        <div className="relative rounded-2xl overflow-hidden border border-slate-100 min-h-[160px] bg-gradient-to-br from-slate-100 via-white to-slate-50 flex items-center justify-center">
           {hasImage ? (
             <img
               src={opp.featuredImage}

@@ -105,9 +105,9 @@ export default function OpportunityApplySteps({ opp }) {
             href={appUrl}
             target="_blank"
             rel="noopener noreferrer"
-            className="flex items-center gap-2 px-3.5 py-2.5 rounded-xl text-xs font-bold border border-slate-200 hover:border-indigo-400 hover:bg-indigo-50 text-slate-700 transition-all"
+            className="flex items-center gap-2 px-3.5 py-2.5 rounded-xl text-xs font-bold border border-slate-200 hover:border-slate-800 hover:bg-slate-50 text-slate-700 hover:text-slate-950 transition-all"
           >
-            <i className="ti ti-external-link text-indigo-600" /> Official Application Portal
+            <i className="ti ti-external-link text-slate-700" /> Official Application Portal
           </a>
         )}
         {srcUrl && (
@@ -115,17 +115,17 @@ export default function OpportunityApplySteps({ opp }) {
             href={srcUrl}
             target="_blank"
             rel="noopener noreferrer"
-            className="flex items-center gap-2 px-3.5 py-2.5 rounded-xl text-xs font-bold border border-slate-200 hover:border-indigo-400 hover:bg-indigo-50 text-slate-700 transition-all"
+            className="flex items-center gap-2 px-3.5 py-2.5 rounded-xl text-xs font-bold border border-slate-200 hover:border-slate-800 hover:bg-slate-50 text-slate-700 hover:text-slate-950 transition-all"
           >
-            <i className="ti ti-world text-indigo-600" /> Official Program Page
+            <i className="ti ti-world text-slate-700" /> Official Program Page
           </a>
         )}
         {opp.contactEmail && (
           <a
             href={`mailto:${opp.contactEmail}`}
-            className="flex items-center gap-2 px-3.5 py-2.5 rounded-xl text-xs font-bold border border-slate-200 hover:border-indigo-400 hover:bg-indigo-50 text-slate-700 transition-all"
+            className="flex items-center gap-2 px-3.5 py-2.5 rounded-xl text-xs font-bold border border-slate-200 hover:border-slate-800 hover:bg-slate-50 text-slate-700 hover:text-slate-950 transition-all"
           >
-            <i className="ti ti-mail text-indigo-600" /> Contact Email
+            <i className="ti ti-mail text-slate-700" /> Contact Email
           </a>
         )}
         {opp.contactPage && (
@@ -133,9 +133,9 @@ export default function OpportunityApplySteps({ opp }) {
             href={opp.contactPage}
             target="_blank"
             rel="noopener noreferrer"
-            className="flex items-center gap-2 px-3.5 py-2.5 rounded-xl text-xs font-bold border border-slate-200 hover:border-indigo-400 hover:bg-indigo-50 text-slate-700 transition-all"
+            className="flex items-center gap-2 px-3.5 py-2.5 rounded-xl text-xs font-bold border border-slate-200 hover:border-slate-800 hover:bg-slate-50 text-slate-700 hover:text-slate-950 transition-all"
           >
-            <i className="ti ti-messages text-indigo-600" /> Contact Page
+            <i className="ti ti-messages text-slate-700" /> Contact Page
           </a>
         )}
         {opp.faqUrl && (
@@ -143,9 +143,9 @@ export default function OpportunityApplySteps({ opp }) {
             href={opp.faqUrl}
             target="_blank"
             rel="noopener noreferrer"
-            className="flex items-center gap-2 px-3.5 py-2.5 rounded-xl text-xs font-bold border border-slate-200 hover:border-indigo-400 hover:bg-indigo-50 text-slate-700 transition-all"
+            className="flex items-center gap-2 px-3.5 py-2.5 rounded-xl text-xs font-bold border border-slate-200 hover:border-slate-800 hover:bg-slate-50 text-slate-700 hover:text-slate-950 transition-all"
           >
-            <i className="ti ti-help text-indigo-600" /> FAQ
+            <i className="ti ti-help text-slate-700" /> FAQ
           </a>
         )}
         {opp.termsUrl && (
@@ -153,9 +153,9 @@ export default function OpportunityApplySteps({ opp }) {
             href={opp.termsUrl}
             target="_blank"
             rel="noopener noreferrer"
-            className="flex items-center gap-2 px-3.5 py-2.5 rounded-xl text-xs font-bold border border-slate-200 hover:border-indigo-400 hover:bg-indigo-50 text-slate-700 transition-all"
+            className="flex items-center gap-2 px-3.5 py-2.5 rounded-xl text-xs font-bold border border-slate-200 hover:border-slate-800 hover:bg-slate-50 text-slate-700 hover:text-slate-950 transition-all"
           >
-            <i className="ti ti-file-text text-indigo-600" /> Terms & Conditions
+            <i className="ti ti-file-text text-slate-700" /> Terms &amp; Conditions
           </a>
         )}
       </div>

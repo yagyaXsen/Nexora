@@ -36,17 +36,17 @@ export default function OpportunityOrganizer({ opp }) {
               href={website}
               target="_blank"
               rel="noopener noreferrer"
-              className="inline-flex items-center gap-2 px-3.5 py-2.5 rounded-xl text-xs font-bold border border-slate-200 hover:border-indigo-400 hover:bg-indigo-50 text-slate-700 transition-all"
+              className="inline-flex items-center gap-2 px-3.5 py-2.5 rounded-xl text-xs font-bold border border-slate-200 hover:border-slate-800 hover:bg-slate-50 text-slate-700 hover:text-slate-950 transition-all"
             >
-              <i className="ti ti-world text-indigo-600" /> Organizer Website
+              <i className="ti ti-world text-slate-700" /> Organizer Website
             </a>
           )}
           {opp.contactEmail && (
             <a
               href={`mailto:${opp.contactEmail}`}
-              className="inline-flex items-center gap-2 px-3.5 py-2.5 rounded-xl text-xs font-bold border border-slate-200 hover:border-indigo-400 hover:bg-indigo-50 text-slate-700 transition-all"
+              className="inline-flex items-center gap-2 px-3.5 py-2.5 rounded-xl text-xs font-bold border border-slate-200 hover:border-slate-800 hover:bg-slate-50 text-slate-700 hover:text-slate-950 transition-all"
             >
-              <i className="ti ti-mail text-indigo-600" /> Contact
+              <i className="ti ti-mail text-slate-700" /> Contact
             </a>
           )}
           {opp.contactPage && (
@@ -54,9 +54,9 @@ export default function OpportunityOrganizer({ opp }) {
               href={opp.contactPage}
               target="_blank"
               rel="noopener noreferrer"
-              className="inline-flex items-center gap-2 px-3.5 py-2.5 rounded-xl text-xs font-bold border border-slate-200 hover:border-indigo-400 hover:bg-indigo-50 text-slate-700 transition-all"
+              className="inline-flex items-center gap-2 px-3.5 py-2.5 rounded-xl text-xs font-bold border border-slate-200 hover:border-slate-800 hover:bg-slate-50 text-slate-700 hover:text-slate-950 transition-all"
             >
-              <i className="ti ti-messages text-indigo-600" /> Contact Page
+              <i className="ti ti-messages text-slate-700" /> Contact Page
             </a>
           )}
         </div>

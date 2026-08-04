@@ -22,7 +22,7 @@ export default function RelatedOpportunities({ items = [], loading = false }) {
   return (
     <section className="space-y-5">
       <div className="flex items-center gap-2">
-        <i className="ti ti-sparkles text-indigo-500 text-lg" />
+        <i className="ti ti-sparkles text-slate-700 text-lg" />
         <h2 className="text-lg font-extrabold text-slate-900 tracking-tight">Similar Opportunities</h2>
       </div>
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -30,7 +30,7 @@ export default function RelatedOpportunities({ items = [], loading = false }) {
           <Link
             key={r.slug || r.id}
             to={`/opportunities/${r.slug || r.id}`}
-            className="group bg-white border border-slate-200 rounded-2xl p-5 shadow-sm hover:shadow-lg hover:border-indigo-200 transition-all space-y-3"
+            className="group bg-white border border-slate-200 rounded-2xl p-5 shadow-sm hover:shadow-lg hover:border-slate-400 transition-all space-y-3"
           >
             <div className="flex items-center justify-between">
               <OpportunityBadge label={r.typeLabel || 'Opportunity'} tone="slate" icon="ti-tag" />
@@ -38,12 +38,12 @@ export default function RelatedOpportunities({ items = [], loading = false }) {
                 <OpportunityBadge label={r.fundingLabel} tone="green" icon="ti-cash" />
               )}
             </div>
-            <h3 className="text-sm font-extrabold text-slate-900 leading-snug group-hover:text-indigo-600 transition-colors line-clamp-2">
+            <h3 className="text-sm font-extrabold text-slate-900 leading-snug group-hover:text-black transition-colors line-clamp-2">
               {r.title}
             </h3>
             <div className="flex items-center justify-between text-[11px] font-mono text-slate-400 pt-2 border-t border-slate-100">
               <span className="flex items-center gap-1">
-                <i className="ti ti-map-pin text-indigo-500" /> {r.countryOrRegion || 'Global'}
+                <i className="ti ti-map-pin text-slate-500" /> {r.countryOrRegion || 'Global'}
               </span>
               {r.deadlineISO && (
                 <span>{formatHumanDate(r.deadlineISO)}</span>

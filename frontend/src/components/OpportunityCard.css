@@ -12,13 +12,13 @@ article.group {
 }
 
 article.group:hover {
-  transform: translateY(-4px) scale(1.01);
-  box-shadow: var(--shadow-s3);
-  border-color: rgba(99, 102, 241, 0.3);
+  transform: translateY(-3px);
+  box-shadow: 0 20px 30px -10px rgba(0, 0, 0, 0.08), 0 8px 12px -6px rgba(0, 0, 0, 0.04);
+  border-color: rgba(15, 23, 42, 0.3);
 }
 
 article.group:focus-within {
-  outline: 2px solid #6366f1;
+  outline: 2px solid #0A0A0A;
   outline-offset: 2px;
 }
 
