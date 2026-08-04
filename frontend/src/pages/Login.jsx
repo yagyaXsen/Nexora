@@ -46,9 +46,13 @@ export default function Login() {
       setError(null)
       setSsoLoading(true)
       try {
-        await loginWithGoogle({ access_token: tokenResponse.access_token })
+        const result = await loginWithGoogle({ access_token: tokenResponse.access_token })
         sessionStorage.removeItem('nexora_return_to')
-        navigate(from, { replace: true })
+        if (result?.is_new_user) {
+          navigate('/onboarding', { replace: true })
+        } else {
+          navigate(from, { replace: true })
+        }
       } catch (err) {
         setError(err.message || 'Google authentication failed. Please try again.')
       } finally {
