@@ -125,6 +125,26 @@ class OpportunityCatalog:
     # tokens that are BOTH in this list are not evidence of a match (e.g. a
     # hypothetical "Max Planck Postdoctoral Fellowship" shares only
     # "postdoctoral"/"fellowship" with the Humboldt twin and must NOT latch on).
+    # Region labels stored by onboarding (e.g. "Europe & UK") expand into the
+    # concrete country/region keywords catalog records actually carry
+    # (country_or_region like "Germany", "USA (San Francisco)", "Global").
+    _REGION_KEYWORDS = {
+        "europe": {"europe", "uk", "united kingdom", "germany", "switzerland", "france",
+                   "netherlands", "italy", "spain", "sweden", "austria", "belgium",
+                   "denmark", "norway", "finland", "ireland", "poland", "portugal",
+                   "czech", "hungary", "greece", "estonia", "lithuania", "latvia",
+                   "slovakia", "slovenia", "croatia", "serbia", "ukraine", "europ", "eu"},
+        "north america": {"north america", "usa", "united states", "u.s.", "canada",
+                          "america", "us"},
+        "asia": {"asia", "japan", "china", "india", "singapore", "south korea", "korea",
+                 "hong kong", "taiwan", "indonesia", "malaysia", "thailand", "vietnam",
+                 "philippines", "australia", "new zealand", "apac", "pacific"},
+        "middle east": {"middle east", "mena", "uae", "saudi arabia", "israel", "qatar",
+                        "turkey", "egypt", "jordan", "kuwait", "bahrain", "oman",
+                        "united arab emirates"},
+        "global": {"global", "worldwide", "international", "remote"},
+    }
+
     _GENERIC_TOKEN_STOPLIST = {
         "postdoctoral", "postdoc", "research", "fellowship", "fellowships",
         "grant", "grants", "scholarship", "scholarships", "program",
@@ -262,7 +282,18 @@ class OpportunityCatalog:
             # ── 3. Country / region fit ──
             if country_list:
                 country_hay = (str(r.country_or_region or "") + " " + str(r.citizenship_requirements or "")).lower()
-                if any(c in country_hay for c in country_list):
+                # Expand region labels ("Europe & UK", "Asia & Pacific"…) into
+                # concrete country keywords so onboarding region picks actually
+                # match catalog records like "Germany" or "USA (San Francisco)".
+                wanted: set = set()
+                for c in country_list:
+                    cl = c.lower()
+                    wanted.add(cl)  # literal term always kept
+                    c_tokens = _tokenize(cl)
+                    for region, keywords in self._REGION_KEYWORDS.items():
+                        if c_tokens & set(_tokenize(region)) or any(k in cl for k in keywords if len(k) >= 4):
+                            wanted |= keywords
+                if wanted & set(_tokenize(country_hay)) or any(c in country_hay for c in wanted if len(c) >= 3):
                     score += 5.0
                     reasons.append("Location fits your target regions")
                 elif "global" in country_hay or not r.country_or_region:
