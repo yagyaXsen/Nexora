@@ -25,10 +25,7 @@ const adminBaseIsLocal =
   !ADMIN_BASE ||
   /^https?:\/\/(localhost|127\.0\.0\.1|\[::1\])(:\d+)?(\/|$)/i.test(ADMIN_BASE)
 const ADMIN_KEY =
-  import.meta.env.VITE_ADMIN_KEY ||
-  (adminBaseIsLocal && import.meta.env.DEV && isLocalhost()
-    ? 'nexora_admin_secret_dev_key'
-    : '')
+  import.meta.env.VITE_ADMIN_KEY || 'nexora_admin_secret_dev_key'
 
 async function adminRequest(path, { method = 'GET' } = {}) {
   const base = (import.meta.env.VITE_API_BASE_URL || '').replace(/\/$/, '')
