@@ -86,7 +86,10 @@ export default function Dashboard() {
   const savedCount = summary?.saved_count ?? apps.length
   const appliedCount = summary?.applied_count ?? apps.filter((a) => ['Applied', 'Assessment', 'Interview', 'Offer', 'Accepted'].includes(a.status)).length
   const upcomingCount = summary?.upcoming_deadlines_count ?? reminders.length
-  const aiMatchedCount = summary?.ai_matched_count ?? recs.length
+  // The AI Matched count must reflect the real personalized feed length.
+  // summary.ai_matched_count is the legacy saved-apps count and is 0 for a
+  // fresh user — using `??` there would keep 0 even when recs has matches.
+  const aiMatchedCount = recs.length > 0 ? recs.length : (summary?.ai_matched_count ?? 0)
   // The published catalog is the source of truth for indexed opportunities —
   // it only contains genuinely verified + enriched records. Falls back to the
   // legacy DB count when the catalog is unavailable.
