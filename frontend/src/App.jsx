@@ -3,6 +3,7 @@ import { useEffect, lazy, Suspense } from 'react'
 import Nav from './components/Nav.jsx'
 import Footer from './components/Footer.jsx'
 import ProtectedRoute from './components/ProtectedRoute.jsx'
+import AdminRoute from './components/AdminRoute.jsx'
 import { ToastProvider } from './components/Toast.jsx'
 import { api } from './lib/api.js'
 
@@ -24,12 +25,9 @@ import Notifications from './pages/Notifications.jsx'
 import Privacy from './pages/Privacy.jsx'
 import Terms from './pages/Terms.jsx'
 import Contact from './pages/Contact.jsx'
-import { ADMIN_NO_LOGIN } from './lib/env.js'
 
-// The admin console is a localhost-only tool. It is lazy-loaded and registered
-// ONLY in dev builds (import.meta.env.DEV → replaced with `false` at build
-// time), so the production bundle never contains the route or the Admin chunk.
-const AdminPage = import.meta.env.DEV ? lazy(() => import('./pages/Admin.jsx')) : null
+// Lazy-loaded Admin console for verified administrators
+const AdminPage = lazy(() => import('./pages/Admin.jsx'))
 
 function ScrollToTop() {
   const { pathname } = useLocation()
@@ -128,25 +126,16 @@ export default function App() {
                 </ProtectedRoute>
               }
             />
-            {AdminPage && (
-              <Route
-                path="/admin"
-                element={
-                  ADMIN_NO_LOGIN ? (
-                    // No-login mode (dev-only): open the console without a session.
-                    <Suspense fallback={null}>
-                      <AdminPage />
-                    </Suspense>
-                  ) : (
-                    <ProtectedRoute>
-                      <Suspense fallback={null}>
-                        <AdminPage />
-                      </Suspense>
-                    </ProtectedRoute>
-                  )
-                }
-              />
-            )}
+            <Route
+              path="/admin"
+              element={
+                <AdminRoute>
+                  <Suspense fallback={null}>
+                    <AdminPage />
+                  </Suspense>
+                </AdminRoute>
+              }
+            />
             {/* Catch-all route */}
             <Route path="*" element={<Landing />} />
           </Routes>
