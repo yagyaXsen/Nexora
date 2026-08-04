@@ -28,13 +28,17 @@ export function useApply(onRecorded) {
 
     // Fire-and-forget: beacon records the click, POST records in tracker.
     // Neither blocks navigation — the <a href> is followed by the browser.
-    trackApplyClick(opp.id)
-
-    api
-      .applyToOpportunity(opp.id)
-      .then(() => onRecorded?.(opp))
-      .catch(() => {
-        /* best-effort: the user is already on their way to the organizer */
-      })
+    // Published-catalog records have no DB id, so tracking is skipped for them.
+    if (opp.id != null) {
+      trackApplyClick(opp.id)
+      api
+        .applyToOpportunity(opp.id)
+        .then(() => onRecorded?.(opp))
+        .catch(() => {
+          /* best-effort: the user is already on their way to the organizer */
+        })
+    } else {
+      onRecorded?.(opp)
+    }
   }
 }
