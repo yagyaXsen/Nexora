@@ -36,7 +36,12 @@ async function adminRequest(path, { method = 'GET' } = {}) {
   const token = getToken()
   if (token) headers.Authorization = `Bearer ${token}`
   if (ADMIN_KEY) headers['X-Admin-Key'] = ADMIN_KEY
-  const res = await fetch(`${base}${path}`, { method, headers })
+  let res
+  try {
+    res = await fetch(`${base}${path}`, { method, headers })
+  } catch (err) {
+    throw new ApiError(0, 'Unable to reach backend server. Please retry in a few moments.')
+  }
   let data = null
   try {
     data = await res.json()
@@ -44,8 +49,6 @@ async function adminRequest(path, { method = 'GET' } = {}) {
     /* non-JSON body */
   }
   if (res.status === 401 && token) {
-    // Same hand-off as the shared client: token is dead (e.g. after a wipe) →
-    // clear it and send the user to login so they can sign up fresh.
     clearToken()
     if (window.location.pathname !== '/login') window.location.assign('/login')
   }
