@@ -603,31 +603,7 @@ export default function Explore() {
         <div className="grid grid-cols-12 gap-8 items-start">
           
           {/* Main Feed Column (8 Columns) */}
-          <div className="col-span-12 lg:col-span-8 space-y-6">
-            
-            {/* Clean results status banner */}
-            {!loading && !error && result && (
-              <div id="opportunities-feed-top" className="flex items-center justify-between text-xs font-mono text-slate-500 pb-3 border-b border-slate-200">
-                <div className="flex items-center gap-2">
-                  <span className="w-2 h-2 rounded-full bg-emerald-500" />
-                  <span className="font-semibold text-slate-700">
-                    SHOWING <strong className="text-slate-900">{startItem}–{endItem}</strong> OF{' '}
-                    <strong className="text-slate-900">{totalItems}</strong> OPPORTUNITIES
-                    {q && ` FOR "${q}"`}
-                  </span>
-                  {totalPages > 1 && (
-                    <span className="text-slate-400 font-medium hidden sm:inline">
-                      • PAGE {page} OF {totalPages}
-                    </span>
-                  )}
-                </div>
-                {sort && (
-                  <span className="text-slate-400">
-                    Sorted by: <strong className="text-indigo-600 uppercase">{sort.replace('_', ' ')}</strong>
-                  </span>
-                )}
-              </div>
-            )}
+          <div id="opportunities-feed-top" className="col-span-12 lg:col-span-8 space-y-6">
 
             {/* Loading skeletons */}
             {loading && (
