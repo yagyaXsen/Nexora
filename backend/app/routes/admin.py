@@ -180,6 +180,8 @@ def admin_delete_user(
     user_email = target_user.email
 
     try:
+        # Unlink any audit event logs pointing to this user
+        db.query(AuditEvent).filter(AuditEvent.user_id == user_id).update({AuditEvent.user_id: None}, synchronize_session=False)
         # Delete user (cascade deletes profile, applications, notifications, followers, reset tokens)
         db.delete(target_user)
         db.commit()
