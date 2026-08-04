@@ -1,4 +1,5 @@
 import { Link } from 'react-router-dom'
+import { SUPPORT_EMAIL } from '../lib/site'
 
 const sections = [
   {
@@ -46,7 +47,7 @@ const sections = [
   {
     title: '7. Contact & Inquiries',
     body: [
-      'For inquiries regarding these Terms of Service, please reach out via our contact page or email legal@nexora.app.',
+      `For inquiries regarding these Terms of Service, please reach out via our contact page or email ${SUPPORT_EMAIL}.`
     ],
   },
 ]

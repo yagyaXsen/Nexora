@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import { Mail, Send, CheckCircle2, Building2, HelpCircle } from 'lucide-react'
 import { api } from '../lib/api'
+import { SUPPORT_EMAIL } from '../lib/site'
 
 export default function Contact() {
   const [submitted, setSubmitted] = useState(false)
@@ -62,8 +63,8 @@ export default function Contact() {
             </div>
             <h3 className="text-sm font-bold text-slate-900 mb-1">Email Support</h3>
             <p className="text-xs text-slate-500 mb-3">Direct response within 24h</p>
-            <a href="mailto:support@nexora.app" className="text-xs font-bold text-slate-900 hover:underline">
-              support@nexora.app
+            <a href={`mailto:${SUPPORT_EMAIL}`} className="text-xs font-bold text-slate-900 hover:underline">
+              {SUPPORT_EMAIL}
             </a>
           </div>
 
@@ -73,8 +74,8 @@ export default function Contact() {
             </div>
             <h3 className="text-sm font-bold text-slate-900 mb-1">Partnerships</h3>
             <p className="text-xs text-slate-500 mb-3">For universities & labs</p>
-            <a href="mailto:partners@nexora.app" className="text-xs font-bold text-emerald-600 hover:underline">
-              partners@nexora.app
+            <a href={`mailto:${SUPPORT_EMAIL}`} className="text-xs font-bold text-emerald-600 hover:underline">
+              {SUPPORT_EMAIL}
             </a>
           </div>
 
@@ -84,8 +85,8 @@ export default function Contact() {
             </div>
             <h3 className="text-sm font-bold text-slate-900 mb-1">Feedback</h3>
             <p className="text-xs text-slate-500 mb-3">Submit program suggestions</p>
-            <a href="mailto:feedback@nexora.app" className="text-xs font-bold text-blue-600 hover:underline">
-              feedback@nexora.app
+            <a href={`mailto:${SUPPORT_EMAIL}`} className="text-xs font-bold text-blue-600 hover:underline">
+              {SUPPORT_EMAIL}
             </a>
           </div>
         </div>
