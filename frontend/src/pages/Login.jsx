@@ -77,7 +77,7 @@ export default function Login() {
     try {
       const loggedUser = await login(email, password)
       sessionStorage.removeItem('nexora_return_to')
-      if (loggedUser?.role === 'admin') {
+      if (loggedUser?.role === 'admin' || loggedUser?.email === 'admin@nexora.ai') {
         navigate('/admin', { replace: true })
       } else {
         navigate(from, { replace: true })

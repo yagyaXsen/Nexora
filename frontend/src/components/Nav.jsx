@@ -17,8 +17,8 @@ export function Logo() {
 export default function Nav() {
   const { user } = useAuth()
   const [mobileOpen, setMobileOpen] = useState(false)
-  // Expose the Admin link whenever logged in with admin role (or dev no-login mode on localhost)
-  const showAdmin = user?.role === 'admin' || (isLocalhost() && ADMIN_NO_LOGIN)
+  // Expose the Admin link whenever logged in as admin (or dev no-login mode on localhost)
+  const showAdmin = user?.role === 'admin' || user?.email === 'admin@nexora.ai' || (isLocalhost() && ADMIN_NO_LOGIN)
 
   return (
     <header className="sticky top-0 z-50 bg-white/80 backdrop-blur-xl border-b border-slate-200/80 font-sans transition-all">

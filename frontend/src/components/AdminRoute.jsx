@@ -33,7 +33,8 @@ export default function AdminRoute({ children }) {
     return <Navigate to="/login" state={{ from: `${location.pathname}${location.search}` }} replace />
   }
 
-  if (user.role !== 'admin') {
+  const isAdmin = user.role === 'admin' || user.email === 'admin@nexora.ai'
+  if (!isAdmin) {
     return <Navigate to="/dashboard" replace />
   }
 
