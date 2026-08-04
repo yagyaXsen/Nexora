@@ -34,10 +34,10 @@ const COUNTRIES = [
 ]
 
 const SORT_OPTIONS = [
-  { value: 'relevance', label: '⚡ Best AI Match / Relevance' },
-  { value: 'deadline_asc', label: '⏰ Deadline (Expiring Soon)' },
-  { value: 'created_desc', label: '✨ Recently Discovered' },
-  { value: 'funding_desc', label: '💰 Highest Funding' },
+  { value: 'relevance', label: 'Best Match / Relevance' },
+  { value: 'deadline_asc', label: 'Deadline (Expiring Soon)' },
+  { value: 'created_desc', label: 'Recently Discovered' },
+  { value: 'funding_desc', label: 'Highest Funding' },
 ]
 
 function readBookmarks() {
