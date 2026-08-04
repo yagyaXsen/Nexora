@@ -240,7 +240,7 @@ export default function Login() {
               </>
             ) : (
               <>
-                <span>Sign in to Dashboard</span>
+                <span>Sign in to Nexora</span>
                 <i className="ti ti-arrow-right text-xs" />
               </>
             )}
