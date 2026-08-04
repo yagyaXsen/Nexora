@@ -121,6 +121,75 @@ class OpportunityCatalog:
         self._ensure()
         return self._by_slug.get(slug)
 
+    # Words too generic to identify a program on their own. Two shared title
+    # tokens that are BOTH in this list are not evidence of a match (e.g. a
+    # hypothetical "Max Planck Postdoctoral Fellowship" shares only
+    # "postdoctoral"/"fellowship" with the Humboldt twin and must NOT latch on).
+    _GENERIC_TOKEN_STOPLIST = {
+        "postdoctoral", "postdoc", "research", "fellowship", "fellowships",
+        "grant", "grants", "scholarship", "scholarships", "program",
+        "programme", "programs", "programmes", "phd", "doctoral",
+        "studentship", "internship", "internships", "fund", "funding",
+        "award", "awards", "prize", "prizes", "academic", "global",
+        "international", "2026", "2027", "2028", "2029", "degree",
+        "master", "masters", "bachelor", "summer", "winter", "fall",
+        "spring", "batch", "cohort", "semester", "open", "apply",
+        "application", "applications", "call", "calls", "year", "years",
+        "scholars", "researchers", "excellence", "fellows", "ai", "ml",
+        "data", "science", "sciences", "tech", "technology", "center",
+        "centre", "institute", "university", "lab", "labs", "network",
+        "innovation", "digital", "energy", "health", "climate",
+    }
+
+    def find_twin(
+        self, title: str, organizer: str = "", category: Optional[str] = None
+    ) -> Optional[PublishedOpportunity]:
+        """Best-effort match of a legacy DB row to a published catalog record.
+
+        Used to enrich legacy detail pages: the published catalog holds the
+        verified, enriched twin of most legacy rows (different title/slug), so
+        the legacy endpoint can surface the rich fields instead of the thin DB
+        row.
+
+        Matching is conservative to avoid wrong-program enrichment (which is
+        worse than none): at least two shared title tokens AND either a shared
+        provider token, >=3 shared title tokens, or a distinctive (non-generic)
+        shared token such as "humboldt", "msca", or "cern".
+        """
+        self._ensure()
+        if not title:
+            return None
+        title_tokens = _tokenize(title)
+        org_tokens = _tokenize(organizer or "")
+
+        best: Optional[PublishedOpportunity] = None
+        best_score = 0.0
+        for r in self._records:
+            r_title_tokens = _tokenize(r.title or "")
+            shared = title_tokens & r_title_tokens
+            title_overlap = len(shared)
+            if title_overlap < 2:
+                continue
+            r_org_tokens = _tokenize(r.provider_organization or "")
+            org_overlap = len(org_tokens & r_org_tokens) if org_tokens and r_org_tokens else 0
+            distinctive = any(
+                tok not in self._GENERIC_TOKEN_STOPLIST for tok in shared
+            )
+            # Refuse weak title-only overlaps (e.g. only generic words).
+            if org_overlap < 1 and title_overlap < 3 and not distinctive:
+                continue
+            # Weighted: title carries the most signal, provider breaks ties,
+            # and matching opportunity_type adds a small bonus. Category is
+            # NOT a hard filter — legacy rows often carry a slightly different
+            # category than the enriched record's opportunity_type.
+            score = title_overlap * 2.0 + org_overlap
+            if category and r.opportunity_type == category:
+                score += 1.0
+            if score > best_score:
+                best_score = score
+                best = r
+        return best
+
     # ── related ────────────────────────────────────────────────────────────
     def related(self, slug: str, limit: int = 4) -> List[PublishedOpportunity]:
         self._ensure()
