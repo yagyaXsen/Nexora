@@ -111,16 +111,12 @@ def ensure_tables() -> bool:
 
 
 def _seed_organizations() -> int:
-    """Seed organizations from seed_data.py if the table is empty."""
+    """Seed organizations from seed_data.py if missing."""
     from app.models import Organization
     from app.seed_data import ORGANIZATIONS
 
     db = SessionLocal()
     try:
-        existing = db.query(Organization).count()
-        if existing > 0:
-            return 0
-
         inserted = 0
         for org_data in ORGANIZATIONS:
             existing_org = db.query(Organization).filter(
@@ -139,14 +135,18 @@ def _seed_organizations() -> int:
 
 
 def seed_initial_data() -> int:
-    """Insert seed sources, organizations, and opportunities if the DB is empty.
+    """Insert seed sources, organizations, and opportunities if missing from DB.
 
     Returns the number of seed opportunities inserted.
     """
     db = SessionLocal()
     try:
         # ── Seed sources ────────────────────────────────────────────────
-        from app.models import Source, SourceType
+        from app.models import Source, SourceType, Opportunity, Organization
+        from app.seed_data import SEED_OPPORTUNITIES
+        import random
+        from datetime import datetime, timezone, timedelta
+        from slugify import slugify
 
         seed_sources = [
             {
@@ -194,28 +194,28 @@ def seed_initial_data() -> int:
             logger.info(f"Seeded {sources_added} new source(s).")
 
         # ── Seed opportunities ──────────────────────────────────────────
-        from app.seed_data import SEED_OPPORTUNITIES
-        from app.models import Opportunity
-
-        existing_count = db.query(Opportunity).count()
-        if existing_count == 0 and SEED_OPPORTUNITIES:
-            from app.models import Organization
-            import math
-            import random
-            from datetime import datetime, timezone, timedelta
-            from slugify import slugify
-
-            inserted = 0
+        inserted = 0
+        if SEED_OPPORTUNITIES:
             for opp_data in SEED_OPPORTUNITIES:
-                slug = slugify(opp_data["title"])[:200]
-                base_slug = slug
+                base_slug = slugify(opp_data["title"])[:200]
+                existing_opp = db.query(Opportunity).filter(
+                    Opportunity.slug == base_slug
+                ).first()
+                if not existing_opp:
+                    existing_opp = db.query(Opportunity).filter(
+                        Opportunity.title == opp_data["title"]
+                    ).first()
+
+                if existing_opp:
+                    continue
+
+                slug = base_slug
                 counter = 1
                 while db.query(Opportunity).filter(Opportunity.slug == slug).first():
                     slug = f"{base_slug}-{counter}"
                     counter += 1
 
-                # Organizations are seeded by _seed_organizations() before
-                # seed_initial_data(), so they should exist in the DB.
+                # Link organization
                 org_slug = slugify(opp_data.get("organizer", "unknown"))
                 org = db.query(Organization).filter(
                     Organization.slug == org_slug
@@ -253,11 +253,11 @@ def seed_initial_data() -> int:
                 db.add(opp)
                 inserted += 1
 
-            db.commit()
-            logger.info(f"Seeded {inserted} opportunity/opportunities.")
-            return inserted
+            if inserted > 0:
+                db.commit()
+                logger.info(f"Seeded {inserted} opportunity/opportunities.")
 
-        return 0
+        return inserted
     finally:
         db.close()
 
