@@ -1,41 +1,21 @@
 import { useEffect, useState, useCallback } from 'react'
-import { getToken, clearToken, ApiError } from '../lib/api'
+import { apiUrl, getToken, clearToken, ApiError } from '../lib/api'
 import { useAuth } from '../lib/auth.jsx'
 import { CountUp } from '../components/CountUp.jsx'
 import { isLocalhost, ADMIN_NO_LOGIN } from '../lib/env.js'
 
-// ── Dev-only admin API client ─────────────────────────────────────────────
-// This file is lazy-loaded and registered ONLY in dev builds (see App.jsx),
-// so these endpoints never ship in the production bundle.
-//
-// Zero-config no-login: when the dev server runs on localhost with no
-// VITE_API_BASE_URL and no VITE_ADMIN_KEY, fall back to the backend's public
-// dev-default admin key (DEV_ADMIN_KEY in app/config.py). That exact situation
-// means the browser talks to the local backend via the vite proxy (same-origin
-// /api → localhost:8000), so the dev key is never transmitted to a remote host
-// and never grants access against a deployed API (which uses a real secret).
 const hasUserKey = !!import.meta.env.VITE_ADMIN_KEY
-// The dev key may only ever be sent to a LOCAL backend. It applies when
-// VITE_API_BASE_URL is empty (vite proxy → localhost:8000) OR when it
-// explicitly points at localhost/127.0.0.1 — the common .env setup. A
-// remote API base (e.g. the deployed API with a real ADMIN_SECRET_KEY)
-// never receives the dev key.
-const ADMIN_BASE = (import.meta.env.VITE_API_BASE_URL || '').replace(/\/$/, '')
-const adminBaseIsLocal =
-  !ADMIN_BASE ||
-  /^https?:\/\/(localhost|127\.0\.0\.1|\[::1\])(:\d+)?(\/|$)/i.test(ADMIN_BASE)
 const ADMIN_KEY =
   import.meta.env.VITE_ADMIN_KEY || 'nexora_admin_secret_dev_key'
 
 async function adminRequest(path, { method = 'GET' } = {}) {
-  const base = (import.meta.env.VITE_API_BASE_URL || '').replace(/\/$/, '')
   const headers = {}
   const token = getToken()
   if (token) headers.Authorization = `Bearer ${token}`
   if (ADMIN_KEY) headers['X-Admin-Key'] = ADMIN_KEY
   let res
   try {
-    res = await fetch(`${base}${path}`, { method, headers })
+    res = await fetch(apiUrl(path), { method, headers })
   } catch (err) {
     throw new ApiError(0, 'Unable to reach backend server. Please retry in a few moments.')
   }
