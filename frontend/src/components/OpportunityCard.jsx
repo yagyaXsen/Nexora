@@ -48,11 +48,22 @@ export default function OpportunityCard({ opp, onSave, onApply, saved = false })
     >
       <div className="space-y-4">
 
-        {/* ── Header: category badge + deadline badge ── */}
+        {/* ── Header: category badge + AI match badge + deadline badge ── */}
         <div className="flex items-center justify-between font-mono text-[9px]">
-          <span className="flex items-center gap-1 bg-[#0A0A0A] text-white font-extrabold px-2.5 py-1 rounded-full uppercase tracking-wider">
-            <i className={`ti ${icon} text-[10px]`} />
-            {categoryLabel(opp.category)}
+          <span className="flex items-center gap-1.5">
+            <span className="flex items-center gap-1 bg-[#0A0A0A] text-white font-extrabold px-2.5 py-1 rounded-full uppercase tracking-wider">
+              <i className={`ti ${icon} text-[10px]`} />
+              {categoryLabel(opp.category)}
+            </span>
+            {opp.ai_match_score > 0 && (
+              <span
+                className="flex items-center gap-1 bg-indigo-50 text-indigo-700 font-extrabold px-2 py-1 rounded-full uppercase tracking-wider border border-indigo-100"
+                title={(opp.ai_match_reasons || []).join(' · ')}
+              >
+                <i className="ti ti-sparkles text-[10px]" />
+                {opp.ai_match_score}% Match
+              </span>
+            )}
           </span>
           <span className={`font-bold border px-2.5 py-1 rounded-full ${dlBadgeClass}`}>
             {dl.text}
