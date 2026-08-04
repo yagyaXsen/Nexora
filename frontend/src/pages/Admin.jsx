@@ -75,6 +75,8 @@ export default function Admin() {
   const [busy, setBusy] = useState(false)
   const [wipeConfirmOpen, setWipeConfirmOpen] = useState(false)
   const [wipeTyped, setWipeTyped] = useState('')
+  const [userToDelete, setUserToDelete] = useState(null)
+  const [deletingId, setDeletingId] = useState(null)
   const [notice, setNotice] = useState(null)
 
   // In dev-only no-login mode the console is accessible without a session;
@@ -111,6 +113,24 @@ export default function Admin() {
   useEffect(() => {
     if (isAdmin && localOnly) load()
   }, [isAdmin, localOnly, load])
+
+  const handleDeleteUser = async () => {
+    if (!userToDelete) return
+    const targetId = userToDelete.id
+    const targetName = userToDelete.name || userToDelete.email
+    setDeletingId(targetId)
+    setNotice(null)
+    try {
+      const res = await adminRequest(`/api/admin/users/${targetId}`, { method: 'DELETE' })
+      setNotice(res?.data?.message || `User '${targetName}' was permanently removed.`)
+      setUserToDelete(null)
+      await load()
+    } catch (e) {
+      setNotice(`Error: ${e.message || 'Failed to delete user'}`)
+    } finally {
+      setDeletingId(null)
+    }
+  }
 
   const handleWipe = async () => {
     if (wipeTyped.trim().toLowerCase() !== 'reset') return
@@ -260,53 +280,80 @@ export default function Admin() {
               <p className="text-xs text-slate-400">New signups will appear here in real time.</p>
             </div>
           ) : (
-            <div className="overflow-x-auto rounded-2xl border border-slate-200">
-              <table className="w-full text-left text-sm min-w-[900px]">
+            <div className="overflow-x-auto rounded-2xl border border-slate-200 shadow-xs">
+              <table className="w-full text-left text-sm min-w-[960px]">
                 <thead>
                   <tr className="bg-slate-50 border-b border-slate-200">
-                    {['USER', 'EMAIL', 'ROLE', 'SIGNED UP', 'LAST LOGIN', 'PROFILE', 'ACTIVITY'].map((h) => (
-                      <th key={h} className="prism-mono text-[10px] uppercase font-bold text-slate-400 px-4 py-3">{h}</th>
+                    {['USER', 'EMAIL', 'ROLE', 'SIGNED UP', 'LAST LOGIN', 'PROFILE', 'ACTIVITY', 'ACTIONS'].map((h) => (
+                      <th
+                        key={h}
+                        className={`prism-mono text-[10px] uppercase font-bold text-slate-400 px-4 py-3 ${
+                          h === 'ACTIONS' ? 'text-right' : ''
+                        }`}
+                      >
+                        {h}
+                      </th>
                     ))}
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100">
-                  {users.map((u) => (
-                    <tr key={u.id} className="hover:bg-slate-50/70 transition-colors">
-                      <td className="px-4 py-3">
-                        <div className="flex items-center gap-2.5">
-                          <div className="w-7 h-7 bg-[#0A0A0A] text-white rounded-full flex items-center justify-center text-[10px] font-extrabold font-mono shrink-0">
-                            {(u.name || '?').charAt(0).toUpperCase()}
+                  {users.map((u) => {
+                    const isSelf = user && user.id === u.id
+                    const isDeletingThis = deletingId === u.id
+                    return (
+                      <tr key={u.id} className="hover:bg-slate-50/70 transition-colors">
+                        <td className="px-4 py-3">
+                          <div className="flex items-center gap-2.5">
+                            <div className="w-7 h-7 bg-[#0A0A0A] text-white rounded-full flex items-center justify-center text-[10px] font-extrabold font-mono shrink-0">
+                              {(u.name || '?').charAt(0).toUpperCase()}
+                            </div>
+                            <span className="font-bold text-slate-800">{u.name}</span>
+                            {u.google_id && (
+                              <span className="prism-mono text-[9px] bg-blue-50 text-blue-600 px-1.5 py-0.5 rounded font-bold">G</span>
+                            )}
+                            {isSelf && (
+                              <span className="prism-mono text-[9px] bg-emerald-50 text-emerald-700 border border-emerald-200 px-1.5 py-0.5 rounded font-bold">
+                                YOU
+                              </span>
+                            )}
                           </div>
-                          <span className="font-bold text-slate-800">{u.name}</span>
-                          {u.google_id && (
-                            <span className="prism-mono text-[9px] bg-blue-50 text-blue-600 px-1.5 py-0.5 rounded font-bold">G</span>
+                        </td>
+                        <td className="px-4 py-3 text-slate-600 font-mono text-xs">{u.email}</td>
+                        <td className="px-4 py-3">
+                          <span className={`prism-mono text-[10px] font-bold px-2 py-0.5 rounded ${u.role === 'admin' ? 'bg-red-50 text-red-600 border border-red-200/60' : 'bg-slate-100 text-slate-500'}`}>
+                            {u.role.toUpperCase()}
+                          </span>
+                        </td>
+                        <td className="px-4 py-3 text-slate-500 text-xs">{fmtDate(u.created_at)}</td>
+                        <td className="px-4 py-3 text-slate-500 text-xs">{fmtDate(u.last_login)}</td>
+                        <td className="px-4 py-3 text-slate-600 text-xs">
+                          {u.profile ? (
+                            <div className="space-y-0.5 max-w-[240px]">
+                              <div className="truncate"><span className="font-bold">Institution:</span> {u.profile.institution || '—'}</div>
+                              <div className="truncate"><span className="font-bold">Degree:</span> {u.profile.academic_degree || '—'}</div>
+                              <div className="truncate"><span className="font-bold">Field:</span> {u.profile.field_of_study || '—'}</div>
+                            </div>
+                          ) : (
+                            <span className="text-slate-300 italic">No profile yet</span>
                           )}
-                        </div>
-                      </td>
-                      <td className="px-4 py-3 text-slate-600">{u.email}</td>
-                      <td className="px-4 py-3">
-                        <span className={`prism-mono text-[10px] font-bold px-2 py-0.5 rounded ${u.role === 'admin' ? 'bg-red-50 text-red-600' : 'bg-slate-100 text-slate-500'}`}>
-                          {u.role.toUpperCase()}
-                        </span>
-                      </td>
-                      <td className="px-4 py-3 text-slate-500 text-xs">{fmtDate(u.created_at)}</td>
-                      <td className="px-4 py-3 text-slate-500 text-xs">{fmtDate(u.last_login)}</td>
-                      <td className="px-4 py-3 text-slate-600 text-xs">
-                        {u.profile ? (
-                          <div className="space-y-0.5 max-w-[240px]">
-                            <div className="truncate"><span className="font-bold">Institution:</span> {u.profile.institution || '—'}</div>
-                            <div className="truncate"><span className="font-bold">Degree:</span> {u.profile.academic_degree || '—'}</div>
-                            <div className="truncate"><span className="font-bold">Field:</span> {u.profile.field_of_study || '—'}</div>
-                          </div>
-                        ) : (
-                          <span className="text-slate-300 italic">No profile yet</span>
-                        )}
-                      </td>
-                      <td className="px-4 py-3 text-slate-600 text-xs">
-                        <span className="font-bold">{u.applications_count}</span> apps · <span className="font-bold">{u.notifications_count}</span> notif
-                      </td>
-                    </tr>
-                  ))}
+                        </td>
+                        <td className="px-4 py-3 text-slate-600 text-xs">
+                          <span className="font-bold">{u.applications_count}</span> apps · <span className="font-bold">{u.notifications_count}</span> notif
+                        </td>
+                        <td className="px-4 py-3 text-right">
+                          <button
+                            onClick={() => setUserToDelete(u)}
+                            disabled={busy || isDeletingThis || isSelf}
+                            title={isSelf ? 'Cannot delete your active account' : `Delete user ${u.name || u.email}`}
+                            className="inline-flex items-center gap-1 text-xs font-bold text-red-600 hover:text-white bg-red-50 hover:bg-red-600 border border-red-200 hover:border-red-600 px-2.5 py-1 rounded-lg transition-all disabled:opacity-30 disabled:cursor-not-allowed cursor-pointer shadow-2xs"
+                          >
+                            <i className={`ti ${isDeletingThis ? 'ti-loader-2 animate-spin' : 'ti-trash'} text-xs`} />
+                            Delete
+                          </button>
+                        </td>
+                      </tr>
+                    )
+                  })}
                 </tbody>
               </table>
             </div>
@@ -330,14 +377,81 @@ export default function Admin() {
           <div className="flex flex-wrap items-center gap-3">
             <button
               onClick={() => setWipeConfirmOpen(true)}
-              disabled={busy}
-              className="bg-red-600 hover:bg-red-700 text-white px-5 py-2.5 rounded-xl text-xs font-bold transition-all disabled:opacity-50 flex items-center gap-2"
+              disabled={busy || deletingId !== null}
+              className="bg-red-600 hover:bg-red-700 text-white px-5 py-2.5 rounded-xl text-xs font-bold transition-all disabled:opacity-50 flex items-center gap-2 shadow-xs cursor-pointer"
             >
               <i className={`ti ${busy ? 'ti-loader-2 animate-spin' : 'ti-trash'}`} />
               {busy ? 'Wiping…' : 'Wipe All User Data'}
             </button>
           </div>
         </section>
+
+        {/* Single user delete confirmation modal */}
+        {userToDelete && (
+          <div className="fixed inset-0 z-[60] bg-slate-950/60 backdrop-blur-xs flex items-center justify-center p-4">
+            <div className="bg-white rounded-3xl shadow-2xl max-w-md w-full p-7 space-y-5 border border-slate-200 animate-in fade-in zoom-in-95 duration-150">
+              <div className="flex items-center justify-between pb-3 border-b border-slate-100">
+                <h3 className="font-extrabold text-slate-900 flex items-center gap-2">
+                  <div className="w-8 h-8 rounded-xl bg-red-50 text-red-600 flex items-center justify-center">
+                    <i className="ti ti-user-x text-lg" />
+                  </div>
+                  Delete Individual User
+                </h3>
+                <button
+                  onClick={() => setUserToDelete(null)}
+                  className="text-slate-400 hover:text-slate-700 p-1 rounded-lg hover:bg-slate-100 transition-colors"
+                >
+                  <i className="ti ti-x text-lg" />
+                </button>
+              </div>
+
+              {/* User details card */}
+              <div className="bg-slate-50 border border-slate-200/80 rounded-2xl p-4 space-y-3">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 bg-slate-900 text-white rounded-full flex items-center justify-center text-sm font-extrabold font-mono shrink-0">
+                    {(userToDelete.name || '?').charAt(0).toUpperCase()}
+                  </div>
+                  <div className="min-w-0">
+                    <div className="font-bold text-slate-900 text-sm truncate">{userToDelete.name}</div>
+                    <div className="text-xs text-slate-500 font-mono truncate">{userToDelete.email}</div>
+                  </div>
+                </div>
+
+                <div className="pt-2 border-t border-slate-200/60 flex items-center justify-between text-xs text-slate-600">
+                  <span>Role: <strong className="uppercase font-mono text-slate-800">{userToDelete.role}</strong></span>
+                  <span><strong>{userToDelete.applications_count}</strong> apps · <strong>{userToDelete.notifications_count}</strong> notifs</span>
+                </div>
+              </div>
+
+              <div className="text-xs text-slate-600 space-y-2 bg-red-50/50 border border-red-100 rounded-xl p-3.5">
+                <p className="font-bold text-red-900 flex items-center gap-1.5">
+                  <i className="ti ti-alert-triangle text-red-600 text-sm" /> Permanent Deletion
+                </p>
+                <p className="text-red-700">
+                  This user&apos;s account, complete profile data, application tracker records, and notification history will be immediately deleted. This action <strong className="underline">cannot be undone</strong>.
+                </p>
+              </div>
+
+              <div className="flex gap-3 justify-end pt-2">
+                <button
+                  onClick={() => setUserToDelete(null)}
+                  disabled={deletingId !== null}
+                  className="px-4 py-2.5 rounded-xl text-xs font-bold bg-slate-100 text-slate-700 hover:bg-slate-200 transition-colors disabled:opacity-50 cursor-pointer"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleDeleteUser}
+                  disabled={deletingId !== null}
+                  className="px-5 py-2.5 rounded-xl text-xs font-bold bg-red-600 text-white hover:bg-red-700 transition-colors flex items-center gap-1.5 disabled:opacity-50 shadow-xs cursor-pointer"
+                >
+                  <i className={`ti ${deletingId ? 'ti-loader-2 animate-spin' : 'ti-trash'}`} />
+                  {deletingId ? 'Deleting…' : 'Delete User'}
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* Wipe confirmation modal */}
         {wipeConfirmOpen && (

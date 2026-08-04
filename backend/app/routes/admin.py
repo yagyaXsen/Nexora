@@ -155,6 +155,54 @@ def admin_users(
     return {"success": True, "data": items}
 
 
+@router.delete("/users/{user_id}")
+def admin_delete_user(
+    user_id: int,
+    admin: Optional[User] = Depends(require_admin),
+    db: Session = Depends(get_db),
+):
+    """Permanently delete an individual user and all associated records."""
+    target_user = db.query(User).filter(User.id == user_id).first()
+    if not target_user:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"User with ID {user_id} not found."
+        )
+
+    # Safety check: prevent deleting own active account if session-based
+    if admin and admin.id == target_user.id:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="You cannot delete your own active admin account. Use another admin account or the admin key."
+        )
+
+    user_name = target_user.name
+    user_email = target_user.email
+
+    try:
+        # Delete user (cascade deletes profile, applications, notifications, followers, reset tokens)
+        db.delete(target_user)
+        db.commit()
+    except Exception as e:
+        db.rollback()
+        logger.exception("Failed to delete user %d: %s", user_id, str(e))
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to delete user: {str(e)}"
+        )
+
+    actor = admin.email if admin else "admin-key (no session)"
+    logger.warning("Admin %s deleted user ID %d (%s, %s)", actor, user_id, user_name, user_email)
+
+    return {
+        "success": True,
+        "data": {
+            "message": f"User '{user_name}' ({user_email}) has been permanently deleted.",
+            "deleted_user_id": user_id,
+        },
+    }
+
+
 @router.post("/reset-users")
 def admin_reset_users(
     admin: Optional[User] = Depends(require_admin),
