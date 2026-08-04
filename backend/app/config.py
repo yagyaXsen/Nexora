@@ -52,6 +52,10 @@ class Settings(BaseSettings):
     MAIL_FROM: str = "no-reply@nexora.local"
     MAIL_FROM_NAME: str = "Nexora"
 
+    # Single public support/contact address used everywhere (contact form
+    # delivery, site-wide support links). Override via CONTACT_EMAIL env var.
+    CONTACT_EMAIL: str = "aarongangwar@gmail.com"
+
     # Used to build absolute links in outbound email. Must point at the deployed
     # frontend origin, which is NOT the same host as the API once the frontend
     # is on static hosting.

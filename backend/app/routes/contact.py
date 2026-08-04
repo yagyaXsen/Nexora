@@ -83,7 +83,7 @@ def submit_contact(
             f"<hr><p>{row.message}</p>"
         )
         mailer.send(
-            to=settings.MAIL_FROM or "support@nexora.app",
+            to=settings.CONTACT_EMAIL or settings.MAIL_FROM or "aarongangwar@gmail.com",
             subject=f"[Nexora Contact] {row.subject} — {row.name}",
             html=html,
         )

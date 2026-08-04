@@ -5,6 +5,7 @@ import { useAuth } from '../lib/auth.jsx'
 import { normalizeOpportunity } from '../lib/opportunityNormalize'
 import { applySEO, resetSEO, opportunityJSONLD } from '../lib/seo'
 import { categoryLabel } from '../lib/format'
+import { SUPPORT_EMAIL } from '../lib/site'
 
 // Section components
 import OpportunityHero from '../components/opportunity/OpportunityHero'
@@ -334,7 +335,7 @@ export default function OpportunityDetail() {
               <i className="ti ti-printer text-xs" /> Print
             </button>
             <a
-              href={`mailto:support@nexora.app?subject=${encodeURIComponent(`Report an issue: ${opp.title}`)}&body=${encodeURIComponent(`Opportunity: ${window.location.href}`)}`}
+              href={`mailto:${SUPPORT_EMAIL}?subject=${encodeURIComponent(`Report an issue: ${opp.title}`)}&body=${encodeURIComponent(`Opportunity: ${window.location.href}`)}`}
               className="flex items-center gap-1 px-2.5 py-1 rounded-lg border border-slate-200 hover:border-red-300 text-slate-500 font-bold transition-colors"
               title="Report an issue with this listing"
             >
