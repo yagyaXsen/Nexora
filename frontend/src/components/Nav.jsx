@@ -17,8 +17,8 @@ export function Logo() {
 export default function Nav() {
   const { user } = useAuth()
   const [mobileOpen, setMobileOpen] = useState(false)
-  // Dev-only: expose the Admin link without a session when no-login mode is on.
-  const showAdmin = isLocalhost() && (user?.role === 'admin' || ADMIN_NO_LOGIN)
+  // Expose the Admin link whenever logged in with admin role (or dev no-login mode on localhost)
+  const showAdmin = user?.role === 'admin' || (isLocalhost() && ADMIN_NO_LOGIN)
 
   return (
     <header className="sticky top-0 z-50 bg-white/80 backdrop-blur-xl border-b border-slate-200/80 font-sans transition-all">

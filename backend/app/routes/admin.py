@@ -61,13 +61,13 @@ def require_admin(
     ):
         return current_user
 
-    # Role check only counts when the request comes from the local machine.
-    if is_loopback and current_user and current_user.role == "admin":
+    # Authenticated Admin session via verified JWT
+    if current_user and current_user.role == "admin":
         return current_user
 
     raise HTTPException(
         status_code=status.HTTP_403_FORBIDDEN,
-        detail="Admin access restricted to localhost (or provide X-Admin-Key)",
+        detail="Admin access required (must be logged in as admin or provide X-Admin-Key)",
     )
 
 

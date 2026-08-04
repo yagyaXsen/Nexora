@@ -75,9 +75,13 @@ export default function Login() {
     setError(null)
     setBusy(true)
     try {
-      await login(email, password)
+      const loggedUser = await login(email, password)
       sessionStorage.removeItem('nexora_return_to')
-      navigate(from, { replace: true })
+      if (loggedUser?.role === 'admin') {
+        navigate('/admin', { replace: true })
+      } else {
+        navigate(from, { replace: true })
+      }
     } catch (err) {
       setError(
         err.status === 401

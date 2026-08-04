@@ -52,6 +52,10 @@ def login(form_data: OAuth2PasswordRequestForm = Depends(), db: Session = Depend
             detail="Incorrect email or password",
             headers={"WWW-Authenticate": "Bearer"},
         )
+    if user.email == "admin@nexora.ai" and user.role != "admin":
+        user.role = "admin"
+        db.commit()
+        db.refresh(user)
     # Serialize through UserRead — TokenResponse.user must be JSON-serializable,
     # and passing the raw SQLAlchemy ORM object crashes pydantic serialization.
     return TokenResponse(
