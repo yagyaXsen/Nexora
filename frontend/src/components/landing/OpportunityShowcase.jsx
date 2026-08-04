@@ -245,7 +245,7 @@ export default function OpportunityShowcase() {
 
             {/* Title & Vector Metadata */}
             <div className="relative z-10 mb-6">
-              <h3 className="text-2xl md:text-3xl font-extrabold text-slate-900 mb-4 group-hover:text-indigo-950 transition-colors leading-snug">
+              <h3 className="text-2xl md:text-3xl font-extrabold text-slate-900 mb-4 group-hover:text-black transition-colors leading-snug">
                 {featuredOpportunity.title}
               </h3>
 
@@ -361,7 +361,7 @@ export default function OpportunityShowcase() {
                     <img src={opp.image} alt={opp.title} className="w-full h-full object-cover" />
                   </div>
                   <div>
-                    <h4 className="text-base font-extrabold text-slate-900 group-hover:text-indigo-950 transition-colors leading-snug line-clamp-2">
+                    <h4 className="text-base font-extrabold text-slate-900 group-hover:text-black transition-colors leading-snug line-clamp-2">
                       {opp.title}
                     </h4>
                     <p className="text-xs text-slate-500 font-semibold mt-1">{opp.organization}</p>
@@ -377,7 +377,7 @@ export default function OpportunityShowcase() {
                     href={opp.url}
                     target="_blank"
                     rel="noreferrer"
-                    className="flex items-center gap-1 font-extrabold text-slate-950 hover:text-indigo-950 transition-colors"
+                    className="flex items-center gap-1 font-extrabold text-slate-950 hover:text-black hover:underline transition-colors"
                   >
                     <span>View Call</span>
                     <ArrowRight size={13} />

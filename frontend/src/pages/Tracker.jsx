@@ -142,27 +142,27 @@ export default function Tracker() {
 
         {/* 2. Telemetry Metrics Bar */}
         <div className="grid grid-cols-2 md:grid-cols-6 gap-4">
-          <div className="bg-slate-50 border border-slate-200 p-4 rounded-2xl space-y-1 hover:border-indigo-300 transition-colors">
+          <div className="bg-slate-50 border border-slate-200 p-4 rounded-2xl space-y-1 hover:border-slate-400 transition-colors">
             <div className="text-2xl font-extrabold text-slate-900"><CountUp end={savedCount} /></div>
             <span className="prism-mono text-[9px] text-slate-400 font-bold uppercase">Saved Signals</span>
           </div>
-          <div className="bg-slate-50 border border-slate-200 p-4 rounded-2xl space-y-1 hover:border-indigo-300 transition-colors">
+          <div className="bg-slate-50 border border-slate-200 p-4 rounded-2xl space-y-1 hover:border-slate-400 transition-colors">
             <div className="text-2xl font-extrabold text-slate-900"><CountUp end={prepCount} /></div>
             <span className="prism-mono text-[9px] text-slate-400 font-bold uppercase">Preparing Packets</span>
           </div>
-          <div className="bg-slate-50 border border-slate-200 p-4 rounded-2xl space-y-1 hover:border-indigo-300 transition-colors">
+          <div className="bg-slate-50 border border-slate-200 p-4 rounded-2xl space-y-1 hover:border-slate-400 transition-colors">
             <div className="text-2xl font-extrabold text-slate-900"><CountUp end={appliedCount} /></div>
             <span className="prism-mono text-[9px] text-slate-400 font-bold uppercase">Submitted</span>
           </div>
-          <div className="bg-slate-50 border border-slate-200 p-4 rounded-2xl space-y-1 hover:border-indigo-300 transition-colors">
+          <div className="bg-slate-50 border border-slate-200 p-4 rounded-2xl space-y-1 hover:border-slate-400 transition-colors">
             <div className="text-2xl font-extrabold text-slate-900"><CountUp end={interviewCount} /></div>
             <span className="prism-mono text-[9px] text-slate-400 font-bold uppercase">Interviews</span>
           </div>
-          <div className="bg-slate-50 border border-slate-200 p-4 rounded-2xl space-y-1 hover:border-indigo-300 transition-colors">
-            <div className="text-2xl font-extrabold text-indigo-600"><CountUp end={offerCount} /></div>
+          <div className="bg-slate-50 border border-slate-200 p-4 rounded-2xl space-y-1 hover:border-slate-400 transition-colors">
+            <div className="text-2xl font-extrabold text-slate-900"><CountUp end={offerCount} /></div>
             <span className="prism-mono text-[9px] text-slate-400 font-bold uppercase">Offers</span>
           </div>
-          <div className="bg-slate-50 border border-slate-200 p-4 rounded-2xl space-y-1 hover:border-indigo-300 transition-colors">
+          <div className="bg-slate-50 border border-slate-200 p-4 rounded-2xl space-y-1 hover:border-slate-400 transition-colors">
             <div className="text-2xl font-extrabold text-emerald-600">98%</div>
             <span className="prism-mono text-[9px] text-slate-400 font-bold uppercase">Avg Match</span>
           </div>
@@ -187,10 +187,10 @@ export default function Tracker() {
                     <div
                       key={app.id}
                       onClick={() => openDrawer(app)}
-                      className="bg-white border border-slate-200 p-4 rounded-2xl shadow-2xs hover:border-indigo-300 hover:shadow-md transition-all duration-200 cursor-pointer space-y-3 group"
+                      className="bg-white border border-slate-200 p-4 rounded-2xl shadow-2xs hover:border-slate-400 hover:shadow-md transition-all duration-200 cursor-pointer space-y-3 group"
                     >
                       <div className="space-y-1">
-                        <h4 className="font-bold text-xs text-slate-900 leading-snug group-hover:text-indigo-600 transition-colors">
+                        <h4 className="font-bold text-xs text-slate-900 leading-snug group-hover:text-black transition-colors">
                           {cleanTitle(app.opportunity.title)}
                         </h4>
                         <span className="prism-mono text-[9px] text-slate-400 font-bold block">
@@ -228,7 +228,7 @@ export default function Tracker() {
           <div className="space-y-6">
             <div className="flex items-center justify-between pb-3 border-b border-slate-200">
               <div>
-                <span className="prism-mono text-[10px] text-indigo-600 font-bold uppercase tracking-wider block">
+                <span className="prism-mono text-[10px] text-slate-600 font-bold uppercase tracking-wider block">
                   CANDIDATE TRACKER SIGNAL
                 </span>
                 <h2 className="text-lg font-extrabold text-slate-950 mt-1">Application Workspace</h2>
@@ -301,7 +301,7 @@ export default function Tracker() {
               onClick={applyHandler(activeApp.opportunity, '/tracker')}
               target="_blank"
               rel="noopener noreferrer"
-              className="bg-indigo-600 hover:bg-indigo-700 text-white px-5 py-3 rounded-xl font-bold text-xs flex items-center gap-1.5 transition-colors"
+              className="bg-[#0A0A0A] hover:bg-slate-800 text-white px-5 py-3 rounded-xl font-bold text-xs flex items-center gap-1.5 transition-colors shadow-sm hover:shadow-md active:scale-[0.98]"
             >
               <span>Outbound Application Link</span>
               <i className="ti ti-arrow-up-right text-white"></i>

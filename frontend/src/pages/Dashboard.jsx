@@ -108,10 +108,12 @@ export default function Dashboard() {
   const savedCount = summary?.saved_count ?? apps.length
   const appliedCount = summary?.applied_count ?? apps.filter((a) => ['Applied', 'Assessment', 'Interview', 'Offer', 'Accepted'].includes(a.status)).length
   const upcomingCount = summary?.upcoming_deadlines_count ?? reminders.length
-  // The AI Matched count must reflect the real personalized feed length.
-  // summary.ai_matched_count is the legacy saved-apps count and is 0 for a
-  // fresh user — using `??` there would keep 0 even when recs has matches.
-  const aiMatchedCount = recs.length > 0 ? recs.length : (summary?.ai_matched_count ?? 0)
+  // The AI Matched count must reflect the real personalized feed. The backend
+  // now reports the true ranked-catalog count in summary.ai_matched_count;
+  // prefer it when positive, and fall back to the rendered feed length for
+  // old backends / users without profile signals (where it legitimately is 0).
+  const aiMatchedCount =
+    (summary?.ai_matched_count ?? 0) > 0 ? summary.ai_matched_count : recs.length
   // The published catalog is the source of truth for indexed opportunities —
   // it only contains genuinely verified + enriched records. Falls back to the
   // legacy DB count when the catalog is unavailable.
@@ -147,7 +149,7 @@ export default function Dashboard() {
     <div className="prism-dash-page bg-white min-h-screen pt-24 pb-20 border-b border-slate-200 font-sans relative overflow-hidden">
       
       {/* Background Ambient Radial Lighting */}
-      <div className="absolute top-0 right-1/4 w-[600px] h-[400px] bg-gradient-to-br from-indigo-500/10 via-purple-500/5 to-transparent rounded-full blur-3xl pointer-events-none" />
+      <div className="absolute top-0 right-1/4 w-[600px] h-[400px] bg-gradient-to-br from-slate-200/30 via-slate-100/20 to-transparent rounded-full blur-3xl pointer-events-none" />
       
       <div className="max-w-[1240px] mx-auto px-6 relative z-10 space-y-10">
 
@@ -167,14 +169,14 @@ export default function Dashboard() {
           <div className="flex items-center gap-3 shrink-0">
             <Link
               to="/explore"
-              className="bg-[#0A0A0A] text-white px-6 py-3 rounded-2xl shadow-lg font-bold text-sm flex items-center gap-2 hover:bg-indigo-600 hover:scale-[1.02] transition-all"
+              className="bg-[#0A0A0A] text-white px-6 py-3 rounded-2xl shadow-lg font-bold text-sm flex items-center gap-2 hover:bg-slate-800 hover:shadow-xl active:scale-[0.98] transition-all"
             >
               <span>Explore Catalog</span>
               <i className="ti ti-arrow-up-right text-white" aria-hidden="true" />
             </Link>
             <Link
               to="/profile"
-              className="bg-white border border-slate-200 text-slate-700 px-5 py-3 rounded-2xl font-bold text-sm hover:bg-slate-50 transition-all shadow-xs"
+              className="bg-white border border-slate-200 text-slate-700 px-5 py-3 rounded-2xl font-bold text-sm hover:bg-slate-50 hover:border-slate-400 transition-all shadow-xs"
             >
               Candidate Profile
             </Link>
@@ -202,7 +204,7 @@ export default function Dashboard() {
 
             <div className="pt-2 flex flex-wrap items-center gap-4 text-xs font-mono text-slate-500 border-t border-slate-100">
               <span className="flex items-center gap-1.5">
-                <span className="w-1.5 h-1.5 rounded-full bg-indigo-500" />
+                <span className="w-1.5 h-1.5 rounded-full bg-slate-700" />
                 Focus: {userFocus}
               </span>
               <span>·</span>
@@ -231,7 +233,7 @@ export default function Dashboard() {
 
         {/* 3. Top Metrics Row (4 Glass Cards with CountUp) */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
-          <div className="bg-white border border-slate-200 p-5 rounded-2xl shadow-sm space-y-2 hover:border-indigo-300 transition-all">
+          <div className="bg-white border border-slate-200 p-5 rounded-2xl shadow-sm space-y-2 hover:border-slate-400 hover:shadow-md transition-all">
             <div className="flex items-center justify-between">
               <span className="prism-mono text-[10px] uppercase font-bold text-slate-400">AI MATCHED SIGNALS</span>
             </div>
@@ -241,10 +243,10 @@ export default function Dashboard() {
             <span className="text-xs text-slate-500">Updated in real-time</span>
           </div>
 
-          <div className="bg-white border border-slate-200 p-5 rounded-2xl shadow-sm space-y-2 hover:border-indigo-300 transition-all">
+          <div className="bg-white border border-slate-200 p-5 rounded-2xl shadow-sm space-y-2 hover:border-slate-400 hover:shadow-md transition-all">
             <div className="flex items-center justify-between">
               <span className="prism-mono text-[10px] uppercase font-bold text-slate-400">SAVED IN TRACKER</span>
-              <i className="ti ti-bookmark text-indigo-600 text-sm" />
+              <i className="ti ti-bookmark text-slate-700 text-sm" />
             </div>
             <div className="text-3xl font-extrabold text-slate-900">
               {loading ? <span className="inline-block w-8 h-7 bg-slate-100 animate-pulse rounded" /> : <CountUp end={savedCount} />}
@@ -252,7 +254,7 @@ export default function Dashboard() {
             <span className="text-xs text-slate-500">Active applications</span>
           </div>
 
-          <div className="bg-white border border-slate-200 p-5 rounded-2xl shadow-sm space-y-2 hover:border-indigo-300 transition-all">
+          <div className="bg-white border border-slate-200 p-5 rounded-2xl shadow-sm space-y-2 hover:border-slate-400 hover:shadow-md transition-all">
             <div className="flex items-center justify-between">
               <span className="prism-mono text-[10px] uppercase font-bold text-slate-400">SUBMITTED APPS</span>
               <i className="ti ti-circle-check text-emerald-600 text-sm" />
@@ -263,7 +265,7 @@ export default function Dashboard() {
             <span className="text-xs text-slate-500">Completed submissions</span>
           </div>
 
-          <div className="bg-white border border-slate-200 p-5 rounded-2xl shadow-sm space-y-2 hover:border-indigo-300 transition-all">
+          <div className="bg-white border border-slate-200 p-5 rounded-2xl shadow-sm space-y-2 hover:border-slate-400 hover:shadow-md transition-all">
             <div className="flex items-center justify-between">
               <span className="prism-mono text-[10px] uppercase font-bold text-slate-400">UPCOMING DEADLINES</span>
               <span className="px-2 py-0.5 bg-red-50 text-red-600 font-mono text-[10px] font-bold rounded">14 DAYS</span>
@@ -287,7 +289,7 @@ export default function Dashboard() {
                 <h2 className="text-sm font-extrabold text-slate-900 tracking-tight uppercase">
                   AI Matched For Your Profile
                 </h2>
-                <Link to="/explore" className="text-xs font-bold text-slate-700 hover:text-indigo-600 transition-colors">
+                <Link to="/explore" className="text-xs font-bold text-slate-700 hover:text-black hover:underline transition-colors">
                   View All Matches →
                 </Link>
               </div>
@@ -306,10 +308,6 @@ export default function Dashboard() {
                       opp={opp}
                       saved={isSaved(opp)}
                       onSave={async (targetOpp) => {
-                        // Slug-keyed published records have no DB id. Save them
-                        // as real tracker rows via /by-slug so the Application
-                        // Tracker sidebar updates; the bookmark stub keeps the
-                        // card state consistent and is the offline fallback.
                         if (targetOpp.id == null) {
                           const nowSaved = toggleBookmark(targetOpp.slug)
                           setSavedSlugs(new Set(readBookmarks()))
@@ -328,13 +326,11 @@ export default function Dashboard() {
                               )
                             }
                           } catch {
-                            // Bookmark stub already updated the card; keep the
-                            // tracker row in sync next load.
+                            // Bookmark stub already updated the card
                           }
                           return
                         }
                         const isSaved = savedSet.has(targetOpp.id)
-                        // ⚡ Instant Real-Time Optimistic UI Update
                         if (isSaved) {
                           setApps((prev) => prev.filter((a) => a.opportunity?.id !== targetOpp.id))
                         } else {
@@ -348,7 +344,6 @@ export default function Dashboard() {
                             await api.saveApplication(targetOpp.id)
                           }
                         } catch {
-                          // Rollback on error
                           if (isSaved) {
                             setApps((prev) => [...prev, { opportunity: targetOpp, status: 'Saved' }])
                           } else {
@@ -365,7 +360,7 @@ export default function Dashboard() {
                   <p className="text-sm text-slate-600 font-serif">
                     No recommendations available yet. Complete your candidate profile to trigger vector matching.
                   </p>
-                  <Link to="/profile" className="inline-block bg-[#0A0A0A] text-white px-5 py-2.5 rounded-xl text-xs font-bold">
+                  <Link to="/profile" className="inline-block bg-[#0A0A0A] text-white px-5 py-2.5 rounded-xl text-xs font-bold hover:bg-slate-800 transition-colors">
                     Complete Profile →
                   </Link>
                 </div>
@@ -402,15 +397,15 @@ export default function Dashboard() {
                 </div>
                 <div className="space-y-3">
                   {trending.map((item) => (
-                    <div key={item.slug || item.id} className="p-4 bg-white border border-slate-200 rounded-2xl flex items-center justify-between gap-4 shadow-sm hover:border-indigo-300 transition-all">
+                    <div key={item.slug || item.id} className="p-4 bg-white border border-slate-200 rounded-2xl flex items-center justify-between gap-4 shadow-sm hover:border-slate-400 hover:shadow-md transition-all">
                       <div>
-                        <span className="prism-mono text-[10px] bg-indigo-50 text-indigo-600 px-2.5 py-0.5 rounded font-bold uppercase">
+                        <span className="prism-mono text-[10px] bg-slate-100 text-slate-800 px-2.5 py-0.5 rounded font-bold uppercase">
                           {item.category}
                         </span>
                         <h4 className="font-bold text-sm text-slate-900 mt-1">{item.title}</h4>
                         <span className="text-xs text-slate-500">{item.organizer} · {item.country}</span>
                       </div>
-                      <Link to={`/opportunities/${item.slug || item.id}`} className="bg-[#0A0A0A] text-white px-4 py-2 rounded-xl text-xs font-bold shrink-0 hover:bg-indigo-600 transition-colors">
+                      <Link to={`/opportunities/${item.slug || item.id}`} className="bg-[#0A0A0A] text-white px-4 py-2 rounded-xl text-xs font-bold shrink-0 hover:bg-slate-800 transition-colors">
                         View Specs →
                       </Link>
                     </div>
@@ -428,12 +423,12 @@ export default function Dashboard() {
             <div className="bg-white border border-slate-200 p-6 rounded-3xl shadow-xl space-y-5">
               <div className="flex items-center justify-between pb-3 border-b border-slate-200">
                 <div className="flex items-center gap-2">
-                  <i className="ti ti-layout-kanban text-indigo-600 text-base" />
+                  <i className="ti ti-layout-kanban text-slate-800 text-base" />
                   <span className="font-bold text-xs uppercase tracking-wider text-slate-900">
                     APPLICATION TRACKER
                   </span>
                 </div>
-                <Link to="/tracker" className="prism-mono text-[11px] font-bold text-indigo-600 hover:underline">
+                <Link to="/tracker" className="prism-mono text-[11px] font-bold text-slate-700 hover:text-slate-950 hover:underline">
                   OPEN BOARD →
                 </Link>
               </div>
@@ -447,13 +442,13 @@ export default function Dashboard() {
                 ) : activeApps.length > 0 ? (
                   activeApps.map((app) => {
                     const statusColors = {
-                      'Interview': 'text-indigo-600 bg-indigo-50',
-                      'Applied': 'text-emerald-600 bg-emerald-50',
-                      'Saved': 'text-slate-600 bg-slate-100',
-                      'Preparing': 'text-amber-600 bg-amber-50',
-                      'Ready to Apply': 'text-blue-600 bg-blue-50',
-                      'Assessment': 'text-purple-600 bg-purple-50',
-                      'Offer': 'text-emerald-700 bg-emerald-100',
+                      'Interview': 'text-slate-900 bg-slate-200',
+                      'Applied': 'text-emerald-700 bg-emerald-50',
+                      'Saved': 'text-slate-700 bg-slate-100',
+                      'Preparing': 'text-amber-700 bg-amber-50',
+                      'Ready to Apply': 'text-blue-700 bg-blue-50',
+                      'Assessment': 'text-slate-800 bg-slate-100',
+                      'Offer': 'text-emerald-800 bg-emerald-100',
                     }
                     const colorClass = statusColors[app.status] || 'text-slate-600 bg-slate-100'
                     return (

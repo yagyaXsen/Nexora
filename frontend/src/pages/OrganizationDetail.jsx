@@ -166,7 +166,7 @@ export default function OrganizationDetail() {
     <div className="prism-org-detail bg-white min-h-screen pt-24 pb-20 font-sans relative overflow-hidden">
       
       {/* Background Ambient Radial Gradient Glow */}
-      <div className="absolute top-0 right-1/4 w-[800px] h-[500px] bg-gradient-to-tr from-indigo-500/10 via-purple-500/5 to-transparent rounded-full blur-3xl pointer-events-none" />
+      <div className="absolute top-0 right-1/4 w-[800px] h-[500px] bg-gradient-to-tr from-slate-200/30 via-slate-100/20 to-transparent rounded-full blur-3xl pointer-events-none" />
       
       {/* 1. Top Cover Image Banner */}
       <div className="h-64 w-full relative overflow-hidden border-b border-slate-200">
@@ -187,7 +187,7 @@ export default function OrganizationDetail() {
         <div className="bg-white border border-slate-200 rounded-3xl p-6 sm:p-8 shadow-xl space-y-6">
           <div className="flex flex-wrap items-start justify-between gap-6">
             <div className="flex items-center gap-4">
-              <div className="w-16 h-16 bg-indigo-50 text-indigo-600 rounded-2xl flex items-center justify-center text-2xl font-extrabold shadow-sm shrink-0">
+              <div className="w-16 h-16 bg-slate-100 text-slate-900 rounded-2xl flex items-center justify-center text-2xl font-extrabold shadow-sm shrink-0 border border-slate-200">
                 {org.name.charAt(0)}
               </div>
               <div className="space-y-1">
@@ -201,7 +201,7 @@ export default function OrganizationDetail() {
                 </div>
                 <h1 className="text-2xl sm:text-3xl font-extrabold text-slate-950 tracking-tight leading-snug">{org.name}</h1>
                 <p className="text-sm text-slate-500 flex items-center gap-2">
-                  <span><i className="ti ti-map-pin text-indigo-600" /> {org.headquarters}</span>
+                  <span><i className="ti ti-map-pin text-slate-700" /> {org.headquarters}</span>
                   <span>·</span>
                   <span>{followerCount.toLocaleString()} Candidates Following</span>
                 </p>
@@ -211,7 +211,7 @@ export default function OrganizationDetail() {
             <div className="flex items-center gap-3">
               <button
                 onClick={toggleFollow}
-                className={`px-5 py-3 rounded-2xl font-bold text-xs transition-colors flex items-center gap-1.5 ${following ? 'bg-slate-100 border border-slate-200 text-slate-700' : 'bg-[#0A0A0A] text-white hover:bg-[#0A0A0A]/90'}`}
+                className={`px-5 py-3 rounded-2xl font-bold text-xs transition-colors flex items-center gap-1.5 ${following ? 'bg-slate-100 border border-slate-200 text-slate-700 hover:bg-slate-200' : 'bg-[#0A0A0A] text-white hover:bg-slate-800'}`}
               >
                 <i className={`ti ${following ? 'ti-check' : 'ti-plus'}`}></i>
                 <span>{following ? 'Following' : 'Follow'}</span>
@@ -221,7 +221,7 @@ export default function OrganizationDetail() {
                 href={org.website}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="bg-white border border-slate-200 text-slate-700 px-4 py-3 rounded-2xl font-bold text-xs hover:bg-slate-50 transition-colors flex items-center gap-1 shadow-xs"
+                className="bg-white border border-slate-200 text-slate-700 px-4 py-3 rounded-2xl font-bold text-xs hover:bg-slate-50 hover:border-slate-400 transition-colors flex items-center gap-1 shadow-xs"
               >
                 <span>Website</span>
                 <i className="ti ti-arrow-up-right"></i>
@@ -288,7 +288,7 @@ export default function OrganizationDetail() {
           <div className="col-span-12 lg:col-span-4 space-y-6">
 
             {/* Candidate Match Index */}
-            <div className="bg-white border border-slate-200 p-6 rounded-2xl shadow-sm space-y-3 hover:border-indigo-300 transition-colors">
+            <div className="bg-white border border-slate-200 p-6 rounded-2xl shadow-sm space-y-3 hover:border-slate-400 hover:shadow-md transition-all">
               <div className="font-mono text-xs text-slate-700 font-bold uppercase tracking-wider pb-2 border-b border-slate-100">
                 Candidate Compatibility
               </div>
@@ -304,15 +304,15 @@ export default function OrganizationDetail() {
                 Similar Institutions
               </div>
               <div className="space-y-2 font-sans font-bold text-xs text-slate-700">
-                <Link to="/organizations/eth-zurich-ai-center" className="p-3.5 bg-slate-50 border border-slate-200 rounded-xl flex items-center justify-between hover:border-indigo-300 transition-colors block">
+                <Link to="/organizations/eth-zurich-ai-center" className="p-3.5 bg-slate-50 border border-slate-200 rounded-xl flex items-center justify-between hover:border-slate-800 hover:bg-slate-100 transition-colors block">
                   <span>ETH Zurich AI Center</span>
                   <i className="ti ti-arrow-up-right text-xs"></i>
                 </Link>
-                <Link to="/organizations/cern-quantum" className="p-3.5 bg-slate-50 border border-slate-200 rounded-xl flex items-center justify-between hover:border-indigo-300 transition-colors block">
+                <Link to="/organizations/cern-quantum" className="p-3.5 bg-slate-50 border border-slate-200 rounded-xl flex items-center justify-between hover:border-slate-800 hover:bg-slate-100 transition-colors block">
                   <span>CERN Quantum Facility</span>
                   <i className="ti ti-arrow-up-right text-xs"></i>
                 </Link>
-                <Link to="/organizations/oxford-rhodes" className="p-3.5 bg-slate-50 border border-slate-200 rounded-xl flex items-center justify-between hover:border-indigo-300 transition-colors block">
+                <Link to="/organizations/oxford-rhodes" className="p-3.5 bg-slate-50 border border-slate-200 rounded-xl flex items-center justify-between hover:border-slate-800 hover:bg-slate-100 transition-colors block">
                   <span>Oxford University Rhodes</span>
                   <i className="ti ti-arrow-up-right text-xs"></i>
                 </Link>

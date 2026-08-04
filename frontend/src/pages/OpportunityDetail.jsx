@@ -299,7 +299,7 @@ export default function OpportunityDetail() {
           </p>
           <Link
             to="/explore"
-            className="bg-[#0A0A0A] text-white px-6 py-3 rounded-2xl font-bold text-sm inline-block hover:bg-indigo-600 transition-colors"
+            className="bg-[#0A0A0A] text-white px-6 py-3 rounded-2xl font-bold text-sm inline-block hover:bg-slate-800 transition-colors shadow-sm hover:shadow-md active:scale-[0.98]"
           >
             Return to Opportunity Explorer
           </Link>
@@ -315,7 +315,7 @@ export default function OpportunityDetail() {
   return (
     <div className="bg-white min-h-screen pt-24 pb-20 font-sans relative overflow-hidden print:pt-0">
       {/* Ambient glow */}
-      <div className="absolute top-0 right-1/4 w-[800px] h-[500px] bg-gradient-to-tr from-indigo-500/10 via-purple-500/5 to-transparent rounded-full blur-3xl pointer-events-none print:hidden" />
+      <div className="absolute top-0 right-1/4 w-[800px] h-[500px] bg-gradient-to-tr from-slate-200/30 via-slate-100/20 to-transparent rounded-full blur-3xl pointer-events-none print:hidden" />
 
       <div className="max-w-[1240px] mx-auto px-6 relative z-10 space-y-8 print:max-w-none print:px-0">
 
@@ -384,9 +384,9 @@ export default function OpportunityDetail() {
             <button
               type="button"
               onClick={() => downloadICS(opp)}
-              className="flex items-center gap-1.5 px-3 py-2 rounded-xl border border-slate-200 hover:border-indigo-400 hover:text-indigo-600 transition-colors"
+              className="flex items-center gap-1.5 px-3 py-2 rounded-xl border border-slate-200 hover:border-slate-800 hover:text-slate-950 hover:bg-slate-50 transition-colors"
             >
-              <i className="ti ti-calendar-plus" /> Add deadline to calendar
+              <i className="ti ti-calendar-plus text-slate-700" /> Add deadline to calendar
             </button>
           )}
           {shareCopied && (

@@ -42,7 +42,7 @@ export default function OpportunityCard({ opp, onSave, onApply, saved = false })
 
   return (
     <article
-      className="opp-card bg-white border border-slate-200 rounded-3xl p-6 shadow-sm hover:shadow-xl hover:border-indigo-200 transition-all duration-300 flex flex-col justify-between space-y-5 cursor-pointer group"
+      className="opp-card bg-white border border-slate-200/90 rounded-3xl p-6 shadow-sm hover:shadow-xl hover:border-slate-400 transition-all duration-300 flex flex-col justify-between space-y-5 cursor-pointer group"
       onClick={() => navigate(`/opportunities/${opp.slug || opp.id}`)}
       aria-label={`${cleanTitle(opp.title)} by ${opp.organizer}`}
     >
@@ -57,10 +57,10 @@ export default function OpportunityCard({ opp, onSave, onApply, saved = false })
             </span>
             {opp.ai_match_score > 0 && (
               <span
-                className="flex items-center gap-1 bg-indigo-50 text-indigo-700 font-extrabold px-2 py-1 rounded-full uppercase tracking-wider border border-indigo-100"
+                className="flex items-center gap-1 bg-slate-100 text-slate-800 font-extrabold px-2 py-1 rounded-full uppercase tracking-wider border border-slate-200"
                 title={(opp.ai_match_reasons || []).join(' · ')}
               >
-                <i className="ti ti-sparkles text-[10px]" />
+                <i className="ti ti-sparkles text-[10px] text-amber-500" />
                 {opp.ai_match_score}% Match
               </span>
             )}
@@ -72,12 +72,12 @@ export default function OpportunityCard({ opp, onSave, onApply, saved = false })
 
         {/* ── Title & Organizer ── */}
         <div className="space-y-1">
-          <h3 className="text-base font-extrabold text-slate-950 leading-snug group-hover:text-indigo-600 transition-colors line-clamp-2">
+          <h3 className="text-base font-extrabold text-slate-950 leading-snug group-hover:text-black transition-colors line-clamp-2">
             {cleanTitle(opp.title)}
           </h3>
           <Link
             to={`/organizations/${orgSlug(opp.organizer)}`}
-            className="prism-mono text-[11px] font-bold text-slate-500 hover:text-indigo-600 transition-colors block truncate"
+            className="prism-mono text-[11px] font-bold text-slate-500 hover:text-slate-900 transition-colors block truncate hover:underline"
             onClick={(e) => e.stopPropagation()}
           >
             {opp.organizer}
@@ -88,13 +88,13 @@ export default function OpportunityCard({ opp, onSave, onApply, saved = false })
         <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-slate-500 font-medium pt-3 border-t border-slate-100">
           {opp.country && (
             <span className="flex items-center gap-1">
-              <i className="ti ti-map-pin text-indigo-500 text-[11px]" />
+              <i className="ti ti-map-pin text-slate-600 text-[11px]" />
               <span className="truncate max-w-[100px]">{opp.country}</span>
             </span>
           )}
           {opp.funding_amount && (
             <span className="flex items-center gap-1 font-bold text-slate-800">
-              <i className="ti ti-cash text-emerald-500 text-[11px]" />
+              <i className="ti ti-cash text-emerald-600 text-[11px]" />
               <span className="truncate max-w-[130px]">{opp.funding_amount}</span>
             </span>
           )}
@@ -118,7 +118,7 @@ export default function OpportunityCard({ opp, onSave, onApply, saved = false })
           </span>
         ) : (
           <a
-            className="bg-[#0A0A0A] hover:bg-indigo-600 text-white font-bold text-xs px-4 py-2 rounded-xl flex items-center gap-1.5 transition-all shadow-sm"
+            className="bg-[#0A0A0A] hover:bg-slate-800 text-white font-bold text-xs px-4 py-2 rounded-xl flex items-center gap-1.5 transition-all shadow-sm hover:shadow-md active:scale-[0.98]"
             href={applyUrl(opp)}
             onClick={onApply}
             target="_blank"
@@ -136,7 +136,7 @@ export default function OpportunityCard({ opp, onSave, onApply, saved = false })
             className={`px-3.5 py-2 rounded-xl text-xs font-bold transition-all border ${
               isSaved
                 ? 'bg-emerald-50 text-emerald-700 border-emerald-300 hover:bg-red-50 hover:text-red-600 hover:border-red-200'
-                : 'bg-slate-50 text-slate-700 border-slate-200 hover:border-indigo-400 hover:bg-indigo-50 hover:text-indigo-700'
+                : 'bg-slate-50 text-slate-700 border-slate-200 hover:border-slate-800 hover:bg-slate-100 hover:text-slate-950'
             }`}
             onClick={handleSaveToggle}
             aria-label={isSaved ? 'Unsave opportunity' : 'Save opportunity'}

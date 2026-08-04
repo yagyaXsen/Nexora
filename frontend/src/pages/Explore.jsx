@@ -431,7 +431,7 @@ export default function Explore() {
               )}
               <button
                 type="submit"
-                className="bg-slate-950 hover:bg-indigo-600 text-white font-bold text-sm px-6 py-3.5 rounded-xl flex items-center justify-center gap-2 transition-all duration-200 shadow-md w-full sm:w-auto"
+                className="bg-slate-950 hover:bg-slate-800 text-white font-bold text-sm px-6 py-3.5 rounded-xl flex items-center justify-center gap-2 transition-all duration-200 shadow-md hover:shadow-lg active:scale-[0.98] w-full sm:w-auto"
               >
                 <span>Search</span>
                 <i className="ti ti-arrow-up-right text-xs" />
@@ -444,16 +444,16 @@ export default function Explore() {
                 {suggestions.length > 0 ? (
                   <div className="p-3 space-y-1">
                     <div className="px-3 py-1 text-[11px] font-mono font-bold text-slate-400 uppercase tracking-wider flex items-center gap-1.5">
-                      <i className="ti ti-sparkles text-indigo-500" /> Instant Autocomplete Suggestions
+                      <i className="ti ti-sparkles text-amber-500" /> Instant Autocomplete Suggestions
                     </div>
                     {suggestions.map((s, idx) => (
                       <button
                         key={idx}
                         type="button"
-                        className="w-full text-left px-3.5 py-2.5 rounded-xl hover:bg-indigo-50/70 text-slate-800 text-sm flex items-center justify-between transition-colors group"
+                        className="w-full text-left px-3.5 py-2.5 rounded-xl hover:bg-slate-100/90 text-slate-800 text-sm flex items-center justify-between transition-colors group"
                         onClick={() => selectSuggestion(s.text)}
                       >
-                        <span className="font-semibold text-slate-900 group-hover:text-indigo-600 flex items-center gap-2">
+                        <span className="font-semibold text-slate-900 group-hover:text-black flex items-center gap-2">
                           <i
                             className={`ti ${
                               s.type === 'organization'
@@ -461,11 +461,11 @@ export default function Explore() {
                                 : s.type === 'tag'
                                 ? 'ti-tag'
                                 : 'ti-award'
-                            } text-slate-400 group-hover:text-indigo-500`}
+                            } text-slate-400 group-hover:text-slate-700`}
                           />
                           {s.text}
                         </span>
-                        <span className="text-[10px] font-mono font-bold text-slate-400 uppercase bg-slate-100 px-2 py-0.5 rounded-md group-hover:bg-indigo-100 group-hover:text-indigo-700">
+                        <span className="text-[10px] font-mono font-bold text-slate-400 uppercase bg-slate-100 px-2 py-0.5 rounded-md group-hover:bg-slate-200 group-hover:text-slate-900">
                           {s.type}
                         </span>
                       </button>
@@ -474,14 +474,14 @@ export default function Explore() {
                 ) : (
                   <div className="p-4 space-y-3">
                     <div className="text-[11px] font-mono font-bold text-slate-400 uppercase tracking-wider flex items-center gap-1.5">
-                      <i className="ti ti-trending-up text-indigo-500" /> Popular Opportunity Searches
+                      <i className="ti ti-trending-up text-slate-600" /> Popular Opportunity Searches
                     </div>
                     <div className="flex flex-wrap gap-2">
                       {POPULAR_SEARCHES.map((query) => (
                         <button
                           key={query}
                           type="button"
-                          className="text-xs bg-slate-50 hover:bg-indigo-50 hover:text-indigo-600 text-slate-700 border border-slate-200 hover:border-indigo-200 px-3 py-1.5 rounded-lg transition-colors font-medium flex items-center gap-1"
+                          className="text-xs bg-slate-50 hover:bg-slate-100 hover:text-slate-950 text-slate-700 border border-slate-200 hover:border-slate-400 px-3 py-1.5 rounded-lg transition-colors font-medium flex items-center gap-1"
                           onClick={() => selectSuggestion(query)}
                         >
                           <i className="ti ti-search text-[10px] text-slate-400" />
@@ -505,8 +505,8 @@ export default function Explore() {
                 onClick={() => selectSuggestion(term)}
                 className={`text-xs px-3 py-1 rounded-full border transition-all ${
                   q.toLowerCase() === term.toLowerCase()
-                    ? 'bg-indigo-600 text-white border-indigo-600 font-bold shadow-xs'
-                    : 'bg-white text-slate-600 border-slate-200 hover:border-indigo-400 hover:text-indigo-600'
+                    ? 'bg-[#0A0A0A] text-white border-[#0A0A0A] font-bold shadow-xs'
+                    : 'bg-white text-slate-600 border-slate-200 hover:border-slate-800 hover:text-slate-950 hover:bg-slate-50'
                 }`}
               >
                 {term}
@@ -524,7 +524,7 @@ export default function Explore() {
             {category && (
               <button
                 onClick={() => update({ category: '' })}
-                className="text-xs text-indigo-600 hover:underline font-bold"
+                className="text-xs text-slate-600 hover:text-slate-950 hover:underline font-bold"
               >
                 Reset Category
               </button>
@@ -679,7 +679,7 @@ export default function Explore() {
             {/* Empty state with suggestions */}
             {!loading && !error && result?.items.length === 0 && (
               <div className="p-12 bg-slate-50 border border-slate-200 rounded-3xl text-center space-y-5 shadow-xs">
-                <div className="w-12 h-12 bg-indigo-50 text-indigo-600 rounded-2xl flex items-center justify-center mx-auto text-2xl">
+                <div className="w-12 h-12 bg-slate-100 text-slate-800 rounded-2xl flex items-center justify-center mx-auto text-2xl">
                   <i className="ti ti-search" />
                 </div>
                 <div className="space-y-1">
@@ -693,7 +693,7 @@ export default function Explore() {
                     <button
                       key={p}
                       onClick={() => selectSuggestion(p)}
-                      className="text-xs bg-white border border-slate-200 hover:border-indigo-400 hover:text-indigo-600 text-slate-700 px-3.5 py-2 rounded-xl font-semibold transition-all shadow-2xs"
+                      className="text-xs bg-white border border-slate-200 hover:border-slate-800 hover:text-slate-950 text-slate-700 px-3.5 py-2 rounded-xl font-semibold transition-all shadow-2xs hover:bg-slate-50"
                     >
                       {p} →
                     </button>
@@ -702,7 +702,7 @@ export default function Explore() {
                 <div>
                   <button
                     onClick={clearAllFilters}
-                    className="bg-slate-950 hover:bg-indigo-600 text-white px-6 py-2.5 rounded-xl text-xs font-bold transition-all shadow-md"
+                    className="bg-slate-950 hover:bg-slate-800 text-white px-6 py-2.5 rounded-xl text-xs font-bold transition-all shadow-md hover:shadow-lg active:scale-[0.98]"
                   >
                     Reset All Filters
                   </button>
@@ -722,7 +722,7 @@ export default function Explore() {
                       <article
                         key={opp.id ?? opp.slug}
                         onClick={() => navigate(`/opportunities/${opp.slug || opp.id}`)}
-                        className="opp-card bg-white border border-slate-200 rounded-3xl p-6 shadow-sm hover:shadow-xl hover:border-indigo-300 transition-all duration-300 flex flex-col justify-between space-y-5 group cursor-pointer"
+                        className="opp-card bg-white border border-slate-200/90 rounded-3xl p-6 shadow-sm hover:shadow-xl hover:border-slate-400 transition-all duration-300 flex flex-col justify-between space-y-5 group cursor-pointer"
                         aria-label={opp.title}
                       >
                         <div className="space-y-4">
@@ -744,7 +744,7 @@ export default function Explore() {
 
                           {/* Title & Organizer */}
                           <div className="space-y-1">
-                            <h3 className="text-base font-extrabold text-slate-950 leading-snug group-hover:text-indigo-600 transition-colors line-clamp-2">
+                            <h3 className="text-base font-extrabold text-slate-950 leading-snug group-hover:text-black transition-colors line-clamp-2">
                               <HighlightText text={opp.title} query={q} />
                             </h3>
                             <span className="font-mono text-[11px] font-bold text-slate-500 block truncate">
@@ -755,12 +755,12 @@ export default function Explore() {
                           {/* Metadata row */}
                           <div className="flex flex-wrap items-center justify-between gap-y-1 text-xs text-slate-500 font-medium pt-3 border-t border-slate-100">
                             <span className="flex items-center gap-1">
-                              <i className="ti ti-map-pin text-indigo-500 text-[11px]" />
+                              <i className="ti ti-map-pin text-slate-600 text-[11px]" />
                               <span className="truncate max-w-[110px]">{opp.country || 'Global'}</span>
                             </span>
                             {opp.funding_amount ? (
                               <span className="flex items-center gap-1 font-bold text-slate-800 truncate max-w-[130px]">
-                                <i className="ti ti-cash text-emerald-500 text-[11px]" />
+                                <i className="ti ti-cash text-emerald-600 text-[11px]" />
                                 {opp.funding_amount}
                               </span>
                             ) : (
@@ -784,7 +784,7 @@ export default function Explore() {
                             onClick={applyHandler(opp, `/explore?${params.toString()}`)}
                             target="_blank"
                             rel="noopener noreferrer"
-                            className="bg-slate-950 hover:bg-indigo-600 text-white font-bold text-xs px-4 py-2 rounded-xl flex items-center gap-1.5 transition-all shadow-2xs"
+                            className="bg-slate-950 hover:bg-slate-800 text-white font-bold text-xs px-4 py-2 rounded-xl flex items-center gap-1.5 transition-all shadow-2xs hover:shadow-md active:scale-[0.98]"
                             aria-label={`Apply to ${opp.title}`}
                           >
                             <span>Apply</span>
@@ -798,7 +798,7 @@ export default function Explore() {
                               className={`px-3.5 py-2 rounded-xl text-xs font-bold transition-all border ${
                                 isSaved
                                   ? 'bg-emerald-50 text-emerald-700 border-emerald-300'
-                                  : 'bg-slate-50 text-slate-700 border-slate-200 hover:border-indigo-400 hover:bg-indigo-50 hover:text-indigo-700'
+                                  : 'bg-slate-50 text-slate-700 border-slate-200 hover:border-slate-800 hover:bg-slate-100 hover:text-slate-950'
                               }`}
                             >
                               {isSaved ? '✓ Saved' : '+ Save'}
@@ -914,7 +914,7 @@ export default function Explore() {
                   ))}
                   <button
                     onClick={() => setShowCompareModal(true)}
-                    className="w-full mt-2 bg-slate-950 hover:bg-indigo-600 text-white py-3.5 rounded-xl font-bold text-xs transition-all shadow-md flex items-center justify-center gap-1.5"
+                    className="w-full mt-2 bg-slate-950 hover:bg-slate-800 text-white py-3.5 rounded-xl font-bold text-xs transition-all shadow-md hover:shadow-lg active:scale-[0.98] flex items-center justify-center gap-1.5"
                   >
                     <span>Compare Matrix Side-by-Side</span>
                     <i className="ti ti-arrow-right text-xs" />
@@ -922,7 +922,7 @@ export default function Explore() {
                 </div>
               ) : (
                 <p className="text-xs text-slate-500 p-4 bg-slate-50 rounded-2xl border border-dashed border-slate-200 leading-relaxed">
-                  Click the comparison icon <i className="ti ti-arrows-diff text-indigo-500 font-bold inline" /> on any card to evaluate eligibility, funding, and deadlines side-by-side.
+                  Click the comparison icon <i className="ti ti-arrows-diff text-slate-600 font-bold inline" /> on any card to evaluate eligibility, funding, and deadlines side-by-side.
                 </p>
               )}
             </div>
@@ -930,19 +930,19 @@ export default function Explore() {
             {/* AI Search Tips Card */}
             <div className="bg-white border border-slate-200 p-6 rounded-3xl shadow-xl space-y-4">
               <div className="font-mono text-xs text-slate-700 font-bold uppercase tracking-wider pb-3 border-b border-slate-200 flex items-center gap-1.5">
-                <i className="ti ti-bulb text-indigo-500" /> Search Tips & Suggestions
+                <i className="ti ti-bulb text-amber-500" /> Search Tips & Suggestions
               </div>
               <ul className="space-y-3 text-xs text-slate-600 leading-relaxed">
                 <li className="flex items-start gap-2">
-                  <span className="text-indigo-600 font-bold">•</span>
+                  <span className="text-slate-900 font-bold">•</span>
                   <span>Combine organization + country like <strong>&quot;ETH Zurich postdoc&quot;</strong> or <strong>&quot;DAAD Germany&quot;</strong> for pinpoint matches.</span>
                 </li>
                 <li className="flex items-start gap-2">
-                  <span className="text-indigo-600 font-bold">•</span>
+                  <span className="text-slate-900 font-bold">•</span>
                   <span>Search specific topics like <strong>&quot;DeepTech grant&quot;</strong>, <strong>&quot;Machine Learning&quot;</strong>, or <strong>&quot;Quantum&quot;</strong>.</span>
                 </li>
                 <li className="flex items-start gap-2">
-                  <span className="text-indigo-600 font-bold">•</span>
+                  <span className="text-slate-900 font-bold">•</span>
                   <span>Sort by <strong>&quot;Approaching Deadline&quot;</strong> to prioritize upcoming application cutoffs.</span>
                 </li>
               </ul>

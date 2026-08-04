@@ -3,10 +3,13 @@ from datetime import datetime, timedelta, timezone
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session, joinedload
 
+import logging
 from app.database import get_db
 from app.models import User, Profile, Application, Opportunity, Notification, OpportunityStatus, utc_now
 from app.schemas import UserRead, ProfileRead, ProfileUpdate, DashboardSummary
 from app.auth import get_current_user
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/api/profile", tags=["Profile"])
 
@@ -84,8 +87,48 @@ def get_dashboard_summary(
         Opportunity.needs_review == False
     ).count()
 
+    # Real personalized signal count: rank the verified catalog against this
+    # user's profile and count how many records score above the meaningful
+    # threshold (a strong focus/domain overlap). Falls back to 0 for a profile
+    # with no signals, never to the saved-apps count.
+    ai_matched_count = 0
+    try:
+        from app.publishing.catalog import catalog
+
+        focus_terms = []
+        skills = []
+        degree = None
+        countries = []
+        profile = current_user.profile if hasattr(current_user, "profile") else None
+        if profile:
+            focus_terms = [
+                *(profile.interests or []),
+                profile.field_of_study or "",
+            ]
+            skills = list(profile.skills or [])
+            degree = profile.academic_degree
+            countries = [
+                *(profile.target_countries or []),
+                profile.residence or "",
+                profile.citizenship or "",
+            ]
+        focus_terms = [t for t in focus_terms if t]
+        skills = [s for s in skills if s]
+        countries = [c for c in countries if c]
+        if focus_terms or skills or degree or countries:
+            ranked, _focus = catalog.match_profile(
+                focus_terms=focus_terms,
+                skills=skills,
+                degree=degree,
+                countries=countries,
+                limit=1000,
+            )
+            ai_matched_count = sum(1 for _opp, score, _reasons in ranked if score >= 30)
+    except Exception:
+        logger.exception("ai_matched_count computation failed")
+
     return DashboardSummary(
-        ai_matched_count=saved_count,
+        ai_matched_count=ai_matched_count,
         saved_count=saved_count,
         applied_count=applied_count,
         upcoming_deadlines_count=upcoming_count,

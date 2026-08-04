@@ -21,9 +21,14 @@ def list_applications(
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
+    # Guard against orphaned rows (opportunity deleted after cascade): an
+    # application whose opportunity no longer exists would serialize with
+    # opportunity=None and 500 the whole list. Only surface rows that still
+    # have a live opportunity.
     query = db.query(Application)\
         .options(joinedload(Application.opportunity))\
-        .filter(Application.user_id == current_user.id)
+        .filter(Application.user_id == current_user.id)\
+        .filter(Application.opportunity.has())
 
     if status_filter:
         query = query.filter(Application.status == status_filter.value)

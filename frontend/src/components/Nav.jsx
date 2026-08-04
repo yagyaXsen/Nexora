@@ -109,7 +109,7 @@ export default function Nav() {
               <Link to="/login" className="text-xs font-bold text-slate-600 hover:text-slate-950 px-3 py-2 transition-colors">
                 Log in
               </Link>
-              <Link to="/signup" className="bg-[#0A0A0A] hover:bg-indigo-600 text-white font-bold text-xs px-4 py-2 rounded-xl transition-all shadow-xs">
+              <Link to="/signup" className="bg-[#0A0A0A] hover:bg-slate-800 text-white font-bold text-xs px-4 py-2 rounded-xl transition-all shadow-xs hover:shadow-md active:scale-[0.98]">
                 Join Nexora
               </Link>
             </div>

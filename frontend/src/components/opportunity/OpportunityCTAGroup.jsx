@@ -31,7 +31,7 @@ export default function OpportunityCTAGroup({ opp, onApply }) {
           target="_blank"
           rel="noopener noreferrer"
           onClick={onApply ? (e) => onApply(e) : undefined}
-          className="w-full py-3.5 rounded-2xl font-bold text-sm transition-all flex items-center justify-center gap-2 shadow-lg bg-[#0A0A0A] hover:bg-indigo-600 text-white"
+          className="w-full py-3.5 rounded-2xl font-bold text-sm transition-all flex items-center justify-center gap-2 shadow-lg bg-[#0A0A0A] hover:bg-slate-800 hover:shadow-xl active:scale-[0.98] text-white"
         >
           <span>{cta.label}</span>
           <i className="ti ti-arrow-up-right" />
