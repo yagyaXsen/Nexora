@@ -73,7 +73,7 @@ export default function Signup() {
       setBusy(true)
       try {
         await loginWithGoogle({ access_token: tokenResponse.access_token })
-        navigate('/explore', { replace: true })
+        navigate('/onboarding', { replace: true })
       } catch (err) {
         setError(err.message || 'Google Sign-Up failed. Please try again.')
       } finally {
@@ -129,8 +129,7 @@ export default function Signup() {
         /* non-fatal */
       }
 
-      setStep(3)
-      setTimeout(() => navigate('/explore'), 2000)
+      navigate('/onboarding', { replace: true })
     } catch (err) {
       setError(
         err.status === 409

@@ -171,24 +171,34 @@ export default function Onboarding() {
         </div>
 
         {step <= TOTAL_STEPS && (
-          <div className="flex items-center gap-3">
-            <div className="flex gap-1.5">
-              {Array.from({ length: TOTAL_STEPS }, (_, i) => (
-                <div
-                  key={i}
-                  className={`h-1.5 rounded-full transition-all duration-300 ${
-                    i + 1 === step
-                      ? 'w-7 bg-indigo-600'
-                      : i + 1 < step
-                      ? 'w-2 bg-emerald-500'
-                      : 'w-2 bg-slate-200'
-                  }`}
-                />
-              ))}
+          <div className="flex items-center gap-4">
+            <div className="flex items-center gap-3">
+              <div className="flex gap-1.5">
+                {Array.from({ length: TOTAL_STEPS }, (_, i) => (
+                  <div
+                    key={i}
+                    className={`h-1.5 rounded-full transition-all duration-300 ${
+                      i + 1 === step
+                        ? 'w-7 bg-indigo-600'
+                        : i + 1 < step
+                        ? 'w-2 bg-emerald-500'
+                        : 'w-2 bg-slate-200'
+                    }`}
+                  />
+                ))}
+              </div>
+              <span className="font-mono text-[11px] font-bold text-slate-400">
+                0{step}/0{TOTAL_STEPS}
+              </span>
             </div>
-            <span className="font-mono text-[11px] font-bold text-slate-400">
-              0{step}/0{TOTAL_STEPS}
-            </span>
+
+            <button
+              onClick={() => navigate('/explore', { replace: true })}
+              className="text-xs font-bold text-slate-400 hover:text-slate-900 transition-colors cursor-pointer flex items-center gap-1 pl-2 border-l border-slate-200"
+            >
+              <span>Skip to Discover</span>
+              <i className="ti ti-arrow-right text-[10px]" />
+            </button>
           </div>
         )}
       </header>
