@@ -395,6 +395,66 @@ def _sweep_expired_opportunities() -> None:
         db.close()
 
 
+def _seed_admin_user() -> None:
+    """Ensure the default administrator user exists with verified role and credentials.
+    
+    Safe & idempotent on all environments (Neon/Postgres & local SQLite).
+    """
+    from app.models import User, Profile
+    from app.auth import hash_password, verify_password
+
+    db = SessionLocal()
+    try:
+        admin = db.query(User).filter(User.email == "admin@nexora.ai").first()
+        if not admin:
+            admin = User(
+                name="Nexora Admin",
+                email="admin@nexora.ai",
+                hashed_password=hash_password("admin123"),
+                role="admin",
+                email_verified=True,
+            )
+            db.add(admin)
+            db.commit()
+            db.refresh(admin)
+            logger.info("Admin user 'admin@nexora.ai' provisioned successfully.")
+        else:
+            updated = False
+            if admin.role != "admin":
+                admin.role = "admin"
+                updated = True
+            if not admin.email_verified:
+                admin.email_verified = True
+                updated = True
+            if not verify_password("admin123", admin.hashed_password):
+                admin.hashed_password = hash_password("admin123")
+                updated = True
+            if updated:
+                db.commit()
+                logger.info("Admin user 'admin@nexora.ai' credentials synchronized.")
+
+        # Ensure admin has a Profile record
+        profile = db.query(Profile).filter(Profile.user_id == admin.id).first()
+        if not profile:
+            profile = Profile(
+                user_id=admin.id,
+                institution="Nexora Platform Operations",
+                academic_degree="Executive Administration",
+                field_of_study="Artificial Intelligence & Education",
+                citizenship="Global",
+                residence="Global",
+                interests=["Administration", "AI", "Scholarships", "Fellowships", "Grants"],
+                target_countries=["Global", "United States", "United Kingdom", "European Union"],
+            )
+            db.add(profile)
+            db.commit()
+    except Exception:
+        db.rollback()
+        logger.exception("Admin user provisioning failed (non-fatal)")
+    finally:
+        db.close()
+
+
 def run_startup():
     """Call once at process boot. Idempotent — safe to call on every restart.
 
@@ -410,6 +470,11 @@ def run_startup():
     except Exception:
         logger.exception("FATAL: Table creation failed")
         raise
+
+    try:
+        _seed_admin_user()
+    except Exception:
+        logger.exception("Admin seeding error (non-fatal)")
 
     try:
         org_count = _seed_organizations()
