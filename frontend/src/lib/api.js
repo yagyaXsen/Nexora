@@ -192,6 +192,12 @@ export const api = {
     request(`/api/applications${status ? `?status=${encodeURIComponent(status)}` : ''}`),
   saveApplication: (opportunity_id) =>
     request('/api/applications', { method: 'POST', body: { opportunity_id } }),
+  // Save/unsave a published-catalog record (slug-keyed, no DB id) as a real
+  // tracker row. The backend hydrates a DB opportunity from the catalog data.
+  saveApplicationBySlug: (slug) =>
+    request(`/api/applications/by-slug/${encodeURIComponent(slug)}`, { method: 'POST' }),
+  unsaveApplicationBySlug: (slug) =>
+    request(`/api/applications/by-slug/${encodeURIComponent(slug)}`, { method: 'DELETE' }),
   // Records the apply and returns the organizer URL. The caller navigates via its
   // own <a href>, so a failure here never blocks the outbound trip.
   applyToOpportunity: (opportunity_id) =>

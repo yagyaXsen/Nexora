@@ -75,6 +75,28 @@ export default function Dashboard() {
       setSummary(sum)
       setPublishedStats(ps)
       setLoading(false)
+
+      // Hydrate any previously bookmarked published records into real tracker
+      // rows so they show in the sidebar/counters (idempotent on the backend).
+      const staleSlugs = readBookmarks().filter(
+        (slug) => !a.some((app) => app.opportunity?.slug === slug)
+      )
+      if (staleSlugs.length === 0) return
+      Promise.allSettled(staleSlugs.map((slug) => api.saveApplicationBySlug(slug))).then(
+        (results) => {
+          if (cancelled) return
+          const rows = results
+            .map((r) => (r.status === 'fulfilled' ? r.value : null))
+            .filter(Boolean)
+          if (rows.length > 0) {
+            setApps((prev) => {
+              const seen = new Set(prev.map((x) => x.opportunity?.id))
+              const fresh = rows.filter((x) => !seen.has(x.opportunity?.id))
+              return fresh.length ? [...prev, ...fresh] : prev
+            })
+          }
+        }
+      )
     })
 
     return () => { cancelled = true }
@@ -284,10 +306,31 @@ export default function Dashboard() {
                       opp={opp}
                       saved={isSaved(opp)}
                       onSave={async (targetOpp) => {
-                        // Slug-keyed published records: local bookmark stub only.
+                        // Slug-keyed published records have no DB id. Save them
+                        // as real tracker rows via /by-slug so the Application
+                        // Tracker sidebar updates; the bookmark stub keeps the
+                        // card state consistent and is the offline fallback.
                         if (targetOpp.id == null) {
-                          toggleBookmark(targetOpp.slug)
+                          const nowSaved = toggleBookmark(targetOpp.slug)
                           setSavedSlugs(new Set(readBookmarks()))
+                          try {
+                            if (nowSaved) {
+                              const row = await api.saveApplicationBySlug(targetOpp.slug)
+                              setApps((prev) =>
+                                prev.some((a) => a.opportunity?.id === row.opportunity?.id)
+                                  ? prev
+                                  : [...prev, row]
+                              )
+                            } else {
+                              await api.unsaveApplicationBySlug(targetOpp.slug)
+                              setApps((prev) =>
+                                prev.filter((a) => a.opportunity?.slug !== targetOpp.slug)
+                              )
+                            }
+                          } catch {
+                            // Bookmark stub already updated the card; keep the
+                            // tracker row in sync next load.
+                          }
                           return
                         }
                         const isSaved = savedSet.has(targetOpp.id)
