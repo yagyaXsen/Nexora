@@ -205,7 +205,7 @@ export default function Admin() {
         {/* Stats */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
           {statCards.map((c) => (
-            <div key={c.label} className="bg-white border border-slate-200 p-5 rounded-2xl shadow-sm space-y-2 hover:border-indigo-300 hover:shadow-md transition-all">
+            <div key={c.label} className="bg-white border border-slate-200 p-5 rounded-2xl shadow-sm space-y-2 hover:border-slate-400 hover:shadow-md transition-all">
               <div className="flex items-center justify-between">
                 <span className="prism-mono text-[10px] uppercase font-bold text-slate-400">{c.label}</span>
                 <i className={`ti ${c.icon} text-sm ${c.tone}`} />

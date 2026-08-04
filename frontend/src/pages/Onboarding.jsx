@@ -252,7 +252,7 @@ export default function Onboarding() {
               </span>
               <button
                 onClick={() => setStep(2)}
-                className="bg-[#0A0A0A] hover:bg-indigo-600 text-white font-bold text-sm px-7 py-3.5 rounded-2xl shadow-xl transition-all flex items-center gap-2 cursor-pointer active:scale-98"
+                className="bg-[#0A0A0A] hover:bg-slate-800 text-white font-bold text-sm px-7 py-3.5 rounded-2xl shadow-xl hover:shadow-2xl transition-all flex items-center gap-2 cursor-pointer active:scale-98"
               >
                 <span>Continue to Fields &amp; Regions</span>
                 <i className="ti ti-arrow-right text-xs" />
@@ -345,7 +345,7 @@ export default function Onboarding() {
               
               <button
                 onClick={handleFinish}
-                className="bg-[#0A0A0A] hover:bg-indigo-600 text-white font-bold text-sm px-8 py-3.5 rounded-2xl shadow-xl transition-all flex items-center gap-2 cursor-pointer active:scale-98"
+                className="bg-[#0A0A0A] hover:bg-slate-800 text-white font-bold text-sm px-8 py-3.5 rounded-2xl shadow-xl hover:shadow-2xl transition-all flex items-center gap-2 cursor-pointer active:scale-98"
               >
                 <span>Complete Profile &amp; Discover Opportunities</span>
                 <i className="ti ti-sparkles text-xs" />
@@ -362,7 +362,7 @@ export default function Onboarding() {
             </div>
             <div className="space-y-2">
               <h2 className="font-sans font-extrabold text-2xl text-slate-950">Calibrating Signal Feed</h2>
-              <p className="font-mono text-xs text-indigo-600 font-bold uppercase tracking-widest">{processingMsg}</p>
+              <p className="font-mono text-xs text-slate-700 font-bold uppercase tracking-widest">{processingMsg}</p>
             </div>
           </div>
         )}

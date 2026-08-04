@@ -80,7 +80,7 @@ export default function ForgotPassword() {
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
                     placeholder="you@institution.edu"
-                    className="w-full pl-11 pr-4 py-3.5 bg-slate-50 border border-slate-200 rounded-2xl text-sm font-medium text-slate-900 placeholder-slate-400 focus:bg-white focus:border-indigo-600 focus:ring-4 focus:ring-indigo-50 outline-none transition-all"
+                    className="w-full pl-11 pr-4 py-3.5 bg-slate-50 border border-slate-200 rounded-2xl text-sm font-medium text-slate-900 placeholder-slate-400 focus:bg-white focus:border-slate-800 focus:ring-4 focus:ring-slate-100 outline-none transition-all"
                   />
                 </div>
               </div>
@@ -88,7 +88,7 @@ export default function ForgotPassword() {
               <button
                 type="submit"
                 disabled={busy}
-                className="w-full bg-[#0A0A0A] hover:bg-indigo-600 text-white font-bold text-sm py-4 rounded-2xl shadow-xl hover:shadow-indigo-600/25 transition-all duration-300 flex items-center justify-center gap-2 disabled:opacity-50"
+                className="w-full bg-[#0A0A0A] hover:bg-slate-800 text-white font-bold text-sm py-4 rounded-2xl shadow-xl hover:shadow-2xl transition-all duration-300 flex items-center justify-center gap-2 disabled:opacity-50"
               >
                 {busy ? (
                   <>
@@ -120,13 +120,13 @@ export default function ForgotPassword() {
             <div className="pt-2 border-t border-slate-200 flex flex-col gap-3">
               <button
                 onClick={() => setSent(false)}
-                className="text-xs font-bold text-indigo-600 hover:underline font-mono"
+                className="text-xs font-bold text-slate-900 hover:underline font-mono"
               >
                 Didn't receive it? Resend email →
               </button>
               <Link
                 to="/login"
-                className="w-full bg-[#0A0A0A] text-white font-bold text-xs py-3 rounded-xl hover:bg-indigo-600 transition-colors inline-block"
+                className="w-full bg-[#0A0A0A] text-white font-bold text-xs py-3 rounded-xl hover:bg-slate-800 transition-colors inline-block"
               >
                 Return to Sign In
               </Link>

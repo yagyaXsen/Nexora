@@ -9,7 +9,7 @@ from fastapi.responses import JSONResponse
 from app.config import settings
 from app.scheduler import start_scheduler, stop_scheduler
 from app.routes import opportunities, sources, pipeline, auth, applications
-from app.routes import profile, notifications, organizations, admin, published
+from app.routes import profile, notifications, organizations, admin, published, contact
 from app.core.exceptions import NexoraException
 
 logging.basicConfig(
@@ -154,6 +154,7 @@ app.include_router(published.router)
 app.include_router(sources.router)
 app.include_router(pipeline.router)
 app.include_router(admin.router)
+app.include_router(contact.router)
 
 @app.get("/api/health", tags=["Health"])
 def health_check():

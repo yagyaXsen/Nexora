@@ -184,6 +184,8 @@ export const api = {
   publishedRelated: (slug, limit = 4) =>
     request(`/api/published/opportunities/${encodeURIComponent(slug)}/related?limit=${limit}`),
   publishedStats: () => request('/api/published/stats'),
+  contactSubmit: (payload) =>
+    request('/api/contact', { method: 'POST', body: payload }),
 
   // ─────────────────────────────────────────────
   // Applications / Tracker
