@@ -83,10 +83,10 @@ export default function Admin() {
   const [notice, setNotice] = useState(null)
 
   // In dev-only no-login mode the console is accessible without a session;
-  // otherwise it still requires role === 'admin'.
+  // otherwise it requires admin role or admin@nexora.ai account.
   const localOnly = isLocalhost()
   const noLoginMode = ADMIN_NO_LOGIN && localOnly
-  const isAdmin = noLoginMode || user?.role === 'admin'
+  const isAdmin = noLoginMode || user?.role === 'admin' || user?.email === 'admin@nexora.ai'
 
   const load = useCallback(async () => {
     setLoading(true)
@@ -101,9 +101,7 @@ export default function Admin() {
     } catch (e) {
       if (!hasUserKey && e?.status === 403) {
         setError(
-          "The API rejected the request. Point VITE_API_BASE_URL at a local backend " +
-          'or set VITE_ADMIN_KEY in frontend/.env.local to match ADMIN_SECRET_KEY ' +
-          'on the server to use the no-login console.'
+          "Admin access denied. Please ensure you are logged in as an administrator."
         )
       } else {
         setError(e.message || 'Failed to load admin data')
@@ -114,8 +112,8 @@ export default function Admin() {
   }, [])
 
   useEffect(() => {
-    if (isAdmin && localOnly) load()
-  }, [isAdmin, localOnly, load])
+    if (isAdmin) load()
+  }, [isAdmin, load])
 
   const handleDeleteUser = async () => {
     if (!userToDelete) return
@@ -175,25 +173,6 @@ export default function Admin() {
     )
   }
 
-  if (!localOnly) {
-    return (
-      <div className="min-h-screen bg-white pt-32 pb-20 font-sans">
-        <div className="max-w-[680px] mx-auto px-6">
-          <div className="border border-amber-200 bg-amber-50 rounded-3xl p-10 text-center space-y-4">
-            <div className="w-14 h-14 mx-auto rounded-2xl bg-amber-100 flex items-center justify-center text-amber-600">
-              <i className="ti ti-shield-lock text-2xl" />
-            </div>
-            <h1 className="text-2xl font-extrabold text-slate-900">Admin console is private</h1>
-            <p className="text-sm text-slate-600">
-              The admin console is only available from{' '}
-              <code className="bg-slate-100 px-1.5 py-0.5 rounded text-xs">localhost</code> during
-              development — it is intentionally disabled on the live site.
-            </p>
-          </div>
-        </div>
-      </div>
-    )
-  }
 
   const signups = stats?.signups ?? {}
   const active = stats?.active_users ?? {}
