@@ -31,7 +31,7 @@ export default function Login() {
   const { login, loginWithGoogle } = useAuth()
   const navigate = useNavigate()
   const location = useLocation()
-  const from = location.state?.from ?? sessionStorage.getItem('nexora_return_to') ?? '/dashboard'
+  const from = location.state?.from ?? sessionStorage.getItem('nexora_return_to') ?? '/explore'
 
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
@@ -46,13 +46,9 @@ export default function Login() {
       setError(null)
       setSsoLoading(true)
       try {
-        const result = await loginWithGoogle({ access_token: tokenResponse.access_token })
+        await loginWithGoogle({ access_token: tokenResponse.access_token })
         sessionStorage.removeItem('nexora_return_to')
-        if (result?.is_new_user) {
-          navigate('/onboarding', { replace: true })
-        } else {
-          navigate(from, { replace: true })
-        }
+        navigate(from, { replace: true })
       } catch (err) {
         setError(err.message || 'Google authentication failed. Please try again.')
       } finally {
