@@ -133,7 +133,22 @@ export default function OpportunityDetail() {
       } catch {
         /* fall through to legacy */
       }
-      // Legacy fallback: same category, exclude self.
+      // Fallback: same category from the published catalog (verified/enriched),
+      // then the legacy DB endpoint as a last resort.
+      try {
+        const r = await api.published({ category: opp.type, page_size: 6 })
+        if (cancelled) return
+        const mapped = (r.items || [])
+          .map(normalizeOpportunity)
+          .filter((x) => x.slug !== opp.slug && (rawId == null || x.id !== rawId))
+        if (mapped.length > 0) {
+          setRelated(mapped)
+          if (!cancelled) setRelatedLoading(false)
+          return
+        }
+      } catch {
+        /* fall through to legacy */
+      }
       try {
         const r = await api.opportunities({ category: opp.type, page_size: 6 })
         if (cancelled) return
