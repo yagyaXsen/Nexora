@@ -66,6 +66,7 @@ export default function App() {
           <Routes>
             <Route path="/" element={<Landing />} />
             <Route path="/explore" element={<Explore />} />
+            <Route path="/discover" element={<Explore />} />
             <Route path="/opportunities/:idOrSlug" element={<OpportunityDetail />} />
             <Route path="/organizations/:slug" element={<OrganizationDetail />} />
             <Route path="/privacy" element={<Privacy />} />

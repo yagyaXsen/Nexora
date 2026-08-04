@@ -72,12 +72,8 @@ export default function Signup() {
       setError(null)
       setBusy(true)
       try {
-        const result = await loginWithGoogle({ access_token: tokenResponse.access_token })
-        if (result?.is_new_user) {
-          navigate('/onboarding')
-        } else {
-          navigate('/dashboard')
-        }
+        await loginWithGoogle({ access_token: tokenResponse.access_token })
+        navigate('/explore', { replace: true })
       } catch (err) {
         setError(err.message || 'Google Sign-Up failed. Please try again.')
       } finally {
