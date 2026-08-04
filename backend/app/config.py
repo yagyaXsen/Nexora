@@ -49,7 +49,7 @@ class Settings(BaseSettings):
     SMTP_PORT: int = 587
     SMTP_USER: str = ""
     SMTP_PASSWORD: str = ""
-    MAIL_FROM: str = "no-reply@nexora.local"
+    MAIL_FROM: str = ""  # defaults to SMTP_USER when empty (Gmail requires it)
     MAIL_FROM_NAME: str = "Nexora"
 
     # Single public support/contact address used everywhere (contact form

@@ -27,18 +27,35 @@ class SmtpMailer(Mailer):
         if not settings.SMTP_HOST:
             raise RuntimeError("SMTP_HOST must be configured when MAILER=smtp")
 
+        # Providers like Gmail refuse to send from an address that is not the
+        # authenticated account, so default the From address to the SMTP user
+        # unless the operator explicitly set MAIL_FROM.
+        from_addr = settings.MAIL_FROM or settings.SMTP_USER or "no-reply@nexora.local"
+
         message = EmailMessage()
         message["Subject"] = subject
-        message["From"] = f"{settings.MAIL_FROM_NAME} <{settings.MAIL_FROM}>"
+        message["From"] = f"{settings.MAIL_FROM_NAME} <{from_addr}>"
         message["To"] = to
         message.set_content("Open this message in an HTML-capable email client.")
         message.add_alternative(html, subtype="html")
 
-        with smtplib.SMTP(settings.SMTP_HOST, settings.SMTP_PORT, timeout=10) as smtp:
+        with smtplib.SMTP(settings.SMTP_HOST, settings.SMTP_PORT, timeout=15) as smtp:
+            smtp.ehlo()
+            if not smtp.has_extn("starttls"):
+                raise RuntimeError(
+                    "SMTP server does not advertise STARTTLS — refusing to send "
+                    "credentials or mail in plaintext."
+                )
             smtp.starttls()
+            smtp.ehlo()
             if settings.SMTP_USER:
+                if not smtp.has_extn("auth"):
+                    raise RuntimeError(
+                        "SMTP server does not advertise AUTH — cannot log in."
+                    )
                 smtp.login(settings.SMTP_USER, settings.SMTP_PASSWORD)
             smtp.send_message(message)
+            logger.info("SMTP email sent to %s (%s)", to, subject)
 
 
 def get_mailer() -> Mailer:
