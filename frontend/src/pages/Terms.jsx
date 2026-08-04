@@ -56,7 +56,7 @@ export default function Terms() {
     <div className="min-h-screen bg-white font-sans">
       <div className="max-w-[860px] mx-auto px-6 pt-28 pb-24">
         <div className="space-y-3 mb-12">
-          <span className="prism-mono text-[11px] font-bold text-indigo-600 uppercase tracking-widest">
+          <span className="prism-mono text-[11px] font-bold text-slate-800 uppercase tracking-widest">
             Legal
           </span>
           <h1 className="text-4xl sm:text-5xl font-extrabold text-slate-900 tracking-tight">
@@ -74,7 +74,7 @@ export default function Terms() {
               <ul className="space-y-2">
                 {s.body.map((line) => (
                   <li key={line} className="text-[15px] leading-relaxed text-slate-600 flex gap-2.5">
-                    <span className="text-indigo-600 font-bold mt-px shrink-0">—</span>
+                    <span className="text-slate-900 font-bold mt-px shrink-0">—</span>
                     <span>{line}</span>
                   </li>
                 ))}
@@ -87,7 +87,7 @@ export default function Terms() {
           <Link to="/" className="text-sm font-bold text-slate-500 hover:text-slate-900 transition-colors flex items-center gap-1.5">
             <i className="ti ti-arrow-left" /> Back to Nexora
           </Link>
-          <Link to="/explore" className="text-sm font-bold text-indigo-600 hover:text-indigo-800 transition-colors flex items-center gap-1.5">
+          <Link to="/explore" className="text-sm font-bold text-slate-900 hover:text-black hover:underline transition-colors flex items-center gap-1.5">
             Explore opportunities <i className="ti ti-arrow-right" />
           </Link>
         </div>

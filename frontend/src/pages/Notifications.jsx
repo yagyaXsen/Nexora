@@ -18,9 +18,12 @@ export default function Notifications() {
   const [filter, setFilter] = useState('all')
   const [items, setItems] = useState([])
   const [loading, setLoading] = useState(true)
+  const [catalogTotal, setCatalogTotal] = useState(null)
 
   useEffect(() => {
     api.notifications().then(setItems).catch(() => {}).finally(() => setLoading(false))
+    // Real indexed-catalog count (verified + enriched records), not a claim.
+    api.publishedStats().then((s) => setCatalogTotal(s?.total ?? null)).catch(() => {})
   }, [])
 
   const markRead = async (id) => {
@@ -100,7 +103,7 @@ export default function Notifications() {
           </div>
 
           <span className="prism-mono text-xs text-slate-400 font-bold">
-            INDEXED PORTALS: 1,420 ACTIVE
+            {catalogTotal ? `${catalogTotal.toLocaleString()} VERIFIED OPPORTUNITIES INDEXED` : 'VERIFIED OPPORTUNITIES INDEXED'}
           </span>
         </div>
 
@@ -109,10 +112,10 @@ export default function Notifications() {
           {filteredItems.map((item) => (
             <div
               key={item.id}
-              className={`p-5 sm:p-6 rounded-3xl border transition-all duration-300 flex flex-col sm:flex-row items-start justify-between gap-4 sm:gap-6 ${item.is_read ? 'bg-white border-slate-200 opacity-80' : 'bg-white border-slate-300 shadow-lg hover:border-indigo-300'}`}
+              className={`p-5 sm:p-6 rounded-3xl border transition-all duration-300 flex flex-col sm:flex-row items-start justify-between gap-4 sm:gap-6 ${item.is_read ? 'bg-white border-slate-200 opacity-80' : 'bg-white border-slate-300 shadow-lg hover:border-slate-400'}`}
             >
               <div className="flex items-start gap-4 min-w-0">
-                <div className={`w-10 h-10 rounded-2xl flex items-center justify-center text-base shrink-0 font-bold ${item.priority === 'critical' ? 'bg-red-50 text-red-600' : 'bg-indigo-50 text-indigo-600'}`}>
+                <div className={`w-10 h-10 rounded-2xl flex items-center justify-center text-base shrink-0 font-bold ${item.priority === 'critical' ? 'bg-red-50 text-red-600' : 'bg-slate-100 text-slate-800'}`}>
                   <i className={item.priority === 'critical' ? 'ti ti-bell-ringing-filled' : 'ti ti-sparkles'} />
                 </div>
 

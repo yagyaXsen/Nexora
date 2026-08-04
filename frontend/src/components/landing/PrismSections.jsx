@@ -215,7 +215,7 @@ export function ProgramsSection() {
                 Don't see a specialized program? Our autonomous agents can scrape and index university portals or private directories on demand for enterprise teams.
               </p>
             </div>
-            <Link className="prism-button prism-button--light font-bold text-indigo-700 hover:text-indigo-900" to="/signup">
+            <Link className="prism-button prism-button--light font-bold text-slate-900 hover:text-black" to="/signup">
               Submit Index Request
             </Link>
           </div>
@@ -514,7 +514,7 @@ export function FaqSection() {
               Can't find what you're looking for? Contact our editorial desk directly.
             </p>
             <div>
-              <Link to="/explore" className="text-sm font-bold text-indigo-600 hover:text-indigo-800 transition-colors flex items-center gap-1.5">
+              <Link to="/explore" className="text-sm font-bold text-slate-900 hover:text-black hover:underline transition-colors flex items-center gap-1.5">
                 <span>Contact Editorial Desk</span>
                 <i className="ti ti-arrow-right" />
               </Link>
@@ -531,8 +531,8 @@ export function FaqSection() {
                 className="w-full flex items-center justify-between text-left font-bold text-base text-slate-900 group"
                 onClick={() => setOpenIndex(openIndex === i ? null : i)}
               >
-                <span className="group-hover:text-indigo-600 transition-colors">{faq.q}</span>
-                <span className="w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center text-slate-600 group-hover:bg-indigo-50 group-hover:text-indigo-600 transition-colors shrink-0 ml-4">
+                <span className="group-hover:text-black transition-colors">{faq.q}</span>
+                <span className="w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center text-slate-600 group-hover:bg-slate-200 group-hover:text-slate-900 transition-colors shrink-0 ml-4">
                   <i className={openIndex === i ? 'ti ti-chevron-up' : 'ti ti-chevron-down'} />
                 </span>
               </button>
@@ -585,7 +585,7 @@ export function ConversionSection() {
 
           {/* Right Column (6 Cols: Nexora Way) */}
           <div className="col-span-12 md:col-span-6 p-10 lg:p-12 bg-white space-y-6">
-            <span className="prism-mono text-[10px] font-bold text-indigo-600 uppercase tracking-widest block">
+            <span className="prism-mono text-[10px] font-bold text-slate-900 uppercase tracking-widest block">
               THE NEXORA WAY
             </span>
             <h3 className="text-2xl font-bold text-slate-900">
@@ -594,15 +594,15 @@ export function ConversionSection() {
 
             <ul className="space-y-4 text-sm text-slate-800 font-medium">
               <li className="flex items-start gap-3">
-                <i className="ti ti-check text-indigo-600 font-bold mt-0.5 shrink-0" />
+                <i className="ti ti-check text-slate-900 font-bold mt-0.5 shrink-0" />
                 <span>One quiet signal tailored specifically to your work</span>
               </li>
               <li className="flex items-start gap-3">
-                <i className="ti ti-check text-indigo-600 font-bold mt-0.5 shrink-0" />
+                <i className="ti ti-check text-slate-900 font-bold mt-0.5 shrink-0" />
                 <span>A clearer next step with preparation lead times</span>
               </li>
               <li className="flex items-start gap-3">
-                <i className="ti ti-check text-indigo-600 font-bold mt-0.5 shrink-0" />
+                <i className="ti ti-check text-slate-900 font-bold mt-0.5 shrink-0" />
                 <span>More time to act, create, and submit excellent work</span>
               </li>
             </ul>
@@ -613,7 +613,7 @@ export function ConversionSection() {
             <Link
               to="/signup"
               style={{ color: '#FFFFFF', backgroundColor: '#0A0A0A' }}
-              className="px-8 py-3.5 rounded-2xl shadow-2xl font-bold text-sm flex items-center gap-2 hover:!bg-indigo-600 hover:scale-105 transition-all whitespace-nowrap border border-white/20"
+              className="px-8 py-3.5 rounded-2xl shadow-2xl font-bold text-sm flex items-center gap-2 hover:!bg-slate-800 hover:scale-105 transition-all whitespace-nowrap border border-white/20"
             >
               <span style={{ color: '#FFFFFF' }} className="!text-white font-bold">Request Access Now</span>
               <i className="ti ti-arrow-right !text-white" style={{ color: '#FFFFFF' }} />

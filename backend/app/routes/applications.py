@@ -5,13 +5,42 @@ from sqlalchemy.orm import Session, joinedload
 
 from app.database import get_db
 from app.models import (
-    Application, ApplicationStatus, Opportunity, OpportunityStatus, User, utc_now
+    Application, ApplicationStatus, Notification, Opportunity, OpportunityStatus,
+    User, utc_now,
 )
 from app.publishing.catalog import catalog as published_catalog
 from app.schemas import (
     ApplicationCreate, ApplicationUpdate, ApplicationRead, ApplyRequest, ApplyResponse
 )
 from app.auth import get_current_user
+
+
+def _notify(db: Session, user_id: int, title: str, message: str,
+            category: str = "status", priority: str = "medium",
+            opp_id: int = None, organizer: str = "Nexora Intelligence",
+            dedupe_hours: int = 24) -> None:
+    """Create a notification, deduping identical (user, category, opp) rows
+    within the given window so rapid re-saves don't spam the feed."""
+    if dedupe_hours > 0:
+        cutoff = datetime.now(timezone.utc) - timedelta(hours=dedupe_hours)
+        existing = db.query(Notification).filter(
+            Notification.user_id == user_id,
+            Notification.title == title,
+            Notification.opp_id == opp_id,
+            Notification.created_at >= cutoff,
+        ).first()
+        if existing:
+            return
+    db.add(Notification(
+        user_id=user_id,
+        title=title,
+        message=message,
+        category=category,
+        priority=priority,
+        opp_id=opp_id,
+        organizer=organizer,
+    ))
+    db.flush()
 
 router = APIRouter(prefix="/api/applications", tags=["Applications"])
 
@@ -86,6 +115,13 @@ def save_opportunity(
         notes=app_in.notes
     )
     db.add(application)
+    _notify(
+        db, current_user.id,
+        title="Opportunity saved to tracker",
+        message=f"{opportunity.title} is now in your Application Tracker.",
+        category="status", priority="medium", opp_id=opportunity.id,
+        organizer=opportunity.organizer or "Nexora Intelligence",
+    )
     db.commit()
     db.refresh(application)
     return application
@@ -182,6 +218,13 @@ def save_published_by_slug(
         status=ApplicationStatus.SAVED.value,
     )
     db.add(application)
+    _notify(
+        db, current_user.id,
+        title="Opportunity saved to tracker",
+        message=f"{opp.title} is now in your Application Tracker.",
+        category="status", priority="medium", opp_id=opp.id,
+        organizer=opp.organizer or "Nexora Intelligence",
+    )
     db.commit()
     db.refresh(application)
     return application
@@ -255,6 +298,15 @@ def apply_to_opportunity(
             application.status = ApplicationStatus.APPLIED.value
         if application.applied_at is None:
             application.applied_at = utc_now()
+
+    if not already_applied:
+        _notify(
+            db, current_user.id,
+            title="Application submitted",
+            message=f"You marked {opportunity.title} as applied. Good luck — track the outcome in your Tracker.",
+            category="status", priority="medium", opp_id=opportunity.id,
+            organizer=opportunity.organizer or "Nexora Intelligence",
+        )
 
     db.commit()
     db.refresh(application)

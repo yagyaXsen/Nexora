@@ -1,9 +1,12 @@
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import { Mail, Send, CheckCircle2, Building2, HelpCircle } from 'lucide-react'
+import { api } from '../lib/api'
 
 export default function Contact() {
   const [submitted, setSubmitted] = useState(false)
+  const [sending, setSending] = useState(false)
+  const [error, setError] = useState(null)
   const [formData, setFormData] = useState({
     name: '',
     email: '',
@@ -11,9 +14,27 @@ export default function Contact() {
     message: '',
   })
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault()
-    setSubmitted(true)
+    if (!formData.name.trim() || !formData.email.trim() || !formData.message.trim()) {
+      setError('Please fill in your name, email, and message.')
+      return
+    }
+    setSending(true)
+    setError(null)
+    try {
+      await api.contactSubmit({
+        name: formData.name.trim(),
+        email: formData.email.trim(),
+        subject: formData.subject,
+        message: formData.message.trim(),
+      })
+      setSubmitted(true)
+    } catch (err) {
+      setError(err?.message || 'Failed to send your message. Please try again.')
+    } finally {
+      setSending(false)
+    }
   }
 
   return (
@@ -22,7 +43,7 @@ export default function Contact() {
         
         {/* Header */}
         <div className="text-center space-y-3 mb-12">
-          <span className="prism-mono text-[11px] font-bold text-indigo-600 uppercase tracking-widest">
+          <span className="prism-mono text-[11px] font-bold text-slate-800 uppercase tracking-widest">
             Support & Inquiries
           </span>
           <h1 className="text-4xl sm:text-5xl font-extrabold text-slate-900 tracking-tight">
@@ -36,12 +57,12 @@ export default function Contact() {
         {/* Contact Cards */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-12">
           <div className="bg-white border border-slate-200/80 rounded-2xl p-6 shadow-xs text-center">
-            <div className="w-10 h-10 rounded-xl bg-indigo-50 text-indigo-600 flex items-center justify-center mx-auto mb-4">
+            <div className="w-10 h-10 rounded-xl bg-slate-100 text-slate-800 flex items-center justify-center mx-auto mb-4">
               <Mail size={20} />
             </div>
             <h3 className="text-sm font-bold text-slate-900 mb-1">Email Support</h3>
             <p className="text-xs text-slate-500 mb-3">Direct response within 24h</p>
-            <a href="mailto:support@nexora.app" className="text-xs font-bold text-indigo-600 hover:underline">
+            <a href="mailto:support@nexora.app" className="text-xs font-bold text-slate-900 hover:underline">
               support@nexora.app
             </a>
           </div>
@@ -100,7 +121,7 @@ export default function Contact() {
                     value={formData.name}
                     onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                     placeholder="Jane Doe"
-                    className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm font-medium text-slate-900 focus:outline-none focus:border-indigo-500"
+                    className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm font-medium text-slate-900 focus:outline-none focus:border-slate-800"
                   />
                 </div>
                 <div>
@@ -113,7 +134,7 @@ export default function Contact() {
                     value={formData.email}
                     onChange={(e) => setFormData({ ...formData, email: e.target.value })}
                     placeholder="jane@example.com"
-                    className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm font-medium text-slate-900 focus:outline-none focus:border-indigo-500"
+                    className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm font-medium text-slate-900 focus:outline-none focus:border-slate-800"
                   />
                 </div>
               </div>
@@ -125,7 +146,7 @@ export default function Contact() {
                 <select
                   value={formData.subject}
                   onChange={(e) => setFormData({ ...formData, subject: e.target.value })}
-                  className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm font-medium text-slate-900 focus:outline-none focus:border-indigo-500"
+                  className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm font-medium text-slate-900 focus:outline-none focus:border-slate-800"
                 >
                   <option>General Inquiry</option>
                   <option>Submit or Verify an Opportunity</option>
@@ -145,15 +166,22 @@ export default function Contact() {
                   value={formData.message}
                   onChange={(e) => setFormData({ ...formData, message: e.target.value })}
                   placeholder="How can we help you?"
-                  className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm font-medium text-slate-900 focus:outline-none focus:border-indigo-500"
+                  className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm font-medium text-slate-900 focus:outline-none focus:border-slate-800"
                 />
               </div>
 
+              {error && (
+                <div className="p-4 bg-red-50 border border-red-200 text-red-700 text-xs font-bold rounded-xl">
+                  ✕ {error}
+                </div>
+              )}
+
               <button
                 type="submit"
-                className="w-full sm:w-auto px-8 py-3.5 bg-slate-950 hover:bg-slate-800 text-white font-extrabold text-xs md:text-sm rounded-xl transition-all shadow-md flex items-center justify-center gap-2"
+                disabled={sending}
+                className="w-full sm:w-auto px-8 py-3.5 bg-slate-950 hover:bg-slate-800 disabled:opacity-50 disabled:cursor-not-allowed text-white font-extrabold text-xs md:text-sm rounded-xl transition-all shadow-md flex items-center justify-center gap-2"
               >
-                <span>Send Message</span>
+                <span>{sending ? 'Sending…' : 'Send Message'}</span>
                 <Send size={15} />
               </button>
             </form>
@@ -164,7 +192,7 @@ export default function Contact() {
           <Link to="/" className="text-sm font-bold text-slate-500 hover:text-slate-900 transition-colors flex items-center gap-1.5">
             <i className="ti ti-arrow-left" /> Back to Nexora
           </Link>
-          <Link to="/explore" className="text-sm font-bold text-indigo-600 hover:text-indigo-800 transition-colors flex items-center gap-1.5">
+          <Link to="/explore" className="text-sm font-bold text-slate-900 hover:text-black hover:underline transition-colors flex items-center gap-1.5">
             Explore opportunities <i className="ti ti-arrow-right" />
           </Link>
         </div>

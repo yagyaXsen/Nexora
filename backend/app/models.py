@@ -263,3 +263,18 @@ class AuditEvent(Base):
     event_type = Column(String(100), nullable=False, index=True)
     payload = Column(JSON, nullable=True, default=dict)
     created_at = Column(DateTime(timezone=True), default=utc_now, nullable=False)
+
+
+class ContactMessage(Base):
+    """A real contact-form submission. Rows are persisted so messages are never
+    silently dropped, and delivered via the configured mailer when SMTP is set."""
+    __tablename__ = "contact_messages"
+
+    id = Column(Integer, primary_key=True, index=True)
+    name = Column(String(255), nullable=False)
+    email = Column(String(255), nullable=False, index=True)
+    subject = Column(String(255), nullable=False, default="General Inquiry")
+    message = Column(Text, nullable=False)
+    user_id = Column(Integer, ForeignKey("users.id", ondelete="SET NULL"), nullable=True)
+    status = Column(String(50), default="received", nullable=False)
+    created_at = Column(DateTime(timezone=True), default=utc_now, nullable=False)
