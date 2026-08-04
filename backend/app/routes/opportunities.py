@@ -6,6 +6,7 @@ from sqlalchemy.orm import Session
 
 from app.database import get_db
 from app.models import Opportunity, OpportunityStatus, OpportunityCategory
+from app.publishing.catalog import catalog as published_catalog
 from app.schemas import (
     OpportunityRead, OpportunityStats, PaginatedOpportunities,
     SearchRequest, SearchResponse
@@ -355,7 +356,66 @@ def get_opportunity_stats(db: Session = Depends(get_db)):
 
 # Keep this catch-all route last: literal paths such as /stats, /search, and
 # /trending must be matched before a value can be treated as a slug.
-@router.get("/{id_or_slug}", response_model=OpportunityRead)
+def _enrich_with_published_twin(opp: Opportunity) -> dict:
+    """Merge the verified, enriched published-catalog twin into a legacy DB row.
+
+    Most legacy rows (e.g. 'Alexander von Humboldt Postdoctoral Research
+    Fellowship 2026') are thin: they only carry title/description/eligibility/
+    funding. Their published twin holds the full enriched dataset
+    (eligibility_summary, benefits_summary, funding_type, application_steps,
+    required_documents, verification data, etc.).
+
+    The twin is the source of truth for verified content: every non-empty twin
+    field wins, including status and deadline (legacy rows carry seeded,
+    synthetic dates/status that frequently contradict the verified call
+    dates). We keep only the legacy row's identity — id, slug, title, and
+    click_count — so tracking, saving, and legacy URLs keep working. The
+    endpoint intentionally returns a plain dict (no response_model) so the
+    merged shape passes through unchanged; the JSON-only frontend normalizes
+    both naming conventions.
+    """
+    twin = published_catalog.find_twin(
+        title=opp.title, organizer=opp.organizer or "", category=opp.category
+    )
+    if not twin:
+        return opp
+
+    merged = dict(opp.__dict__)
+    merged.pop("_sa_instance_state", None)
+
+    twin_data = twin.model_dump()
+    # Surface every non-empty enriched field from the verified twin, then
+    # restore the legacy identity fields that must not change.
+    for key, val in twin_data.items():
+        if val is None or val == [] or val == "":
+            continue
+        merged[key] = val
+
+    # Legacy identity — keep only what tracking/URLs depend on.
+    merged["id"] = opp.id
+    merged["slug"] = opp.slug
+    merged["title"] = opp.title
+    merged["click_count"] = opp.click_count
+    merged["created_at"] = opp.created_at
+    merged["category"] = opp.category
+    # Legacy 0-1 confidence is replaced by the twin's 0-100 confidence_score;
+    # keep the legacy field for any consumer that reads it directly.
+    merged["confidence"] = opp.confidence
+    merged["needs_review"] = opp.needs_review
+    merged["organization_id"] = opp.organization_id
+
+    # Verified twin data fully wins on status and deadline. Legacy rows carry
+    # seeded/synthetic dates that contradict the verified call calendar (e.g. a
+    # Humboldt row dated Oct 10, 2026 while the verified note says the next
+    # call opens November 15, 2026). When the twin has no fixed deadline, the
+    # legacy synthetic date must not be shown either.
+    merged["status"] = twin.status
+    merged["deadline"] = twin_data.get("deadline")
+
+    return merged
+
+
+@router.get("/{id_or_slug}")
 def get_opportunity(id_or_slug: str, db: Session = Depends(get_db)):
     opp = None
     if id_or_slug.isdigit():
@@ -386,4 +446,4 @@ def get_opportunity(id_or_slug: str, db: Session = Depends(get_db)):
             status_code=status.HTTP_404_NOT_FOUND,
             detail=f"Opportunity '{id_or_slug}' not found"
         )
-    return opp
+    return _enrich_with_published_twin(opp)
