@@ -8,8 +8,8 @@
 
 ## What you'll end up with
 
-- **Frontend live at:** `https://nexora.pages.dev` (Cloudflare Pages)
-- **Backend live at:** `https://nexora-api.onrender.com` (Render)
+- **Frontend live at:** `https://nexora-8y5.pages.dev` (Cloudflare Pages)
+- **Backend live at:** `https://nexora-vjf8.onrender.com` (Render)
 - **Database:** Neon Postgres (free tier, persistent)
 - **AI search:** mock parser by default; Groq is optional and fail-open
 - **Email:** ConsoleMailer mode (prints to logs instead of sending — fine for demo)
