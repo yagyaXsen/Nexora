@@ -6,6 +6,7 @@ import OpportunityCard from '../components/OpportunityCard.jsx'
 import { CountUp } from '../components/CountUp.jsx'
 import { ALL_CATEGORIES, categoryLabel, formatDate } from '../lib/format'
 import { useApply } from '../hooks/useApply'
+import { toCardShape, readBookmarks, toggleBookmark } from '../lib/published'
 import './Dashboard.css'
 
 export default function Dashboard() {
@@ -17,6 +18,7 @@ export default function Dashboard() {
   const [stats, setStats] = useState(null)
   const [summary, setSummary] = useState(null)
   const [publishedStats, setPublishedStats] = useState(null)
+  const [savedSlugs, setSavedSlugs] = useState(() => new Set(readBookmarks()))
   const [loading, setLoading] = useState(true)
 
   // Applying creates/updates a tracker row, so add it to the local list too.
@@ -33,8 +35,10 @@ export default function Dashboard() {
     setLoading(true)
 
     Promise.all([
-      api.recommendations(6).catch(() => []),
-      api.trending(4).catch(() => []),
+      // AI Matched feed comes from the verified published catalog (slug-keyed,
+      // no DB id) — the legacy /api/opportunities endpoint only holds 13 thin rows.
+      api.published({ page_size: 6 }).then((r) => (r.items || []).map(toCardShape)).catch(() => []),
+      api.published({ page_size: 4 }).then((r) => (r.items || []).map(toCardShape)).catch(() => []),
       api.remindersUpcoming(14).catch(() => []),
       api.applications().catch(() => []),
       api.stats().catch(() => null),
@@ -56,6 +60,8 @@ export default function Dashboard() {
   }, [])
 
   const savedSet = new Set(apps.map((a) => a.opportunity?.id).filter(Boolean))
+  // Slug-keyed published records are saved via the local bookmark stub.
+  const isSaved = (opp) => (opp.id != null ? savedSet.has(opp.id) : savedSlugs.has(opp.slug))
   const savedCount = summary?.saved_count ?? apps.length
   const appliedCount = summary?.applied_count ?? apps.filter((a) => ['Applied', 'Assessment', 'Interview', 'Offer', 'Accepted'].includes(a.status)).length
   const upcomingCount = summary?.upcoming_deadlines_count ?? reminders.length
@@ -250,9 +256,16 @@ export default function Dashboard() {
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
                   {recs.map((opp) => (
                     <OpportunityCard
-                      key={opp.id}
+                      key={opp.slug || opp.id}
                       opp={opp}
+                      saved={isSaved(opp)}
                       onSave={async (targetOpp) => {
+                        // Slug-keyed published records: local bookmark stub only.
+                        if (targetOpp.id == null) {
+                          toggleBookmark(targetOpp.slug)
+                          setSavedSlugs(new Set(readBookmarks()))
+                          return
+                        }
                         const isSaved = savedSet.has(targetOpp.id)
                         // ⚡ Instant Real-Time Optimistic UI Update
                         if (isSaved) {
@@ -322,7 +335,7 @@ export default function Dashboard() {
                 </div>
                 <div className="space-y-3">
                   {trending.map((item) => (
-                    <div key={item.id} className="p-4 bg-white border border-slate-200 rounded-2xl flex items-center justify-between gap-4 shadow-sm hover:border-indigo-300 transition-all">
+                    <div key={item.slug || item.id} className="p-4 bg-white border border-slate-200 rounded-2xl flex items-center justify-between gap-4 shadow-sm hover:border-indigo-300 transition-all">
                       <div>
                         <span className="prism-mono text-[10px] bg-indigo-50 text-indigo-600 px-2.5 py-0.5 rounded font-bold uppercase">
                           {item.category}
@@ -377,7 +390,7 @@ export default function Dashboard() {
                     }
                     const colorClass = statusColors[app.status] || 'text-slate-600 bg-slate-100'
                     return (
-                      <div key={app.id} className="p-3.5 bg-[#FAFAFA] border border-slate-200 rounded-2xl flex items-center justify-between gap-3">
+                      <div key={app.id ?? app.opportunity?.id ?? app.opportunity?.slug} className="p-3.5 bg-[#FAFAFA] border border-slate-200 rounded-2xl flex items-center justify-between gap-3">
                         <div className="min-w-0">
                           <h4 className="font-bold text-xs text-slate-900 truncate">{app.opportunity?.title}</h4>
                           <span className="prism-mono text-[10px] text-slate-500">{app.opportunity?.organizer?.toUpperCase()}</span>

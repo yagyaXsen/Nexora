@@ -1,46 +1,25 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import { api } from '../lib/api'
 import { useAuth } from '../lib/auth.jsx'
 import { categoryLabel, formatDate } from '../lib/format'
 import { applyUrl } from '../lib/api'
 import { useApply } from '../hooks/useApply'
+import { toCardShape, readBookmarks, toggleBookmark } from '../lib/published'
 import './Explore.css'
 
 const PAGE_SIZE = 12
-const BOOKMARKS_KEY = 'nexora_bookmarks'
 
 // Explore category values → published catalog opportunity_type values.
 // 'gov_scheme' is a legacy-only category (not in the verified catalog), so
 // Explore falls back to the legacy DB endpoint for it.
 const CATEGORY_TO_PUBLISHED = {
   exchange: 'exchange_program',
+  // Legacy-only categories with no verified catalog equivalent — fall back
+  // to the legacy DB endpoint rather than showing an empty published result.
   gov_scheme: null,
-}
-
-const FUNDING_LABELS = {
-  fully_funded: 'Fully Funded',
-  partially_funded: 'Partially Funded',
-  stipend: 'Stipend',
-  grant_support: 'Grant Support',
-  tuition_covered: 'Tuition Covered',
-}
-
-/**
- * Map a published-catalog record into the card shape Explore expects.
- * Published records have no DB `id` (slug-keyed), so save/compare use slugs.
- */
-function normalizePublishedItem(p) {
-  return {
-    ...p,
-    id: null,
-    category: p.opportunity_type,
-    organizer: p.provider_organization,
-    country: p.country_or_region,
-    funding_amount: FUNDING_LABELS[p.funding_type] || null,
-    eligibility_text: p.eligibility_summary,
-    apply_url: p.application_url || p.official_source_url,
-  }
+  travel: null,
+  giveaway: null,
 }
 
 /** The published catalog has no server-side sort — apply it client-side. */
@@ -90,15 +69,6 @@ const SORT_OPTIONS = [
   { value: 'created_desc', label: 'Recently Discovered' },
   { value: 'funding_desc', label: 'Highest Funding' },
 ]
-
-function readBookmarks() {
-  try {
-    const cur = JSON.parse(localStorage.getItem(BOOKMARKS_KEY) || '[]')
-    return Array.isArray(cur) ? cur : []
-  } catch {
-    return []
-  }
-}
 
 /** Helper to highlight matched search terms in title or organizer */
 function HighlightText({ text, query }) {
@@ -302,7 +272,7 @@ export default function Explore() {
         : api
             .published({ q, category: publishedCategory, country, page, page_size: PAGE_SIZE })
             .then((r) => ({
-              items: sortPublishedItems((r.items || []).map(normalizePublishedItem), sort),
+              items: sortPublishedItems((r.items || []).map(toCardShape), sort),
               total: r.total,
               page: r.page,
               pages: r.pages,
@@ -357,10 +327,8 @@ export default function Explore() {
       return
     }
     if (opp.id == null) {
-      const cur = readBookmarks()
-      const next = cur.includes(opp.slug) ? cur.filter((s) => s !== opp.slug) : [...cur, opp.slug]
-      localStorage.setItem(BOOKMARKS_KEY, JSON.stringify(next))
-      setSavedSlugs(new Set(next))
+      toggleBookmark(opp.slug)
+      setSavedSlugs(new Set(readBookmarks()))
       return
     }
     const isSaved = savedIds.has(opp.id)
