@@ -53,6 +53,7 @@ yarn-error.log
 nexora.db
 nexora.db.bak*
 postgres_data/
+backend/backups/
 
 # Freebuff desktop
 .freebuff/
