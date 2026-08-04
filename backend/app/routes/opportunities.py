@@ -327,6 +327,32 @@ def apply_redirect(opp_id: int, db: Session = Depends(get_db)):
     db.commit()
     return RedirectResponse(url=opp.apply_url, status_code=status.HTTP_307_TEMPORARY_REDIRECT)
 
+
+@router.get("/stats", response_model=OpportunityStats)
+def get_opportunity_stats(db: Session = Depends(get_db)):
+    """Summary metrics of all opportunities in the platform."""
+    total = db.query(Opportunity).count()
+    active = db.query(Opportunity).filter(Opportunity.status == OpportunityStatus.ACTIVE.value).count()
+    expiring = db.query(Opportunity).filter(Opportunity.status == OpportunityStatus.EXPIRING_SOON.value).count()
+    expired = db.query(Opportunity).filter(Opportunity.status == OpportunityStatus.EXPIRED.value).count()
+    dead = db.query(Opportunity).filter(Opportunity.status == OpportunityStatus.DEAD_LINK.value).count()
+    review = db.query(Opportunity).filter(Opportunity.needs_review == True).count()
+
+    cat_counts = db.query(Opportunity.category, func.count(Opportunity.id))\
+        .filter(Opportunity.status.in_([OpportunityStatus.ACTIVE.value, OpportunityStatus.EXPIRING_SOON.value]))\
+        .group_by(Opportunity.category).all()
+    breakdown = {cat: count for cat, count in cat_counts if cat}
+
+    return OpportunityStats(
+        total_opportunities=total,
+        active_count=active,
+        expiring_soon_count=expiring,
+        expired_count=expired,
+        dead_link_count=dead,
+        needs_review_count=review,
+        categories_breakdown=breakdown,
+    )
+
 # Keep this catch-all route last: literal paths such as /stats, /search, and
 # /trending must be matched before a value can be treated as a slug.
 @router.get("/{id_or_slug}", response_model=OpportunityRead)
