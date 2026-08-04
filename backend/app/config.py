@@ -61,7 +61,7 @@ class Settings(BaseSettings):
     GOOGLE_CLIENT_ID: str = ""
 
     # Comma-separated list of allowed browser origins.
-    CORS_ORIGINS: str = "http://localhost:5173,http://127.0.0.1:5173"
+    CORS_ORIGINS: str = "http://localhost:5173,http://127.0.0.1:5173,https://nexora-8y5.pages.dev"
 
     # In-process APScheduler only works while the process is awake. Free hosts
     # spin down after ~15 min idle, so deployed environments drive ingestion from
