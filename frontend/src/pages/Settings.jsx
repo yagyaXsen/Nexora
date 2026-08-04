@@ -309,6 +309,20 @@ export default function Settings() {
       <div className="absolute top-0 right-1/4 w-[800px] h-[500px] bg-gradient-to-tr from-indigo-500/10 via-purple-500/5 to-transparent rounded-full blur-3xl pointer-events-none" />
 
       <div className="max-w-[1240px] mx-auto px-6 relative z-10 space-y-8">
+        {/* Back navigation */}
+        <button
+          type="button"
+          onClick={() =>
+            window.history.length > 1
+              ? navigate(-1)
+              : navigate('/dashboard', { replace: true })
+          }
+          className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg border border-slate-200 hover:border-slate-400 text-slate-500 font-bold font-mono text-xs transition-colors"
+          title="Go back to the previous page"
+        >
+          <i className="ti ti-arrow-left text-xs" /> Back
+        </button>
+
         {/* Header Title */}
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 pb-6 border-b border-slate-200">
           <div className="space-y-2">

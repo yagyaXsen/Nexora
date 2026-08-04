@@ -171,6 +171,20 @@ export default function Profile() {
           )
         })()}
 
+        {/* 0. Back navigation */}
+        <button
+          type="button"
+          onClick={() =>
+            window.history.length > 1
+              ? navigate(-1)
+              : navigate('/dashboard', { replace: true })
+          }
+          className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg border border-slate-200 hover:border-slate-400 text-slate-500 font-bold font-mono text-xs transition-colors"
+          title="Go back to the previous page"
+        >
+          <i className="ti ti-arrow-left text-xs" /> Back
+        </button>
+
         {/* 1. Header Profile Banner */}
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 pb-6 border-b border-slate-200">
           <div className="flex items-center gap-4">
