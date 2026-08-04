@@ -322,6 +322,19 @@ export default function OpportunityDetail() {
 
         {/* Breadcrumb + utility row */}
         <nav className="flex flex-wrap items-center gap-2 font-mono text-xs text-slate-400 print:hidden">
+          <button
+            type="button"
+            onClick={() =>
+              window.history.length > 1
+                ? navigate(-1)
+                : navigate('/explore', { replace: true })
+            }
+            className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg border border-slate-200 hover:border-slate-400 text-slate-600 font-bold transition-colors"
+            title="Go back to the previous page"
+          >
+            <i className="ti ti-arrow-left text-xs" /> Back
+          </button>
+          <span className="text-slate-300">/</span>
           <Link to="/explore" className="hover:text-slate-800 transition-colors font-bold">Explorer Index</Link>
           <span>/</span>
           <span className="uppercase text-slate-800 font-bold">{categoryLabel(opp.type)}</span>

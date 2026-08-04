@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { Link, useParams } from 'react-router-dom'
+import { Link, useNavigate, useParams } from 'react-router-dom'
 import { api } from '../lib/api'
 import OpportunityCard from '../components/OpportunityCard.jsx'
 import './OrganizationDetail.css'
@@ -135,10 +135,11 @@ function getOrgData(slug) {
 
 export default function OrganizationDetail() {
   const { slug } = useParams()
+  const navigate = useNavigate()
   const org = getOrgData(slug)
 
   const [following, setFollowing] = useState(false)
-  const [followerCount, setFollowerCount] = useState(1420)
+  const [followerCount, setFollowerCount] = useState(0)
   const [opportunities, setOpportunities] = useState([])
   const [loading, setLoading] = useState(true)
 
@@ -182,7 +183,25 @@ export default function OrganizationDetail() {
       </div>
 
       <div className="max-w-[1240px] mx-auto px-6 relative z-10 -mt-16 space-y-8">
-        
+
+        {/* Back navigation bar */}
+        <nav className="relative z-10 mb-2 flex flex-wrap items-center gap-2 font-mono text-xs text-slate-400">
+          <button
+            type="button"
+            onClick={() =>
+              window.history.length > 1
+                ? navigate(-1)
+                : navigate('/explore', { replace: true })
+            }
+            className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg border border-slate-200 bg-white/90 hover:border-slate-400 text-slate-600 font-bold transition-colors shadow-xs"
+            title="Go back to the previous page"
+          >
+            <i className="ti ti-arrow-left text-xs" /> Back
+          </button>
+          <span className="text-slate-300">/</span>
+          <Link to="/explore" className="hover:text-slate-800 transition-colors font-bold">Explorer Index</Link>
+        </nav>
+
         {/* 2. Hero Specs Card */}
         <div className="bg-white border border-slate-200 rounded-3xl p-6 sm:p-8 shadow-xl space-y-6">
           <div className="flex flex-wrap items-start justify-between gap-6">
