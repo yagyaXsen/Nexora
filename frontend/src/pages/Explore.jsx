@@ -10,6 +10,57 @@ import './Explore.css'
 const PAGE_SIZE = 12
 const BOOKMARKS_KEY = 'nexora_bookmarks'
 
+// Explore category values → published catalog opportunity_type values.
+// 'gov_scheme' is a legacy-only category (not in the verified catalog), so
+// Explore falls back to the legacy DB endpoint for it.
+const CATEGORY_TO_PUBLISHED = {
+  exchange: 'exchange_program',
+  gov_scheme: null,
+}
+
+const FUNDING_LABELS = {
+  fully_funded: 'Fully Funded',
+  partially_funded: 'Partially Funded',
+  stipend: 'Stipend',
+  grant_support: 'Grant Support',
+  tuition_covered: 'Tuition Covered',
+}
+
+/**
+ * Map a published-catalog record into the card shape Explore expects.
+ * Published records have no DB `id` (slug-keyed), so save/compare use slugs.
+ */
+function normalizePublishedItem(p) {
+  return {
+    ...p,
+    id: null,
+    category: p.opportunity_type,
+    organizer: p.provider_organization,
+    country: p.country_or_region,
+    funding_amount: FUNDING_LABELS[p.funding_type] || null,
+    eligibility_text: p.eligibility_summary,
+    apply_url: p.application_url || p.official_source_url,
+  }
+}
+
+/** The published catalog has no server-side sort — apply it client-side. */
+function sortPublishedItems(items, sort) {
+  if (sort === 'deadline_asc') {
+    return [...items].sort((a, b) =>
+      String(a.deadline || '9999-12-31').localeCompare(String(b.deadline || '9999-12-31'))
+    )
+  }
+  if (sort === 'funding_desc') {
+    const order = ['fully_funded', 'partially_funded', 'stipend', 'grant_support', 'tuition_covered']
+    return [...items].sort((a, b) => {
+      const ia = order.indexOf(a.funding_type)
+      const ib = order.indexOf(b.funding_type)
+      return (ia === -1 ? 99 : ia) - (ib === -1 ? 99 : ib)
+    })
+  }
+  return items
+}
+
 const POPULAR_SEARCHES = [
   'CERN Fellowship',
   'DAAD Postdoc',
@@ -215,29 +266,48 @@ export default function Explore() {
     setLoading(true)
     setError(null)
 
-    const fetcher = api
-      .opportunities({
-        q,
-        category,
-        country,
-        sort,
-        page,
-        page_size: PAGE_SIZE,
-      })
-      .then((r) => ({
-        items: r.items,
-        total: r.total,
-        page: r.page,
-        pages: r.pages,
-      }))
-      .catch(() =>
-        api.search(q || 'research').then((r) => ({
+    // Prefer the verified published catalog (54 records). Fall back to the
+    // legacy DB endpoint for the gov_scheme category or if published fails.
+    // Unmapped categories pass through unchanged (accelerator, scholarship, ...).
+    const publishedCategory =
+      CATEGORY_TO_PUBLISHED[category] === null ? null : CATEGORY_TO_PUBLISHED[category] ?? category
+    const fetchLegacy = () =>
+      api
+        .opportunities({
+          q,
+          category,
+          country,
+          sort,
+          page,
+          page_size: PAGE_SIZE,
+        })
+        .then((r) => ({
           items: r.items,
           total: r.total,
-          intent: r.intent,
-          degraded: r.degraded,
+          page: r.page,
+          pages: r.pages,
         }))
-      )
+        .catch(() =>
+          api.search(q || 'research').then((r) => ({
+            items: r.items,
+            total: r.total,
+            intent: r.intent,
+            degraded: r.degraded,
+          }))
+        )
+
+    const fetcher =
+      publishedCategory === null
+        ? fetchLegacy()
+        : api
+            .published({ q, category: publishedCategory, country, page, page_size: PAGE_SIZE })
+            .then((r) => ({
+              items: sortPublishedItems((r.items || []).map(normalizePublishedItem), sort),
+              total: r.total,
+              page: r.page,
+              pages: r.pages,
+            }))
+            .catch(fetchLegacy)
 
     fetcher
       .then((r) => !cancelled && setResult(r))
