@@ -213,21 +213,53 @@ export default function OpportunityDetail() {
       return
     }
     if (rawId == null) {
-      // Published (non-DB) record: local bookmark stub — no tracker row yet.
+      // Published (non-DB) record: keep the local bookmark as an optimistic
+      // mirror, but ALSO persist a real tracker row (the backend hydrates the
+      // catalog record) so the Tracker and Notifications update in real time.
       const current = readBookmarks()
-      const next = current.includes(opp.slug)
-        ? current.filter((s) => s !== opp.slug)
-        : [...current, opp.slug]
+      const willSave = !current.includes(opp.slug)
+      const next = willSave ? [...current, opp.slug] : current.filter((s) => s !== opp.slug)
       localStorage.setItem(BOOKMARKS_KEY, JSON.stringify(next))
-      setSaved(next.includes(opp.slug))
+      setSaved(willSave)
+      setSaving(true)
+      try {
+        if (willSave) {
+          const row = await api.saveApplicationBySlug(opp.slug)
+          // The hydrated row carries a real DB id — use it for Apply tracking
+          // and id-based save/unsave from here on.
+          if (row?.opportunity?.id != null) setRawId(row.opportunity.id)
+        } else {
+          await api.unsaveApplicationBySlug(opp.slug)
+        }
+      } catch {
+        // Roll the bookmark back so UI state stays honest.
+        localStorage.setItem(BOOKMARKS_KEY, JSON.stringify(current))
+        setSaved(current.includes(opp.slug))
+      } finally {
+        setSaving(false)
+      }
       return
     }
     const previous = saved
     setSaved(!previous)
     setSaving(true)
     try {
-      if (previous) await api.unsaveOpportunity(rawId)
-      else await api.saveApplication(rawId)
+      if (previous) {
+        await api.unsaveOpportunity(rawId)
+        // Published records hydrate a row and set rawId, so unsaves can arrive
+        // via this branch — keep the bookmark mirror in sync or a reload would
+        // show a ghost "Saved" state.
+        const cur = readBookmarks()
+        if (cur.includes(opp.slug)) {
+          localStorage.setItem(BOOKMARKS_KEY, JSON.stringify(cur.filter((s) => s !== opp.slug)))
+        }
+      } else {
+        await api.saveApplication(rawId)
+        const cur = readBookmarks()
+        if (!cur.includes(opp.slug)) {
+          localStorage.setItem(BOOKMARKS_KEY, JSON.stringify([...cur, opp.slug]))
+        }
+      }
     } catch {
       setSaved(previous)
     } finally {

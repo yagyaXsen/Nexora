@@ -327,8 +327,19 @@ export default function Explore() {
       return
     }
     if (opp.id == null) {
+      // Published (non-DB) record: mirror the local bookmark with a real
+      // tracker row (backend hydrates the catalog record) so the Tracker and
+      // Notifications reflect the save in real time. Roll back on failure.
+      const wasSaved = readBookmarks().includes(opp.slug)
       toggleBookmark(opp.slug)
       setSavedSlugs(new Set(readBookmarks()))
+      try {
+        if (wasSaved) await api.unsaveApplicationBySlug(opp.slug)
+        else await api.saveApplicationBySlug(opp.slug)
+      } catch {
+        toggleBookmark(opp.slug)
+        setSavedSlugs(new Set(readBookmarks()))
+      }
       return
     }
     const isSaved = savedIds.has(opp.id)
