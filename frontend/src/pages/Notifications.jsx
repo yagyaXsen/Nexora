@@ -4,7 +4,12 @@ import { api } from '../lib/api'
 import './Notifications.css'
 
 function timeAgo(dateStr) {
-  const diff = Date.now() - new Date(dateStr).getTime()
+  // SQLite round-trips drop the tz marker ("2026-08-06T20:03:44"), which JS
+  // would otherwise parse as LOCAL time. Backend timestamps are UTC, so treat
+  // tz-less strings as UTC before computing the diff.
+  const hasTz = /(Z|[+-]\d{2}:?\d{2})$/.test(dateStr || '')
+  const normalized = hasTz ? dateStr : `${dateStr}Z`
+  const diff = Date.now() - new Date(normalized).getTime()
   const mins = Math.floor(diff / 60000)
   if (mins < 1) return 'JUST NOW'
   if (mins < 60) return `${mins}M AGO`

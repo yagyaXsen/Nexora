@@ -337,6 +337,8 @@ def update_application(
             detail=f"Application ID {application_id} not found"
         )
 
+    was_applied = bool(application.applied_at)
+
     update_data = app_in.model_dump(exclude_unset=True)
     if "status" in update_data and update_data["status"]:
         update_data["status"] = update_data["status"].value
@@ -347,6 +349,17 @@ def update_application(
     # Auto-stamp applied_at when moving to applied
     if application.status == ApplicationStatus.APPLIED.value and application.applied_at is None:
         application.applied_at = utc_now()
+
+    # Mirror the Apply-CTA flow: notify when the user marks the application as
+    # applied in the Tracker, so the Notifications feed updates in real time.
+    if application.status == ApplicationStatus.APPLIED.value and not was_applied:
+        _notify(
+            db, current_user.id,
+            title="Application submitted",
+            message=f"You marked {application.opportunity.title} as applied. Good luck — track the outcome in your Tracker.",
+            category="status", priority="medium", opp_id=application.opportunity_id,
+            organizer=application.opportunity.organizer or "Nexora Intelligence",
+        )
 
     db.commit()
     db.refresh(application)

@@ -74,5 +74,14 @@ export function AuthProvider({ children }) {
 }
 
 export function useAuth() {
-  return useContext(AuthContext)
+  const context = useContext(AuthContext)
+  return context || {
+    user: null,
+    loading: false,
+    login: async () => null,
+    signup: async () => null,
+    logout: async () => {},
+    refresh: async () => null,
+    loginWithGoogle: async () => ({ user: null, is_new_user: false }),
+  }
 }
