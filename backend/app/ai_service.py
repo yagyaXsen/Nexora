@@ -10,8 +10,35 @@ from typing import Dict, Any, Optional
 from app.config import settings
 from app.schemas import OpportunityExtract, SearchIntent
 from app.models import OpportunityCategory
+from app.pipeline.extractor import _clean_title
 
 logger = logging.getLogger(__name__)
+
+# Date shapes the mock extractor can lift out of page text so demo data
+# reflects the page instead of a pure hash-random guess. Tried in order.
+_DATE_CANDIDATE_RE = re.compile(
+    r"\b(\d{4}-\d{2}-\d{2}"
+    r"|\d{1,2}\s+(?:jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)[a-z]*\s+\d{4}"
+    r"|(?:jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)[a-z]*\.?\s+\d{1,2},?\s+\d{4})\b",
+    re.IGNORECASE,
+)
+_DATE_FORMATS = (
+    "%Y-%m-%d", "%d %B %Y", "%d %b %Y",
+    "%B %d, %Y", "%b %d, %Y", "%B %d %Y", "%b %d %Y",
+)
+
+
+def _parse_deadline_hint(text: str) -> Optional[datetime]:
+    """Best-effort deadline date from page text (mock mode only)."""
+    for match in _DATE_CANDIDATE_RE.finditer(text[:6000]):
+        candidate = match.group(1).replace(".", "")
+        for fmt in _DATE_FORMATS:
+            try:
+                parsed = datetime.strptime(candidate, fmt).replace(tzinfo=timezone.utc)
+                return parsed.replace(hour=23, minute=59, second=59)
+            except ValueError:
+                continue
+    return None
 
 class AIService:
     def __init__(self):
@@ -183,17 +210,24 @@ Text Content:
     def _mock_extraction(self, text_content: str, source_name: str, candidate_url: str) -> OpportunityExtract:
         text_hash = hashlib.md5(text_content.encode("utf-8")).hexdigest()
         hash_val = int(text_hash[:8], 16)
-        
+
         categories = list(OpportunityCategory)
         cat = categories[hash_val % len(categories)]
-        
+
         # Derive title lines
         lines = [l.strip() for l in text_content.splitlines() if l.strip()]
         first_line = lines[0] if lines else "Global Opportunity Program"
-        title = first_line[:120] if len(first_line) > 5 else f"{source_name} Opportunity Program {hash_val % 1000}"
+        # Strip markdown/pipeline artifacts ('# ', 'Program Page', nav junk) so
+        # mock records don't carry '#'-prefixed titles that the startup junk
+        # sweep would later delete.
+        title = _clean_title(first_line)[:120] or f"{source_name} Opportunity Program {hash_val % 1000}"
 
-        future_days = 15 + (hash_val % 60)
-        deadline_dt = datetime.now(timezone.utc) + timedelta(days=future_days)
+        # Use a real date printed on the page when one exists. Mock mode must
+        # NEVER fabricate a deadline: a made-up future date would make a
+        # closed/expired program look open (and an automated pipeline would
+        # then faithfully maintain fabricated data). No date on the page →
+        # deadline stays null and the record renders as "Deadline Unclear".
+        deadline_dt = _parse_deadline_hint(text_content)
         
         return OpportunityExtract(
             category=cat,
