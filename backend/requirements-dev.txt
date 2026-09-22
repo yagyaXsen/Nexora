@@ -6,4 +6,6 @@
 #   pip install -r requirements-dev.txt
 #   playwright install chromium
 
-scrapling[fetchers]>=0.2.99
+# Pinned to the version the parser code is written/tested against
+# (Scrapling 0.4 removed Selector's first-match helper - see app/pipeline/fetcher.py)
+scrapling[fetchers]==0.4.15

@@ -116,7 +116,7 @@ class PageResult:
 
     @staticmethod
     def _find_apply_url_impl(
-        css_first_fn, css_all_fn, get_text_fn, get_attr_fn,
+        first_fn, css_all_fn, get_text_fn, get_attr_fn,
         base_url: str, selector: Optional[str],
     ) -> Optional[str]:
         """Single implementation of the 3-step apply-link algorithm.
@@ -129,7 +129,7 @@ class PageResult:
         Step 3: href containing "apply" or "application"
         """
         if selector:
-            el = css_first_fn(selector)
+            el = first_fn(selector)
             href = get_attr_fn(el, 'href') if el else None
             if href:
                 return urljoin(base_url, href)
@@ -165,7 +165,7 @@ class PageResult:
         """Extract the most direct apply link from the page."""
         if _SCRAPLING_AVAILABLE and self._soup is not None and hasattr(self._soup, 'css'):
             return self._find_apply_url_impl(
-                lambda sel: self._soup.css_first(sel),
+                lambda sel: (self._soup.css(sel) or [None])[0],
                 lambda sel: self._soup.css(sel),
                 lambda el: el.text,
                 lambda el, attr: el.attrib.get(attr, ''),
@@ -192,13 +192,22 @@ class PageResult:
     def _scrapling_cards(self, item_sel, title_sel, link_sel):
         page = self._soup
         results = []
+
+        # Scrapling >= 0.3 removed the first-match helper; .css() returns a
+        # list-like Selectors object that is falsy when empty - take [0].
         for el in (page.css(item_sel) or [])[:15]:
-            title_node = el.css_first(title_sel)
-            link_node = el.css_first(link_sel)
+            title_nodes = el.css(title_sel) or []
+            link_nodes = el.css(link_sel) or []
+
+            title_node = title_nodes[0] if title_nodes else None
+            link_node = link_nodes[0] if link_nodes else None
+
             title = (title_node.text if title_node else el.text or '').strip()[:120]
             href = (link_node.attrib.get('href') if link_node else None) or ''
+
             if len(title) >= 5 and href:
                 results.append((title, href))
+
         return results
 
     def _bs4_cards(self, item_sel, title_sel, link_sel):
@@ -261,6 +270,14 @@ def _fetch_page(
                 logger.warning(f"Scrapling returned None for {url}")
                 return None
 
+            # Scrapling returns error responses instead of raising (the httpx
+            # fallback calls raise_for_status here). Mirror that: 4xx/5xx ->
+            # None, so deep-fetch skips the page and a failed listing raises
+            # FetchError - an error page must never be extracted as content.
+            if getattr(page, "status", 0) and page.status >= 400:
+                logger.warning(f"Scrapling got HTTP {page.status} for {url}")
+                return None
+
             # get_all_text strips script/style/nav by default in 0.4.x
             text = page.get_all_text(ignore_tags=('script', 'style', 'nav', 'footer', 'header'))
             return PageResult(url=url, text=text, soup=page)
@@ -278,6 +295,9 @@ def _fetch_page(
                 else:
                     page = None
                 if page is None:
+                    return None
+                if getattr(page, "status", 0) and page.status >= 400:
+                    logger.warning(f"Scrapling got HTTP {page.status} for {url} (retry)")
                     return None
                 text = page.get_all_text(ignore_tags=('script', 'style', 'nav', 'footer', 'header'))
                 return PageResult(url=url, text=text, soup=page)
