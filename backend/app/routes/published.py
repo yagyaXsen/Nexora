@@ -1,3 +1,4 @@
+import logging
 from typing import List, Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Query
@@ -5,14 +6,27 @@ from sqlalchemy.orm import Session, joinedload
 
 from app.auth import get_current_user
 from app.database import get_db
-from app.models import User
+from app.models import Opportunity, User
 from app.publishing.catalog import catalog
+from app.publishing.live_feed import db_opportunity_to_published, merge_feed
 from app.publishing.models import (
     PublishedMatchItem, PublishedMatchResponse, PublishedOpportunity,
     PublishedListResponse, PublishedStats,
 )
 
 router = APIRouter(prefix="/api/published", tags=["Published Opportunities"])
+logger = logging.getLogger(__name__)
+
+
+def _published_feed(db: Session):
+    """The active catalog: static verified records + pipeline-published DB
+    records. Never raises — if the live layer fails, the static catalog is
+    served unchanged (an empty/failed pipeline can NOT wipe the feed)."""
+    try:
+        return merge_feed(db, catalog)
+    except Exception:
+        logger.exception("Published feed merge failed — serving static catalog only")
+        return None
 
 
 @router.get("/match", response_model=PublishedMatchResponse)
@@ -65,6 +79,7 @@ def match_published(
         degree=degree,
         countries=countries,
         limit=limit,
+        records=_published_feed(db),
     )
 
     items = [
@@ -93,20 +108,40 @@ def list_published(
     funded_only: bool = Query(False, description="Only funded opportunities"),
     page: int = Query(1, ge=1),
     page_size: int = Query(20, ge=1, le=100),
+    db: Session = Depends(get_db),
 ):
     result = catalog.list(
         category=category, country=country, status=status,
         q=q, page=page, page_size=page_size, funded_only=funded_only,
+        records=_published_feed(db),
     )
     return PublishedListResponse(**result)
 
 
 @router.get("/opportunities/{slug}", response_model=PublishedOpportunity)
-def get_published(slug: str):
-    opp = catalog.get(slug)
-    if not opp:
-        raise HTTPException(status_code=404, detail=f"Opportunity '{slug}' not found")
-    return opp
+def get_published(slug: str, db: Session = Depends(get_db)):
+    """Detail for anything that appears (or appeared) in the published feed.
+
+    Resolution order — same lifecycle truth as the list endpoint:
+      1. the merged feed (static records AND pipeline-published live records,
+         twins already enriched, live status/deadline winning),
+      2. a DB-only record that is currently NOT eligible (expired/dead_link):
+         served with status "closed" so history stays viewable but is never
+         presented as active — no static JSON entry is required,
+      3. 404.
+    """
+    feed = _published_feed(db) or []
+    rec = next((r for r in feed if r.slug == slug), None)
+    if rec is not None:
+        # Static records get read-time freshness; live records already carry
+        # pipeline lifecycle state.
+        return catalog.fresh(rec) if catalog.get(slug) is not None else rec
+
+    row = db.query(Opportunity).filter(Opportunity.slug == slug).first()
+    if row is not None:
+        return db_opportunity_to_published(row)
+
+    raise HTTPException(status_code=404, detail=f"Opportunity '{slug}' not found")
 
 
 @router.get("/opportunities/{slug}/related", response_model=List[PublishedOpportunity])
@@ -115,5 +150,5 @@ def related_published(slug: str, limit: int = Query(4, ge=1, le=12)):
 
 
 @router.get("/stats", response_model=PublishedStats)
-def published_stats():
-    return catalog.stats()
+def published_stats(db: Session = Depends(get_db)):
+    return catalog.stats(records=_published_feed(db))

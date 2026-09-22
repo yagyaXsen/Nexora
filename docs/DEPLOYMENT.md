@@ -157,7 +157,23 @@ gh repo create nexora --private --source=. --remote=origin --push
    | `GROQ_API_KEY` | (from step 3) |
   | `USE_MOCK_AI` | `False` |
   | `ENABLE_INTERNAL_SCHEDULER` | `False` |
+  | `ADMIN_SECRET_KEY` | generate like `SECRET_KEY`; must match the GitHub secret `NEXORA_ADMIN_SECRET_KEY` (drives the cron workflow) |
   | `CORS_ORIGINS` | leave blank for now — fill after step 6 |
+
+   Optional pipeline/publishing tuning (safe defaults shown — all in hours/seconds):
+
+   | Key | Default | Purpose |
+   |---|---|---|
+   | `INGEST_INTERVAL_HOURS` | `6` | Internal scheduler scrape cadence (GH Actions drives this in prod at `17 */6 * * *`) |
+   | `LIFECYCLE_INTERVAL_HOURS` | `24` | Expiry + link-check sweep cadence (GH Actions: `43 1 * * *`) |
+   | `PUBLISH_REFRESH_INTERVAL_HOURS` | `168` | Weekly publishing refresh (GH Actions: `7 3 * * 0` Sundays). Metrics only — the live feed updates itself within a minute of pipeline changes |
+   | `MIN_SOURCE_RESCRAPE_HOURS` | `5` | Skip sources scraped more recently than this (prevents internal/external cron overlap) |
+   | `LIVE_FEED_TTL_SECONDS` | `60` | Published-feed cache for the live DB section |
+   | `EXPIRING_SOON_DAYS` | `7` | Deadline window for the expiring_soon status |
+   | `DEAD_LINK_FAILURE_THRESHOLD` | `3` | Consecutive transient failures before dead_link |
+   | `PUBLISH_MIN_CONFIDENCE` | `0.75` | Min extraction confidence for a pipeline record to publish |
+   | `CRON_MAX_SOURCES` | `10` | Sources per ingest batch |
+   | `CRON_MAX_DEAD_LINK_CHECKS` | `30` | Apply-URL checks per lifecycle sweep |
 
 6. Click **Create Web Service**. Render starts building (~5 min).
 7. When build finishes, the dashboard shows your URL: `https://nexora-api.onrender.com`.

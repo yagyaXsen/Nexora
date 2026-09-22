@@ -404,13 +404,34 @@ def _enrich_with_published_twin(opp: Opportunity) -> dict:
     merged["needs_review"] = opp.needs_review
     merged["organization_id"] = opp.organization_id
 
-    # Verified twin data fully wins on status and deadline. Legacy rows carry
-    # seeded/synthetic dates that contradict the verified call calendar (e.g. a
-    # Humboldt row dated Oct 10, 2026 while the verified note says the next
-    # call opens November 15, 2026). When the twin has no fixed deadline, the
-    # legacy synthetic date must not be shown either.
+    # Verified twin data wins on status and deadline for legacy/seed rows,
+    # which carry seeded/synthetic dates that contradict the verified call
+    # calendar (e.g. a Humboldt row dated Oct 10, 2026 while the verified note
+    # says the next call opens November 15, 2026). When the twin has no fixed
+    # deadline, the legacy synthetic date must not be shown either.
+    #
+    # EXCEPTION — pipeline-fresh rows win instead: when the row is
+    # pipeline-managed (source_id set) AND has been verified against its live
+    # source (last_verified_at set), its deadline/status come from a real,
+    # recent scrape of the program page. The static twin is a frozen snapshot,
+    # so it must NOT override fresher scraped data (e.g. a deadline the source
+    # extended after the dataset was published). Legacy/seed rows
+    # (source_id=None, never verified) keep the twin-wins behavior.
     merged["status"] = twin.status
     merged["deadline"] = twin_data.get("deadline")
+    if opp.source_id is not None and opp.last_verified_at is not None:
+        db_status_to_published = {
+            "active": "open",
+            "expiring_soon": "open",
+            "expired": "closed",
+            "dead_link": "closed",
+        }
+        merged_status = db_status_to_published.get(opp.status)
+        if merged_status:
+            merged["status"] = merged_status
+        if opp.deadline is not None:
+            merged["deadline"] = opp.deadline.date().isoformat()
+        merged["last_verified_at"] = opp.last_verified_at.date().isoformat()
 
     return merged
 

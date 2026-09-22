@@ -40,6 +40,12 @@ def _sync_missing_columns() -> None:
     table_col_map = {
         "opportunities": [
             ("organization_id", "INTEGER"),
+            ("last_checked_at", "TIMESTAMP WITH TIME ZONE"),
+            ("last_verified_at", "TIMESTAMP WITH TIME ZONE"),
+            ("link_check_failures", "INTEGER NOT NULL DEFAULT 0"),
+        ],
+        "pipeline_runs": [
+            ("revalidated_count", "INTEGER NOT NULL DEFAULT 0"),
         ],
         "users": [
             ("google_id", "VARCHAR(255)"),
@@ -353,39 +359,47 @@ def _clear_dummy_profile_defaults() -> None:
 
 
 def _sweep_expired_opportunities() -> None:
-    """Mark past-deadline opportunities as expired and remove dead_link/junk entries."""
+    """Boot-time expiration pass + legacy junk cleanup.
+
+    Expiration is delegated to the ONE shared implementation
+    (pipeline.lifecycle.run_daily_expiry_sweep) so boot, the scheduler, and the
+    external cron endpoint all behave identically. It marks past-deadline rows
+    expired, flips the expiring_soon window, and revives rows whose deadline
+    moved back into the future.
+
+    Historical note: this sweep used to DELETE every dead_link row. That was
+    destructive — check_dead_links marks rows dead_link on a single transient
+    network failure, so a temporary outage could permanently delete an
+    opportunity (and its users' Applications) at the next boot. Dead links are
+    now recovered by the link checker instead of purged here. Only '#' title
+    artifacts (deterministic pipeline junk, never a real opportunity) are
+    removed.
+    """
     from app.models import Opportunity, Application, OpportunityStatus
-    from datetime import datetime, timezone
+    from app.pipeline.lifecycle import run_daily_expiry_sweep
 
     db = SessionLocal()
     try:
-        now = datetime.now(timezone.utc)
+        expiry = run_daily_expiry_sweep(db)
+        logger.info(
+            f"Lifecycle sweep: {expiry['expired_count']} expired, "
+            f"{expiry['expiring_soon_count']} expiring soon, "
+            f"{expiry['reminder_count']} reminders sent."
+        )
 
-        # 1. Mark active opportunities whose deadline has passed as expired
-        expired = db.query(Opportunity).filter(
-            Opportunity.status == OpportunityStatus.ACTIVE.value,
-            Opportunity.deadline.isnot(None),
-            Opportunity.deadline < now,
-        ).all()
-        for o in expired:
-            o.status = OpportunityStatus.EXPIRED.value
-        if expired:
-            db.commit()
-            logger.info(f"Lifecycle sweep: marked {len(expired)} opportunity/opportunities as expired.")
-
-        # 2. Remove dead_link entries and junk titles (titles starting with #)
+        # Remove '#' title artifacts (pipeline junk, deterministic — never the
+        # result of a transient failure).
         junk = db.query(Opportunity).filter(
-            (Opportunity.status == OpportunityStatus.DEAD_LINK.value) |
-            (Opportunity.title.like('#%'))
+            Opportunity.title.like('#%')
         ).all()
         for o in junk:
             db.query(Application).filter(Application.opportunity_id == o.id).delete()
             db.delete(o)
         if junk:
             db.commit()
-            logger.info(f"Lifecycle sweep: removed {len(junk)} dead_link/junk opportunities.")
+            logger.info(f"Lifecycle sweep: removed {len(junk)} junk-title opportunities.")
 
-        if not expired and not junk:
+        if not expiry["expired_count"] and not junk:
             logger.info("Lifecycle sweep: all opportunities are current.")
 
     except Exception:

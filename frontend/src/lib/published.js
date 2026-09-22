@@ -50,7 +50,10 @@ export function toCardShape(p) {
     category: p.opportunity_type,
     organizer: p.provider_organization,
     country: p.country_or_region,
-    funding_amount: PUBLISHED_FUNDING_LABELS[p.funding_type] || null,
+    // Static records carry the funding_type enum; live pipeline records carry
+    // free-text funding_amount. Prefer the enum label, fall through to the
+    // scraped amount — never clobber a real value with null.
+    funding_amount: PUBLISHED_FUNDING_LABELS[p.funding_type] || p.funding_amount || null,
     eligibility_text: p.eligibility_summary,
     apply_url: p.application_url || p.official_source_url,
   }

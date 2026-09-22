@@ -6,6 +6,7 @@ changes where `records` comes from.
 
 import logging
 import re
+from datetime import date
 from pathlib import Path
 from typing import Dict, List, Optional
 
@@ -22,6 +23,54 @@ SEARCHABLE_FIELDS = (
     "target_audience",
 )
 ARRAY_SEARCH_FIELDS = ("tags", "disciplines", "study_level")
+
+
+def _effective_status(rec, today: Optional[date] = None) -> str:
+    """Recompute a record's open/closed state AT READ TIME.
+
+    The catalog is loaded once per process, so a status inferred at load time
+    goes stale as days pass: a record that was 'open' at boot silently stays
+    'open' after its deadline passes unless something recomputes it. This
+    mirrors loader._infer_status, but against today's date, so the API never
+    serves an expired record as open (the frontend re-checks too — this is
+    the backend source of truth).
+    """
+    if today is None:
+        today = date.today()
+
+    raw_status = str(rec.status or "").strip().lower()
+    if raw_status in {"closed", "expired", "expired_or_archived", "archived"}:
+        return "closed"
+
+    deadline = getattr(rec, "deadline", None)
+    if deadline:
+        try:
+            if date.fromisoformat(str(deadline)[:10]) < today:
+                return "closed"
+        except ValueError:
+            pass
+
+    if raw_status in {"rolling"} or rec.rolling_deadline is True:
+        return "rolling"
+    if raw_status in {"open", "active", "expiring_soon"}:
+        return "open"
+    if raw_status == "upcoming":
+        return "upcoming"
+    if raw_status == "unclear":
+        return "unclear"
+    if deadline:
+        return "open"
+    if rec.application_readiness == "application_not_yet_open":
+        return "upcoming"
+    return raw_status or "unclear"
+
+
+def _with_fresh_status(rec):
+    """Return a copy of the record whose status reflects today's date."""
+    eff = _effective_status(rec)
+    if eff == rec.status:
+        return rec
+    return rec.model_copy(update={"status": eff}) if hasattr(rec, "model_copy") else rec
 
 
 def _tokenize(text: str) -> set:
@@ -59,6 +108,16 @@ class OpportunityCatalog:
         self._ensure()
         return self._rejections
 
+    def records(self) -> List[PublishedOpportunity]:
+        """The static catalog records (with load-time statuses).
+
+        The publishing layer uses these as the base of the merged feed;
+        per-request freshness (open/closed vs today's date) is applied in
+        list/stats/match_profile regardless of the source of the records.
+        """
+        self._ensure()
+        return list(self._records)
+
     # ── listing / filtering ────────────────────────────────────────────────
     def list(
         self,
@@ -69,9 +128,13 @@ class OpportunityCatalog:
         page: int = 1,
         page_size: int = 20,
         funded_only: bool = False,
+        records: Optional[List[PublishedOpportunity]] = None,
     ) -> Dict:
         self._ensure()
-        items = list(self._records)
+        # records=None → the static catalog; the publishing layer passes the
+        # merged feed (static + verified live DB records) instead.
+        base = list(records) if records is not None else list(self._records)
+        items = base
 
         if category:
             items = [r for r in items if r.opportunity_type == category]
@@ -79,7 +142,7 @@ class OpportunityCatalog:
             c = country.lower()
             items = [r for r in items if r.country_or_region and c in r.country_or_region.lower()]
         if status:
-            items = [r for r in items if r.status == status]
+            items = [r for r in items if _effective_status(r) == status]
         if funded_only:
             items = [r for r in items if r.funding_type in {"fully_funded", "partially_funded", "stipend"}]
         if q:
@@ -105,11 +168,14 @@ class OpportunityCatalog:
         page_items = items[start:start + page_size]
 
         categories = {}
-        for r in self._records:
+        for r in base:
             categories[r.opportunity_type] = categories.get(r.opportunity_type, 0) + 1
 
         return {
-            "items": [r.model_dump() if hasattr(r, "model_dump") else r.dict() for r in page_items],
+            "items": [
+                (_with_fresh_status(r).model_dump() if hasattr(r, "model_dump") else r.dict())
+                for r in page_items
+            ],
             "total": total,
             "page": page,
             "page_size": page_size,
@@ -119,7 +185,13 @@ class OpportunityCatalog:
 
     def get(self, slug: str) -> Optional[PublishedOpportunity]:
         self._ensure()
-        return self._by_slug.get(slug)
+        rec = self._by_slug.get(slug)
+        return _with_fresh_status(rec) if rec else None
+
+    @staticmethod
+    def fresh(rec: PublishedOpportunity) -> PublishedOpportunity:
+        """Apply read-time status freshness to any record (static or merged)."""
+        return _with_fresh_status(rec)
 
     # Words too generic to identify a program on their own. Two shared title
     # tokens that are BOTH in this list are not evidence of a match (e.g. a
@@ -219,6 +291,7 @@ class OpportunityCatalog:
         countries=None,
         limit: int = 6,
         exclude_statuses=None,
+        records: Optional[List[PublishedOpportunity]] = None,
     ) -> List:
         """Rank catalog records against a candidate's profile signals.
 
@@ -229,8 +302,13 @@ class OpportunityCatalog:
 
         Scoring is intentionally transparent: each positive signal adds a
         human-readable reason, which the API surfaces to the UI.
+
+        records=None ranks the static catalog; the publishing layer passes
+        the merged feed so Dashboard matches include pipeline-verified DB
+        records too.
         """
         self._ensure()
+        base_records = list(records) if records is not None else list(self._records)
         exclude = set(exclude_statuses or ("closed",))
 
         focus = [str(t).lower() for t in (focus_terms or []) if t]
@@ -246,8 +324,8 @@ class OpportunityCatalog:
         matched_focus: set = set()
         ranked: List = []
 
-        for r in self._records:
-            if r.status in exclude:
+        for r in base_records:
+            if _effective_status(r) in exclude:
                 continue
 
             score = 0.0
@@ -317,11 +395,12 @@ class OpportunityCatalog:
                 score += 2.0
 
             # ── 6. Freshness / openness ──
-            if r.status == "open":
+            eff_status = _effective_status(r)
+            if eff_status == "open":
                 score += 5.0
-            elif r.status == "rolling":
+            elif eff_status == "rolling":
                 score += 4.0
-            elif r.status == "upcoming":
+            elif eff_status == "upcoming":
                 score += 2.0
 
             ranked.append((score, r, reasons))
@@ -335,7 +414,7 @@ class OpportunityCatalog:
         result = []
         for score, r, reasons in ranked[:limit]:
             pct = round(score / best * 100) if best > 0 else 0
-            result.append((r, pct, reasons))
+            result.append((_with_fresh_status(r), pct, reasons))
 
         # Drop generic tokens ("ai", "research", "fellowships"…) from the
         # surfaced focus terms — only distinctive matched words add signal.
@@ -378,29 +457,31 @@ class OpportunityCatalog:
                 scored.append((score, r))
 
         scored.sort(key=lambda x: (-x[0], x[1].title.lower()))
-        return [r for _, r in scored[:limit]]
+        return [_with_fresh_status(r) for _, r in scored[:limit]]
 
     # ── stats ──────────────────────────────────────────────────────────────
-    def stats(self) -> PublishedStats:
+    def stats(self, records: Optional[List[PublishedOpportunity]] = None) -> PublishedStats:
         self._ensure()
+        base = list(records) if records is not None else list(self._records)
         by_type: Dict[str, int] = {}
         by_status: Dict[str, int] = {}
         fully_funded = 0
         verified = 0
-        for r in self._records:
+        for r in base:
             by_type[r.opportunity_type or "other"] = by_type.get(r.opportunity_type or "other", 0) + 1
-            by_status[r.status] = by_status.get(r.status, 0) + 1
+            eff = _effective_status(r)
+            by_status[eff] = by_status.get(eff, 0) + 1
             if r.funding_type == "fully_funded":
                 fully_funded += 1
             if (r.verification_status or "").startswith("officially"):
                 verified += 1
         return PublishedStats(
-            total=len(self._records),
+            total=len(base),
             by_type=dict(sorted(by_type.items())),
             by_status=dict(sorted(by_status.items())),
             fully_funded=fully_funded,
             verified_count=verified,
-            needs_review_count=sum(1 for r in self._records if r.confidence_score and r.confidence_score < 75),
+            needs_review_count=sum(1 for r in base if r.confidence_score and r.confidence_score < 75),
         )
 
 
