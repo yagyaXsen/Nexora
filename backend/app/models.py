@@ -195,6 +195,18 @@ class Opportunity(Base):
     source_id = Column(Integer, ForeignKey("sources.id", ondelete="SET NULL"), nullable=True)
     raw_document_id = Column(Integer, ForeignKey("raw_documents.id", ondelete="SET NULL"), nullable=True)
     organization_id = Column(Integer, ForeignKey("organizations.id", ondelete="SET NULL"), nullable=True, index=True)
+    # ── Maintenance bookkeeping (automation) ─────────────────────────────────
+    # last_checked_at: the pipeline last evaluated this row (scrape, sweep, or
+    #   link check) — proves the record is being revisited even when the page
+    #   content is unchanged.
+    # last_verified_at: the source page was successfully reached and the stored
+    #   data confirmed against it.
+    # link_check_failures: consecutive TRANSIENT failures (5xx/timeout/DNS) of
+    #   the apply-URL link check. Reaches DEAD_LINK_FAILURE_THRESHOLD →
+    #   dead_link; resets to 0 on any successful check.
+    last_checked_at = Column(DateTime(timezone=True), nullable=True, index=True)
+    last_verified_at = Column(DateTime(timezone=True), nullable=True, index=True)
+    link_check_failures = Column(Integer, default=0, nullable=False)
     created_at = Column(DateTime(timezone=True), default=utc_now, nullable=False)
     updated_at = Column(DateTime(timezone=True), default=utc_now, onupdate=utc_now, nullable=False)
 
@@ -251,6 +263,8 @@ class PipelineRun(Base):
     updated_count = Column(Integer, default=0, nullable=False)
     duplicate_count = Column(Integer, default=0, nullable=False)
     failed_count = Column(Integer, default=0, nullable=False)
+    # Unchanged pages re-verified against their existing opportunity (no AI call).
+    revalidated_count = Column(Integer, default=0, nullable=False)
     error_log = Column(JSON, nullable=True, default=list)
 
     source = relationship("Source", back_populates="pipeline_runs")
