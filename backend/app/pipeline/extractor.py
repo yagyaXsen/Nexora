@@ -15,6 +15,7 @@ _TITLE_CLEANUP_REGEXES = [
     re.compile(r"^DIRECT_APPLY_URL:\s*\S+\s*", re.IGNORECASE),
     re.compile(r"^Program Page\s*", re.IGNORECASE),
     re.compile(r"^title:\s*", re.IGNORECASE),
+    re.compile(r"^#+\s*"),  # markdown heading artifacts scraped off listing pages
     re.compile(r"^(Stories|About|Home|Search|Contact|Menu|Navigation|Skip to content)\s*", re.IGNORECASE),
 ]
 

@@ -12,6 +12,7 @@ Falls back to plain httpx if Scrapling is not installed (keeps dev bootstrap wor
 
 import hashlib
 import logging
+from dataclasses import dataclass, field
 from typing import List, Optional
 from urllib.parse import urljoin
 
@@ -21,6 +22,30 @@ from sqlalchemy.orm import Session
 from app.models import Source, SourceType, RawDocument, RawDocumentStatus
 
 logger = logging.getLogger(__name__)
+
+
+class FetchError(Exception):
+    """The source itself could not be fetched (listing page / feed / sitemap).
+
+    Raised so PipelineRunner can mark the run FAILED with a visible error —
+    a dead source must never look like a successful run that simply found
+    nothing. Per-document failures do NOT raise this; they are skipped so one
+    bad page cannot terminate the whole source.
+    """
+
+
+@dataclass
+class FetchOutcome:
+    """Everything fetch_source learned about a source in one pass.
+
+    raw_docs:       NEW or CHANGED pages → go through extraction → dedupe.
+    unchanged_docs: pages whose content hash matches an existing RawDocument.
+                    They skip extraction, but the runner uses them to
+                    re-validate the opportunities already built from them
+                    (refresh last_checked/last_verified, recompute status).
+    """
+    raw_docs: List[RawDocument] = field(default_factory=list)
+    unchanged_docs: List[RawDocument] = field(default_factory=list)
 
 # ── Scrapling import — try each fetcher independently ────────────────────────
 # A missing DynamicFetcher (PlayWright) shouldn't disable the basic Fetcher.
@@ -308,7 +333,7 @@ class PipelineFetcher:
 
     # ── Public entry point ─────────────────────────────────────────────────────
 
-    def fetch_source(self, db: Session, source: Source) -> List[RawDocument]:
+    def fetch_source(self, db: Session, source: Source) -> FetchOutcome:
         items: List[FetchedItem] = []
         try:
             if source.type == SourceType.RSS.value:
@@ -319,10 +344,15 @@ class PipelineFetcher:
                 items = self._fetch_sitemap(source)
             else:
                 logger.warning(f"Unknown source type: {source.type} for source {source.id}")
+        except FetchError:
+            # The source itself is unreachable — let the runner record a FAILED
+            # run instead of a silent "completed, 0 fetched".
+            raise
         except Exception as e:
             logger.error(f"Error fetching source {source.name} ({source.url}): {e}")
             raise
 
+        outcome = FetchOutcome()
         raw_docs: List[RawDocument] = []
         for item in items:
             existing = db.query(RawDocument).filter(
@@ -330,7 +360,8 @@ class PipelineFetcher:
                 RawDocument.content_hash == item.content_hash,
             ).first()
             if existing:
-                logger.info(f"Unchanged {item.content_hash[:8]} for {item.url}, skipping.")
+                logger.info(f"Unchanged {item.content_hash[:8]} for {item.url}, skipping extraction.")
+                outcome.unchanged_docs.append(existing)
                 continue
 
             # Embed resolved apply URL on line 1 so extractor lifts it out cleanly
@@ -348,8 +379,9 @@ class PipelineFetcher:
             db.flush()
             raw_docs.append(raw_doc)
 
+        outcome.raw_docs = raw_docs
         db.commit()
-        return raw_docs
+        return outcome
 
     # ── Internal: deep-fetch a single program page ─────────────────────────────
 
@@ -359,10 +391,19 @@ class PipelineFetcher:
         use_stealth: bool = False,
         use_js: bool = False,
         apply_link_selector: Optional[str] = None,
-    ) -> FetchedItem:
+    ) -> Optional[FetchedItem]:
+        """Fetch one program page. Returns None when the page could not be
+        fetched (404, 500, timeout, …).
+
+        Returning None (instead of an empty-content stub item) is deliberate:
+        the old stub still entered extraction and manufactured a bogus
+        opportunity from nothing — a temporary failure must never create or
+        rewrite data. Callers skip None results; other pages continue.
+        """
         page = _fetch_page(program_url, use_stealth=use_stealth, use_js=use_js)
         if not page:
-            return FetchedItem(url=program_url, raw_content='', apply_url=program_url)
+            logger.warning(f"Deep fetch failed (source unavailable): {program_url}")
+            return None
 
         apply_url = page.find_apply_url(program_url, apply_link_selector) or program_url
 
@@ -389,6 +430,11 @@ class PipelineFetcher:
         apply_link_selector = config.get('apply_link_selector')
 
         feed = feedparser.parse(source.url)
+        if not feed.entries and getattr(feed, 'bozo', False):
+            # Malformed feed / network-level failure — raise so the run is
+            # recorded as failed instead of silently completing with 0 items.
+            raise FetchError(f"RSS feed unreachable or malformed: {source.url} ({getattr(feed, 'bozo_exception', '')})")
+
         items: List[FetchedItem] = []
 
         for entry in feed.entries[:20]:
@@ -401,22 +447,27 @@ class PipelineFetcher:
                     link, use_stealth=use_stealth, use_js=use_js,
                     apply_link_selector=apply_link_selector,
                 )
-                deep.raw_content = (
-                    f"# {title}\n"
-                    f"**Source:** {source.name}\n"
-                    f"**Apply URL:** {deep.apply_url}\n\n"
-                    f"## Summary\n{summary}\n\n"
-                    f"## Program Page\n{deep.raw_content}"
-                )
-                items.append(deep)
-            else:
-                raw_content = (
-                    f"# {title}\n**Source:** {source.name}\n**Apply URL:** {link}\n\n"
-                    f"## Overview\n{summary}\n"
-                )
-                if hasattr(entry, 'content'):
-                    raw_content += f"\n## Full Description\n{entry.content[0].value}\n"
-                items.append(FetchedItem(url=link, raw_content=raw_content, apply_url=link))
+                if deep is not None:
+                    deep.raw_content = (
+                        f"# {title}\n"
+                        f"**Source:** {source.name}\n"
+                        f"**Apply URL:** {deep.apply_url}\n\n"
+                        f"## Summary\n{summary}\n\n"
+                        f"## Program Page\n{deep.raw_content}"
+                    )
+                    items.append(deep)
+                    continue
+                # Deep fetch failed (temporary outage) — fall back to the feed
+                # summary, which is still real content from the source.
+                logger.info(f"RSS deep fetch failed for {link}; using feed summary only.")
+
+            raw_content = (
+                f"# {title}\n**Source:** {source.name}\n**Apply URL:** {link}\n\n"
+                f"## Overview\n{summary}\n"
+            )
+            if hasattr(entry, 'content'):
+                raw_content += f"\n## Full Description\n{entry.content[0].value}\n"
+            items.append(FetchedItem(url=link, raw_content=raw_content, apply_url=link))
 
         return items
 
@@ -432,10 +483,12 @@ class PipelineFetcher:
         link_sel = config.get('link_selector', 'a')
         apply_link_selector = config.get('apply_link_selector')
 
-        # Level 1: fetch the listing page
+        # Level 1: fetch the listing page. A failed listing means the SOURCE is
+        # down — raise FetchError so the run is marked failed (a source being
+        # unreachable is not the same as "nothing new was found").
         listing = _fetch_page(source.url, use_stealth=use_stealth, use_js=use_js)
         if not listing:
-            return []
+            raise FetchError(f"Listing page unreachable: {source.url}")
 
         cards = listing.find_cards(item_sel, title_sel, link_sel)
 
@@ -456,6 +509,10 @@ class PipelineFetcher:
                     use_js=use_js,
                     apply_link_selector=apply_link_selector,
                 )
+                if deep is None:
+                    # One broken page must not terminate the source — skip it
+                    # and keep going with the rest (failure isolation).
+                    continue
                 deep.raw_content = (
                     f"# {title_text}\n"
                     f"**Source:** {source.name}\n"
@@ -496,7 +553,7 @@ class PipelineFetcher:
             locs = [loc.text.strip() for loc in soup.find_all('loc') if loc.text.strip()]
         except Exception as e:
             logger.error(f"Sitemap fetch failed for {source.url}: {e}")
-            return []
+            raise FetchError(f"Sitemap unreachable: {source.url} ({e})")
 
         items: List[FetchedItem] = []
         for loc in locs[:15]:
@@ -509,7 +566,7 @@ class PipelineFetcher:
                 use_js=use_js,
                 apply_link_selector=apply_link_selector,
             )
-            if deep.raw_content:
+            if deep is not None and deep.raw_content:
                 # Wrap with source context so the extractor gets a meaningful
                 # title line instead of the generic "# Program Page" header.
                 deep.raw_content = (
