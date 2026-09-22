@@ -4,25 +4,65 @@ on:
   schedule:
     - cron: "17 */6 * * *"
     - cron: "43 1 * * *"
+    - cron: "7 3 * * 0"
   workflow_dispatch:
 
+# Calls the authenticated cron endpoint with a bounded cold-start retry:
+# a sleeping Render instance may take ~60s to wake, so transient connection
+# failures/HTML splash pages are retried; real application errors still fail
+# the run visibly. GitHub masks the secret automatically in logs.
 jobs:
   ingest:
-    if: github.event.schedule != '43 1 * * *'
+    if: github.event.schedule != '43 1 * * *' && github.event.schedule != '7 3 * * 0'
     runs-on: ubuntu-latest
     steps:
       - name: Trigger bounded source ingest
-        run: >-
-          curl --fail --silent --show-error --request POST
-          --header "X-Admin-Key: ${{ secrets.NEXORA_ADMIN_SECRET_KEY }}"
-          "${{ secrets.NEXORA_API_URL }}/api/pipeline/cron/ingest"
+        run: |
+          for attempt in 1 2 3; do
+            body=$(curl --fail --silent --show-error --max-time 900 --request POST \
+              --header "X-Admin-Key: ${{ secrets.NEXORA_ADMIN_SECRET_KEY }}" \
+              "${{ secrets.NEXORA_API_URL }}/api/pipeline/cron/ingest") \
+              && echo "$body" | grep -q '"success"[[:space:]]*:' && \
+              { echo "Ingest OK: $body"; exit 0; }
+            echo "Attempt $attempt did not reach a healthy API (cold start or error); retrying in 30s"
+            sleep 30
+          done
+          echo "Ingest endpoint did not return a valid success response after 3 attempts" >&2
+          exit 1
 
   lifecycle:
     if: github.event.schedule == '43 1 * * *'
     runs-on: ubuntu-latest
     steps:
       - name: Trigger lifecycle sweep
-        run: >-
-          curl --fail --silent --show-error --request POST
-          --header "X-Admin-Key: ${{ secrets.NEXORA_ADMIN_SECRET_KEY }}"
-          "${{ secrets.NEXORA_API_URL }}/api/pipeline/cron/lifecycle"
+        run: |
+          for attempt in 1 2 3; do
+            body=$(curl --fail --silent --show-error --max-time 900 --request POST \
+              --header "X-Admin-Key: ${{ secrets.NEXORA_ADMIN_SECRET_KEY }}" \
+              "${{ secrets.NEXORA_API_URL }}/api/pipeline/cron/lifecycle") \
+              && echo "$body" | grep -q '"success"[[:space:]]*:' && \
+              { echo "Lifecycle OK: $body"; exit 0; }
+            echo "Attempt $attempt did not reach a healthy API (cold start or error); retrying in 30s"
+            sleep 30
+          done
+          echo "Lifecycle endpoint did not return a valid success response after 3 attempts" >&2
+          exit 1
+
+  publish:
+    # Weekly publishing refresh (idempotent — safe to re-run manually).
+    if: github.event.schedule == '7 3 * * 0'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Trigger publishing refresh
+        run: |
+          for attempt in 1 2 3; do
+            body=$(curl --fail --silent --show-error --max-time 900 --request POST \
+              --header "X-Admin-Key: ${{ secrets.NEXORA_ADMIN_SECRET_KEY }}" \
+              "${{ secrets.NEXORA_API_URL }}/api/pipeline/cron/publish") \
+              && echo "$body" | grep -q '"success"[[:space:]]*:' && \
+              { echo "Publish OK: $body"; exit 0; }
+            echo "Attempt $attempt did not reach a healthy API (cold start or error); retrying in 30s"
+            sleep 30
+          done
+          echo "Publish endpoint did not return a valid success response after 3 attempts" >&2
+          exit 1

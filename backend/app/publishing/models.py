@@ -27,6 +27,9 @@ class PublishedOpportunity(BaseModel):
     short_original_summary: Optional[str] = None
     verification_notes: Optional[str] = None
     funding_type: Optional[str] = None
+    # Free-text funding info from pipeline-scraped records (the static dataset
+    # uses the funding_type enum instead; both are surfaced when present).
+    funding_amount: Optional[str] = None
     application_fee: Optional[str] = None
     duration: Optional[str] = None
     start_date: Optional[str] = None

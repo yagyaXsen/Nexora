@@ -74,6 +74,47 @@ class Settings(BaseSettings):
     CRON_MAX_SOURCES: int = 10
     CRON_MAX_DEAD_LINK_CHECKS: int = 30
 
+    # ── Automation cadence (hours) ────────────────────────────────────────────
+    # The internal scheduler converts these to IntervalTriggers so both the
+    # in-process cron and the external GitHub-Actions cron can be tuned from
+    # env vars without code changes. Defaults: ingest every 6h (matches the
+    # GH Actions "17 */6 * * *" cadence), lifecycle sweep once a day.
+    INGEST_INTERVAL_HOURS: int = 6
+    LIFECYCLE_INTERVAL_HOURS: int = 24
+    # Kick a full ingest shortly after boot (useful for dev; off by default so
+    # frequent redeploys on sleeping hosts don't hammer sources).
+    RUN_INGEST_ON_STARTUP: bool = False
+    # Delay (seconds) before the first scheduled ingest after boot.
+    INGEST_STARTUP_DELAY_SECONDS: int = 120
+    # A scheduled batch skips sources scraped more recently than this. Keeps
+    # the internal APScheduler and the external GitHub-Actions cron (both may
+    # be enabled) from re-scraping the same sources back-to-back, and makes a
+    # future multi-worker deployment safe. Manual runs (POST /api/sources/{id}/run)
+    # are never throttled.
+    MIN_SOURCE_RESCRAPE_HOURS: float = 5.0
+
+    # ── Maintenance policy ────────────────────────────────────────────────────
+    # Deadline window that flips active → expiring_soon.
+    EXPIRING_SOON_DAYS: int = 7
+    # Consecutive transient failures (5xx / timeout / network) before a link
+    # check marks an opportunity dead_link. A single failure must NOT kill a
+    # record — 404/410 are still treated as permanent immediately.
+    DEAD_LINK_FAILURE_THRESHOLD: int = 3
+
+    # ── Publishing layer (frontend active feed) ───────────────────────────────
+    # How long the merged published feed caches its live-DB section. The feed
+    # is re-read from the DB after this TTL, and the pipeline invalidates the
+    # cache after every ingestion run / lifecycle sweep, so expiry, revival,
+    # and new records surface within seconds of the pipeline knowing.
+    LIVE_FEED_TTL_SECONDS: int = 60
+    # Weekly publishing refresh cadence (168h = Sunday-ish weekly). This job
+    # records publishing metrics (published/new/removed) as an AuditEvent —
+    # visibility itself is computed at read time and never waits a week.
+    PUBLISH_REFRESH_INTERVAL_HOURS: int = 168
+    # Minimum extraction confidence for a pipeline-verified record to be
+    # published (mirrors the static catalog's own >= 75/100 quality gate).
+    PUBLISH_MIN_CONFIDENCE: float = 0.75
+
     model_config = SettingsConfigDict(
         env_file=".env",
         env_file_encoding="utf-8",
@@ -125,6 +166,20 @@ def _assert_production_safe(s: Settings) -> None:
         raise RuntimeError(
             "Refusing to start with unsafe production configuration:\n"
             + "\n".join(f"  - {p}" for p in problems)
+        )
+
+    # Mock extraction in production is a deliberate demo choice, but it must
+    # be an EXPLICIT one: without this notice the automation would silently
+    # fill the opportunity database with heuristic (non-LLM) extractions.
+    if s.USE_MOCK_AI or not s.GROQ_API_KEY:
+        logger.warning(
+            "USE_MOCK_AI is active (USE_MOCK_AI=%s, GROQ_API_KEY %s). Pipeline "
+            "extraction will use the heuristic parser instead of Groq: fields "
+            "the parser cannot find on the page are left empty rather than "
+            "invented, but records will be less complete than LLM extractions. "
+            "Set USE_MOCK_AI=false with a GROQ_API_KEY for production-grade "
+            "extraction.",
+            s.USE_MOCK_AI, "present" if s.GROQ_API_KEY else "missing",
         )
 
 
