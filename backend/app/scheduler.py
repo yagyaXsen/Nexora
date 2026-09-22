@@ -1,10 +1,12 @@
 import logging
+from datetime import datetime, timedelta, timezone
+
 from apscheduler.schedulers.background import BackgroundScheduler
-from apscheduler.triggers.cron import CronTrigger
+from apscheduler.triggers.interval import IntervalTrigger
 
 from app.config import settings
 from app.database import SessionLocal
-from app.models import Source
+from app.models import Source, AuditEvent, utc_now
 from app.pipeline.runner import runner
 from app.pipeline.lifecycle import run_daily_expiry_sweep, check_dead_links
 
@@ -12,52 +14,140 @@ logger = logging.getLogger(__name__)
 
 scheduler = BackgroundScheduler()
 
+# ── Observability state (in-process, best-effort) ─────────────────────────────
+# Read by GET /api/pipeline/status. Shows what the automation is doing between
+# DB writes. Resets on restart by design — durable history lives in
+# pipeline_runs / audit_events.
+pipeline_state = {
+    "ingest_running": False,
+    "lifecycle_running": False,
+    "last_ingest": None,      # {"finished_at", "sources_processed", "sources_failed"}
+    "last_lifecycle": None,   # summary dict written by the sweep
+}
+
+
 def scheduled_ingest_all_sources():
     logger.info("Executing scheduled ingest for all enabled sources...")
+    pipeline_state["ingest_running"] = True
+    started = utc_now()
     db = SessionLocal()
+    processed = 0
+    failed = 0
+    skipped = 0
     try:
         sources = db.query(Source).filter(Source.enabled == True).limit(settings.CRON_MAX_SOURCES).all()
-        completed = 0
+        # Least-recently-run first so a capped batch (CRON_MAX_SOURCES) rotates
+        # fairly across runs instead of starving the tail of the list.
+        sources.sort(key=lambda s: (s.last_run_at is not None, s.last_run_at))
+        # Double-trigger guard: when the internal scheduler AND the external
+        # GitHub-Actions cron are both enabled (or a future deployment runs
+        # multiple workers), two batches could fire close together. Skip
+        # sources scraped within the minimum window — runs are idempotent,
+        # but this avoids redundant network traffic and AI calls. Manual runs
+        # via POST /api/sources/{id}/run bypass this guard.
+        cutoff = utc_now() - timedelta(hours=settings.MIN_SOURCE_RESCRAPE_HOURS)
         for source in sources:
+            last = source.last_run_at
+            if last is not None and last.tzinfo is None:
+                last = last.replace(tzinfo=timezone.utc)
+            if last is not None and last > cutoff:
+                skipped += 1
+                continue
             try:
-                runner.run_source(db, source)
-                completed += 1
+                run = runner.run_source(db, source)
+                if run.status == "failed":
+                    # The source is down (run recorded the error). Count it as
+                    # failed, not processed — but keep retrying it in future
+                    # batches; transient outages must recover.
+                    failed += 1
+                else:
+                    processed += 1
             except Exception as e:
+                failed += 1
                 logger.error(f"Error running scheduled source ID {source.id}: {e}")
-        return {"sources_processed": completed}
+        if skipped:
+            logger.info(f"Scheduled ingest skipped {skipped} source(s) scraped within the last {settings.MIN_SOURCE_RESCRAPE_HOURS}h.")
+        return {"sources_processed": processed, "sources_failed": failed, "sources_skipped_recent": skipped}
     finally:
         db.close()
+        pipeline_state["ingest_running"] = False
+        pipeline_state["last_ingest"] = {
+            "finished_at": utc_now().isoformat(),
+            "started_at": started.isoformat(),
+            "sources_processed": processed,
+            "sources_failed": failed,
+        }
 
 def scheduled_daily_lifecycle_sweep():
     logger.info("Executing scheduled daily lifecycle sweep...")
+    pipeline_state["lifecycle_running"] = True
     db = SessionLocal()
     try:
         expiry = run_daily_expiry_sweep(db)
-        dead_links = check_dead_links(db, max_checks=settings.CRON_MAX_DEAD_LINK_CHECKS)
-        return {**expiry, "dead_link_count": dead_links}
+        dead_links = check_dead_links(db)
+        summary = {**expiry, **dead_links}
+        pipeline_state["last_lifecycle"] = {
+            "finished_at": utc_now().isoformat(),
+            **summary,
+        }
+        # Durable record for observability (survives restarts, queryable from
+        # /api/pipeline/status).
+        try:
+            db.add(AuditEvent(
+                event_type="lifecycle_sweep",
+                payload={"finished_at": utc_now().isoformat(), **summary},
+            ))
+            db.commit()
+        except Exception:
+            db.rollback()
+            logger.warning("Could not persist lifecycle audit event (non-fatal)")
+        return summary
     except Exception as e:
         logger.error(f"Error during lifecycle sweep: {e}")
     finally:
         db.close()
+        pipeline_state["lifecycle_running"] = False
 
 def start_scheduler():
     if not scheduler.running:
-        # Schedule ingestion every day at midnight (or every 6 hours)
+        now = datetime.now(timezone.utc)
+
+        ingest_start = now
+        if not settings.RUN_INGEST_ON_STARTUP:
+            ingest_start = now + timedelta(seconds=settings.INGEST_STARTUP_DELAY_SECONDS)
+
         scheduler.add_job(
             scheduled_ingest_all_sources,
-            trigger=CronTrigger(hour="0", minute="0"),
-            id="daily_ingest_job",
-            replace_existing=True
+            trigger=IntervalTrigger(hours=settings.INGEST_INTERVAL_HOURS, start_date=ingest_start),
+            id="ingest_job",
+            replace_existing=True,
+            max_instances=1,
+            coalesce=True,
+            misfire_grace_time=3600,
         )
-        # Schedule lifecycle sweep every day at 1:00 AM
+        if settings.RUN_INGEST_ON_STARTUP:
+            scheduler.add_job(
+                scheduled_ingest_all_sources,
+                next_run_time=now,
+                id="ingest_startup_job",
+                replace_existing=True,
+                max_instances=1,
+            )
         scheduler.add_job(
             scheduled_daily_lifecycle_sweep,
-            trigger=CronTrigger(hour="1", minute="0"),
-            id="daily_lifecycle_job",
-            replace_existing=True
+            trigger=IntervalTrigger(hours=settings.LIFECYCLE_INTERVAL_HOURS, start_date=now + timedelta(minutes=5)),
+            id="lifecycle_job",
+            replace_existing=True,
+            max_instances=1,
+            coalesce=True,
+            misfire_grace_time=3600,
         )
         scheduler.start()
-        logger.info("APScheduler started successfully.")
+        logger.info(
+            f"APScheduler started: ingest every {settings.INGEST_INTERVAL_HOURS}h, "
+            f"lifecycle every {settings.LIFECYCLE_INTERVAL_HOURS}h "
+            f"(first ingest at {ingest_start.isoformat()})."
+        )
 
 def stop_scheduler():
     if scheduler.running:

@@ -328,6 +328,7 @@ class PipelineRunRead(BaseModel):
     updated_count: int
     duplicate_count: int
     failed_count: int
+    revalidated_count: int = 0
     error_log: Optional[Any] = None
 
     class Config:
