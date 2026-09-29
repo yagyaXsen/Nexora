@@ -1,6 +1,4 @@
 import logging
-import time
-from collections import defaultdict, deque
 from contextlib import asynccontextmanager
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
@@ -11,6 +9,7 @@ from app.scheduler import start_scheduler, stop_scheduler
 from app.routes import opportunities, sources, pipeline, auth, applications
 from app.routes import profile, notifications, organizations, admin, published, contact
 from app.core.exceptions import NexoraException
+from app.services.rate_limit import InMemoryRateLimiter, client_ip
 
 logging.basicConfig(
     level=logging.INFO if not settings.DEBUG else logging.DEBUG,
@@ -55,7 +54,7 @@ app = FastAPI(
 # Best-effort in-memory flood protection. Intentionally resets on restart;
 # durable multi-instance rate limiting belongs behind a shared store once the
 # product has that budget.
-_rate_limit_hits: dict[str, deque] = defaultdict(deque)
+_read_limiter = InMemoryRateLimiter()
 _RATE_LIMIT = 100       # requests per window (also the hard cutoff)
 _RATE_WINDOW = 60       # seconds
 
@@ -72,18 +71,11 @@ async def rate_limit_middleware(request: Request, call_next):
     ):
         return await call_next(request)
 
-    # Use IP or forwarded-for header
-    client_ip = request.headers.get("x-forwarded-for", request.client.host if request.client else "unknown")
-    key = f"{client_ip}:{path.split('/')[3] if len(path.split('/')) > 3 else 'root'}"
+    parts = path.split('/')
+    key = f"{client_ip(request)}:{parts[3] if len(parts) > 3 else 'root'}"
+    allowed, remaining = _read_limiter.hit(key, _RATE_LIMIT, _RATE_WINDOW)
 
-    now = time.monotonic()
-    hits = _rate_limit_hits[key]
-
-    # Prune expired entries
-    while hits and hits[0] <= now - _RATE_WINDOW:
-        hits.popleft()
-
-    if len(hits) >= _RATE_LIMIT:
+    if not allowed:
         return JSONResponse(
             status_code=429,
             content={
@@ -99,12 +91,10 @@ async def rate_limit_middleware(request: Request, call_next):
             headers={"Retry-After": str(_RATE_WINDOW)},
         )
 
-    hits.append(now)
-
     # Add informative headers
     response = await call_next(request)
     response.headers["X-RateLimit-Limit"] = str(_RATE_LIMIT)
-    response.headers["X-RateLimit-Remaining"] = str(max(0, _RATE_LIMIT - len(hits)))
+    response.headers["X-RateLimit-Remaining"] = str(remaining)
     return response
 
 
@@ -164,6 +154,6 @@ def health_check():
             "status": "healthy",
             "app_name": settings.APP_NAME,
             "version": "2.0.0",
-            "database": settings.DATABASE_URL.split("://")[0],
+            "database": settings.DATABASE_URL.split("://")[0].split("+")[0],
         }
     }

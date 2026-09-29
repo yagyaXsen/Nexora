@@ -22,8 +22,14 @@ class Settings(BaseSettings):
     @field_validator("DATABASE_URL", mode="before")
     @classmethod
     def assemble_db_connection(cls, v: str) -> str:
-        if isinstance(v, str) and v.startswith("postgres://"):
-            return v.replace("postgres://", "postgresql://", 1)
+        # Name the installed driver explicitly. SQLAlchemy 2.1 maps a bare
+        # postgresql:// URL to psycopg (v3), but requirements.txt installs
+        # psycopg2 — so an unpinned rebuild would fail to connect at boot.
+        # URLs that already name a driver (postgresql+xyz://) are left alone.
+        if isinstance(v, str):
+            for bare in ("postgres://", "postgresql://"):
+                if v.startswith(bare):
+                    return "postgresql+psycopg2://" + v[len(bare):]
         return v
 
     GROQ_API_KEY: str = ""

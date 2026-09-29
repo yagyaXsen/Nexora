@@ -109,6 +109,10 @@ def ensure_tables() -> bool:
        but were never added to pre-existing tables by migrations.
     """
     from app.database import Base
+    # Registers every model on Base.metadata. Without it, create_all() only
+    # knows the tables some other import happened to load — booting via
+    # `python -m app.startup` on an empty database created nothing and failed.
+    import app.models  # noqa: F401
 
     Base.metadata.create_all(bind=engine)
     logger.info("Base tables created / verified.")
