@@ -424,9 +424,14 @@ class OpportunityCatalog:
         return result, distinctive_focus
 
     # ── related ────────────────────────────────────────────────────────────
-    def related(self, slug: str, limit: int = 4) -> List[PublishedOpportunity]:
+    def related(self, slug: str, limit: int = 4,
+                records: Optional[List[PublishedOpportunity]] = None) -> List[PublishedOpportunity]:
+        """records=None searches the static catalog; the publishing layer passes
+        the merged feed so pipeline (live) records get — and appear as —
+        related items too."""
         self._ensure()
-        base = self._by_slug.get(slug)
+        pool = list(records) if records is not None else self._records
+        base = next((r for r in pool if r.slug == slug), None)
         if not base:
             return []
 
@@ -437,7 +442,7 @@ class OpportunityCatalog:
         base_level = set(base.study_level or [])
 
         scored = []
-        for r in self._records:
+        for r in pool:
             if r.slug == slug:
                 continue
             score = 0

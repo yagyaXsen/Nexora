@@ -1,6 +1,6 @@
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import List, Optional, Any, Dict
-from pydantic import BaseModel, EmailStr, Field
+from pydantic import BaseModel, EmailStr, Field, TypeAdapter, ValidationError, field_validator
 from app.models import ApplicationStatus, SourceType, OpportunityCategory, OpportunityStatus
 
 # ──────────────────────────────────────────────
@@ -133,6 +133,62 @@ class OpportunityExtract(BaseModel):
     description: str = Field(description="Detailed summary of the opportunity")
     tags: List[str] = Field(default_factory=list, description="Keywords or topic tags")
     confidence: float = Field(ge=0.0, le=1.0, description="AI confidence score from 0.0 to 1.0")
+
+    # LLM output is loosely shaped. One odd field ("deadline": "Rolling",
+    # "category": "Scholarship") used to fail validation and discard the whole
+    # extraction; over-long strings broke the Postgres transaction for the run.
+
+    @field_validator("category", mode="before")
+    @classmethod
+    def _normalize_category(cls, v):
+        if isinstance(v, str):
+            key = v.strip().lower().replace("-", "_").replace(" ", "_")
+            return _CATEGORY_ALIASES.get(key, key)
+        return v
+
+    @field_validator("deadline", mode="before")
+    @classmethod
+    def _lenient_deadline(cls, v):
+        if v is None or isinstance(v, datetime):
+            return v
+        try:
+            return _DATETIME_ADAPTER.validate_python(v)
+        except ValidationError:
+            return None  # "Rolling", "TBD", "not specified" → unknown, never invented
+
+    @field_validator("deadline")
+    @classmethod
+    def _deadline_utc(cls, v):
+        # Naive datetimes would be interpreted in the DB server's timezone.
+        if v is not None and v.tzinfo is None:
+            return v.replace(tzinfo=timezone.utc)
+        return v
+
+    @field_validator("tags", mode="before")
+    @classmethod
+    def _lenient_tags(cls, v):
+        if v is None:
+            return []
+        if isinstance(v, str):
+            return [t.strip() for t in v.split(",") if t.strip()]
+        return [str(t) for t in v if str(t).strip()] if isinstance(v, list) else v
+
+    @field_validator("title", "organizer", "country", "funding_amount")
+    @classmethod
+    def _fit_column(cls, v, info):
+        limit = _OPPORTUNITY_COLUMN_LIMITS[info.field_name]
+        return v[:limit].rstrip() if isinstance(v, str) else v
+
+
+# Sizes of the matching String(n) columns on models.Opportunity.
+_OPPORTUNITY_COLUMN_LIMITS = {"title": 500, "organizer": 255, "country": 100, "funding_amount": 255}
+_DATETIME_ADAPTER = TypeAdapter(datetime)
+_CATEGORY_ALIASES = {
+    "hackathon": "competition", "contest": "competition", "challenge": "competition",
+    "incubator": "accelerator", "exchange_program": "exchange", "exchange_programme": "exchange",
+    "government_scheme": "gov_scheme", "scheme": "gov_scheme", "summit": "conference",
+    "scholarships": "scholarship", "fellowships": "fellowship", "grants": "grant",
+}
 
 class OpportunityRead(BaseModel):
     id: int

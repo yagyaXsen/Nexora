@@ -1,4 +1,3 @@
-import { Link } from 'react-router-dom'
 
 export function NexoraLogoIcon({ className = 'w-7 h-7', fillSquare = '#000000', fillN = '#FFFFFF' }) {
   return (

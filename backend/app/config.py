@@ -22,8 +22,14 @@ class Settings(BaseSettings):
     @field_validator("DATABASE_URL", mode="before")
     @classmethod
     def assemble_db_connection(cls, v: str) -> str:
-        if isinstance(v, str) and v.startswith("postgres://"):
-            return v.replace("postgres://", "postgresql://", 1)
+        # Name the installed driver explicitly. SQLAlchemy 2.1 maps a bare
+        # postgresql:// URL to psycopg (v3), but requirements.txt installs
+        # psycopg2 — so an unpinned rebuild would fail to connect at boot.
+        # URLs that already name a driver (postgresql+xyz://) are left alone.
+        if isinstance(v, str):
+            for bare in ("postgres://", "postgresql://"):
+                if v.startswith(bare):
+                    return "postgresql+psycopg2://" + v[len(bare):]
         return v
 
     GROQ_API_KEY: str = ""
@@ -36,6 +42,12 @@ class Settings(BaseSettings):
     AI_MIN_QUERY_LENGTH_FOR_LLM: int = 5
 
     ADMIN_SECRET_KEY: str = DEV_ADMIN_KEY
+    # Admin login account. Provisioned at boot ONLY when both are set — there
+    # is no built-in default account (a public default password in the source
+    # would be an admin backdoor on every deployment). The password is kept in
+    # sync with this value on every boot, so rotating it = change env + restart.
+    ADMIN_EMAIL: str = ""
+    ADMIN_PASSWORD: str = ""
     CONFIDENCE_THRESHOLD: float = 0.70
     SECRET_KEY: str = DEV_SECRET_KEY
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 1440
@@ -128,13 +140,38 @@ class Settings(BaseSettings):
 
 settings = Settings()
 
+# Passwords that must never guard an admin account, whatever the length rule.
+_KNOWN_WEAK_ADMIN_PASSWORDS = {"admin123", "password", "changeme", "admin", "nexora"}
+MIN_ADMIN_PASSWORD_LENGTH = 12
+_LOCAL_DB_HOSTS = {"", "localhost", "127.0.0.1", "::1"}
+
+
+def is_deployed(s: Settings) -> bool:
+    """Is this process (almost certainly) a deployed environment?
+
+    DEBUG defaults to True so a fresh checkout runs with zero config — which
+    also means a host that never set DEBUG=false would skip every safety
+    check below. A database on a remote host (Neon, Render Postgres, …) is an
+    unambiguous deployment signal, so it enables the checks as well.
+    """
+    if not s.DEBUG:
+        return True
+    if s.DATABASE_URL.startswith("sqlite"):
+        return False
+    try:
+        from sqlalchemy.engine import make_url
+        host = make_url(s.DATABASE_URL).host or ""
+    except Exception:
+        return True  # unparseable non-SQLite URL: fail closed
+    return host.lower() not in _LOCAL_DB_HOSTS
+
 
 def _assert_production_safe(s: Settings) -> None:
     """Fail closed on configuration that is fine locally but destructive or
     insecure in a deployed environment. Called at import time so the process
     refuses to boot rather than silently losing data or signing tokens with a
     public secret."""
-    if s.DEBUG:
+    if not is_deployed(s):
         # Warn but keep going — these are expected during local development.
         if s.DATABASE_URL.startswith("sqlite"):
             logger.info("DEBUG mode: using SQLite. Deployed builds require Postgres.")
@@ -150,22 +187,42 @@ def _assert_production_safe(s: Settings) -> None:
             "DATABASE_URL at a managed Postgres instance."
         )
 
-    if s.SECRET_KEY == DEV_SECRET_KEY:
+    if not s.SECRET_KEY or s.SECRET_KEY == DEV_SECRET_KEY:
         problems.append(
-            "SECRET_KEY is still the public development default. Anyone could forge a "
-            "JWT for any user. Set SECRET_KEY from the environment."
+            "SECRET_KEY is empty or still the public development default. Anyone could "
+            "forge a JWT for any user. Set SECRET_KEY from the environment."
         )
 
-    if s.ADMIN_SECRET_KEY == DEV_ADMIN_KEY:
+    if not s.ADMIN_SECRET_KEY or s.ADMIN_SECRET_KEY == DEV_ADMIN_KEY:
         problems.append(
-            "ADMIN_SECRET_KEY is still the public development default. The pipeline "
-            "and cron endpoints would be open to anyone."
+            "ADMIN_SECRET_KEY is empty or still the public development default. The "
+            "admin, pipeline and cron endpoints would be open to anyone."
+        )
+
+    if s.ADMIN_PASSWORD and (
+        len(s.ADMIN_PASSWORD) < MIN_ADMIN_PASSWORD_LENGTH
+        or s.ADMIN_PASSWORD.lower() in _KNOWN_WEAK_ADMIN_PASSWORDS
+    ):
+        problems.append(
+            f"ADMIN_PASSWORD is too weak (use at least {MIN_ADMIN_PASSWORD_LENGTH} "
+            "characters, not a common default). It grants full admin access."
         )
 
     if problems:
         raise RuntimeError(
             "Refusing to start with unsafe production configuration:\n"
             + "\n".join(f"  - {p}" for p in problems)
+        )
+
+    if s.DEBUG:
+        logger.warning(
+            "DEBUG=true on what looks like a deployed environment (remote database). "
+            "Set DEBUG=false: DEBUG enables verbose logging."
+        )
+    if bool(s.ADMIN_EMAIL) != bool(s.ADMIN_PASSWORD):
+        logger.warning(
+            "Only one of ADMIN_EMAIL / ADMIN_PASSWORD is set — no admin login account "
+            "will be provisioned. The X-Admin-Key header still grants admin access."
         )
 
     # Mock extraction in production is a deliberate demo choice, but it must

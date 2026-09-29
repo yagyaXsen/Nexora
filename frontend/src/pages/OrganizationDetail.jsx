@@ -144,14 +144,23 @@ export default function OrganizationDetail() {
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
+    // Ignore a slower response for the previous organization after navigating.
+    let cancelled = false
     setLoading(true)
     // Fetch opportunities matching organizer search query dynamically
     api
       .opportunities({ q: org.query, page_size: 6 })
-      .then((r) => setOpportunities(r.items))
+      .then((r) => {
+        if (!cancelled) setOpportunities(r.items)
+      })
       .catch(() => {})
-      .finally(() => setLoading(false))
-  }, [slug])
+      .finally(() => {
+        if (!cancelled) setLoading(false)
+      })
+    return () => {
+      cancelled = true
+    }
+  }, [org.query])
 
   const toggleFollow = () => {
     if (following) {

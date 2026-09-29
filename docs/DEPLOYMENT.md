@@ -1,337 +1,209 @@
 # Nexora — Free Deployment Guide
 
-> Everything you need to deploy Nexora as a live portfolio project.
-> **Total cost: $0/month.** Total setup time: ~90 minutes.
-> Result: a public demo URL you can put on your resume.
+> Everything you need to deploy Nexora on free tiers.
+> **Total cost: $0/month.** Total setup time: ~60–90 minutes.
 
 ---
 
 ## What you'll end up with
 
-- **Frontend live at:** `https://nexora-8y5.pages.dev` (Cloudflare Pages)
-- **Backend live at:** `https://nexora-vjf8.onrender.com` (Render)
+- **Frontend:** Cloudflare Pages (e.g. `https://nexora-8y5.pages.dev`)
+- **Backend:** Render web service (e.g. `https://nexora-vjf8.onrender.com`)
 - **Database:** Neon Postgres (free tier, persistent)
-- **AI search:** mock parser by default; Groq is optional and fail-open
-- **Email:** ConsoleMailer mode (prints to logs instead of sending — fine for demo)
-- **File uploads:** LocalDisk (works for demo; files are ephemeral on Render free tier)
-
-Every recruiter who clicks the URL sees a real, working product.
+- **Pipeline automation:** GitHub Actions cron calling the backend (Render's free instance sleeps, so the in-process scheduler is turned off there)
+- **AI extraction/search:** Groq if you add a key; otherwise the heuristic parser (it never invents data, but records are less complete)
+- **Email:** printed to the Render logs by default; real delivery via any SMTP account
 
 ---
 
-## The 6 accounts you need (in order)
-
-Each section below has: **What it is · How to get it · What to copy · Where it goes · Time · Cost.**
-
----
+## The accounts you need (in order)
 
 ### 1 · GitHub (host the code)
 
-| Field | Value |
-|---|---|
-| **What it is** | Where your code lives. Render and Cloudflare Pages pull from here. |
-| **How to get** | If you already have a GitHub account, skip. Otherwise: go to `github.com/signup`, sign up with your email. |
-| **What to copy** | Your repo URL once pushed: `https://github.com/<your-username>/nexora` |
-| **Where it goes** | You'll point Render and Cloudflare Pages at this URL in steps 5 and 6. |
-| **Time** | 5 min (signup) + 2 min (push repo) |
-| **Cost** | $0 |
-
-**How to push your existing local repo to GitHub:**
+If you don't have an account, sign up at `github.com/signup`, then push the repo:
 
 ```bash
-cd /Users/alokkumar/Nexora
-
-# Install gh CLI if you don't have it (one-time)
-brew install gh
-gh auth login
-
-# Create + push repo (private is fine)
 gh repo create nexora --private --source=. --remote=origin --push
 ```
 
-**Verify:** open the GitHub URL it prints. You see your code in the browser.
-
----
-
 ### 2 · Neon (Postgres database)
 
-| Field | Value |
-|---|---|
-| **What it is** | Free, managed Postgres. Replaces your local `localhost:5432/nexora_db` in production. |
-| **How to get** | Go to `console.neon.tech/sign_up`. Sign in with GitHub. |
-| **What to copy** | The connection string from the **Connection Details** widget. Looks like:<br>`postgresql://user:pass@ep-xxx.us-east-2.aws.neon.tech/neondb?sslmode=require` |
-| **Where it goes** | Render env var `DATABASE_URL` (step 5) |
-| **Time** | 10 min |
-| **Cost** | $0 (free tier: 0.5 GB storage, auto-suspends after 5 min idle) |
+1. `console.neon.tech/sign_up` → **Continue with GitHub** → **Create project** (`nexora-prod`, Postgres 16, AWS US East (Ohio)).
+2. Copy the connection string from **Connection Details**. It looks like
+   `postgresql://user:pass@ep-xxx.us-east-2.aws.neon.tech/neondb?sslmode=require`.
+   This is your `DATABASE_URL`.
 
-**Steps:**
-1. Open `console.neon.tech/sign_up` → click **Continue with GitHub**.
-2. Click **Create your first project** when prompted.
-3. Fill in:
-   - **Project name:** `nexora-prod`
-   - **Postgres version:** `16`
-   - **Cloud:** AWS
-   - **Region:** US East (Ohio) — closest to Render free-tier hosts
-4. Click **Create project**.
-5. You land on a dashboard. The **Connection Details** widget shows a connection string.
-6. Click **Show password** if hidden. Copy the WHOLE string.
-7. Paste somewhere safe (Notes app, password manager) — labeled `DATABASE_URL`.
+### 3 · Groq API key (optional — LLM extraction and search)
 
-**Verify:** the string starts with `postgresql://` and ends with `?sslmode=require`.
+1. `console.groq.com/keys` → **Create API Key** → copy the `gsk_...` key.
+2. This is your `GROQ_API_KEY`. Without it, set nothing: the backend uses the heuristic parser.
 
----
+### 4 · Render (host the backend)
 
-### 3 · Groq API key (AI search / inference)
-
-| Field | Value |
-|---|---|
-| **What it is** | Fast LLM inference (Llama-class). Powers AI search in Nexora. |
-| **How to get** | Go to `console.groq.com/keys`. Sign in with Google. |
-| **What to copy** | The `gsk_...` API key shown after you click "Create API Key" |
-| **Where it goes** | Render env var `GROQ_API_KEY` (step 5) |
-| **Time** | 5 min |
-| **Cost** | $0 (free tier: 30 req/min, ~14,000 req/day — way more than a demo needs) |
-
-**Steps:**
-1. Open `console.groq.com` → click **Sign in** (use Google or GitHub).
-2. Once logged in, click **API Keys** in the left sidebar.
-3. Click **Create API Key**.
-4. Name it `nexora-portfolio`. Click Submit.
-5. Groq shows the key **once**. Copy it. Save labeled `GROQ_API_KEY`.
-
-**Verify:** the key starts with `gsk_`.
-
----
-
-### 4 · Google Gemini API key (AI cover letter drafting)
-
-| Field | Value |
-|---|---|
-| **What it is** | Google's LLM. Powers cover letter drafting in Nexora. |
-| **How to get** | Go to `aistudio.google.com/app/apikey`. Sign in with Google. |
-| **What to copy** | The `AIza...` API key shown after clicking "Create API key" |
-| **Where it goes** | Render env var `GEMINI_API_KEY` (step 5) |
-| **Time** | 5 min |
-| **Cost** | $0 (free tier: 15 req/min on Gemini Pro) |
-
-**Steps:**
-1. Open `aistudio.google.com/app/apikey` → sign in with Google account.
-2. Click **Create API key** → choose a Google Cloud project (or create a new one — pick the default).
-3. Copy the key shown. Save labeled `GEMINI_API_KEY`.
-
-**Verify:** the key starts with `AIza`.
-
----
-
-### 5 · Render (host the backend)
-
-| Field | Value |
-|---|---|
-| **What it is** | Hosts your FastAPI backend. Auto-deploys when you push to GitHub. |
-| **How to get** | Go to `render.com/register`. Sign up with GitHub. |
-| **What to copy** | After deploy: the URL like `https://nexora-api.onrender.com` |
-| **Where it goes** | Cloudflare Pages env var `VITE_API_URL` (step 6) |
-| **Time** | 20 min |
-| **Cost** | $0 (free tier: backend sleeps after 15 min idle, wakes in ~30 sec on next request) |
-
-**Steps:**
-
-1. Open `render.com/register` → click **GitHub** → authorize Render to access your repos.
-2. Top right → **New +** → **Web Service**.
-3. Pick your `nexora` repo from the list.
-4. Fill in the form:
-   - **Name:** `nexora-api`
-   - **Region:** Ohio (US East)
-   - **Branch:** `main`
+1. `render.com/register` → sign up with GitHub.
+2. **New +** → **Web Service** → pick the `nexora` repo, then:
    - **Root Directory:** `backend`
-   - **Runtime:** `Python 3`
+   - **Runtime:** Python 3
    - **Build Command:** `pip install -r requirements.txt`
    - **Start Command:** `uvicorn app.main:app --host 0.0.0.0 --port $PORT`
-   - **Instance Type:** **Free**
-5. Scroll down to **Environment Variables** → click **Add Environment Variable** for each:
+   - **Instance Type:** Free
+3. Add these **Environment Variables**. Generate each secret with
+   `python3 -c "import secrets; print(secrets.token_hex(32))"`.
 
    | Key | Value |
    |---|---|
-   | `DATABASE_URL` | (from step 2) |
-   | `SECRET_KEY` | run `python3 -c "import secrets; print(secrets.token_hex(32))"` to generate one |
-   | `GROQ_API_KEY` | (from step 3) |
-  | `USE_MOCK_AI` | `False` |
-  | `ENABLE_INTERNAL_SCHEDULER` | `False` |
-  | `ADMIN_SECRET_KEY` | generate like `SECRET_KEY`; must match the GitHub secret `NEXORA_ADMIN_SECRET_KEY` (drives the cron workflow) |
-  | `CORS_ORIGINS` | leave blank for now — fill after step 6 |
+   | `DATABASE_URL` | from step 2 |
+   | `DEBUG` | `False` |
+   | `SECRET_KEY` | a generated secret (signs login tokens) |
+   | `ADMIN_SECRET_KEY` | a different generated secret (guards admin, pipeline and cron endpoints) |
+   | `ADMIN_EMAIL` | the email you'll log in to the admin console with |
+   | `ADMIN_PASSWORD` | a unique password, at least 12 characters |
+   | `ENABLE_INTERNAL_SCHEDULER` | `False` |
+   | `FRONTEND_URL` | your Cloudflare Pages URL (fill in after step 5; used in email links) |
+   | `CORS_ORIGINS` | your Cloudflare Pages URL (fill in after step 5) |
+   | `GROQ_API_KEY` + `USE_MOCK_AI` | optional: your key and `False` |
 
-   Optional pipeline/publishing tuning (safe defaults shown — all in hours/seconds):
+   **The backend refuses to start** on a deployed environment if `SECRET_KEY` or
+   `ADMIN_SECRET_KEY` is empty or a public development default, or if
+   `ADMIN_PASSWORD` is weak. The error in the Render logs names the variable.
+   There is no built-in admin account: the admin login exists only when
+   `ADMIN_EMAIL` and `ADMIN_PASSWORD` are set, and changing `ADMIN_PASSWORD`
+   plus a restart rotates it.
+
+   Optional email delivery (password resets, contact form):
+
+   | Key | Value |
+   |---|---|
+   | `MAILER` | `smtp` |
+   | `SMTP_HOST` / `SMTP_PORT` | e.g. `smtp.gmail.com` / `587` (STARTTLS is required) |
+   | `SMTP_USER` / `SMTP_PASSWORD` | the account and its app password |
+   | `MAIL_FROM` | optional; defaults to `SMTP_USER` |
+
+   Optional pipeline tuning (defaults shown):
 
    | Key | Default | Purpose |
    |---|---|---|
-   | `INGEST_INTERVAL_HOURS` | `6` | Internal scheduler scrape cadence (GH Actions drives this in prod at `17 */6 * * *`) |
-   | `LIFECYCLE_INTERVAL_HOURS` | `24` | Expiry + link-check sweep cadence (GH Actions: `43 1 * * *`) |
-   | `PUBLISH_REFRESH_INTERVAL_HOURS` | `168` | Weekly publishing refresh (GH Actions: `7 3 * * 0` Sundays). Metrics only — the live feed updates itself within a minute of pipeline changes |
-   | `MIN_SOURCE_RESCRAPE_HOURS` | `5` | Skip sources scraped more recently than this (prevents internal/external cron overlap) |
-   | `LIVE_FEED_TTL_SECONDS` | `60` | Published-feed cache for the live DB section |
-   | `EXPIRING_SOON_DAYS` | `7` | Deadline window for the expiring_soon status |
-   | `DEAD_LINK_FAILURE_THRESHOLD` | `3` | Consecutive transient failures before dead_link |
-   | `PUBLISH_MIN_CONFIDENCE` | `0.75` | Min extraction confidence for a pipeline record to publish |
-   | `CRON_MAX_SOURCES` | `10` | Sources per ingest batch |
-   | `CRON_MAX_DEAD_LINK_CHECKS` | `30` | Apply-URL checks per lifecycle sweep |
+   | `MIN_SOURCE_RESCRAPE_HOURS` | `5` | Skip sources scraped more recently than this |
+   | `CRON_MAX_SOURCES` | `10` | Sources per ingest batch (least recently attempted first) |
+   | `CRON_MAX_DEAD_LINK_CHECKS` | `30` | Apply-URL checks per lifecycle sweep (least recently checked first) |
+   | `DEAD_LINK_FAILURE_THRESHOLD` | `3` | Consecutive transient failures before `dead_link` |
+   | `EXPIRING_SOON_DAYS` | `7` | Deadline window for `expiring_soon` |
+   | `PUBLISH_MIN_CONFIDENCE` | `0.75` | Minimum extraction confidence for a pipeline record to publish |
+   | `LIVE_FEED_TTL_SECONDS` | `60` | Cache for the live part of the published feed |
+   | `INGEST_INTERVAL_HOURS` / `LIFECYCLE_INTERVAL_HOURS` / `PUBLISH_REFRESH_INTERVAL_HOURS` | `6` / `24` / `168` | Only used when the internal scheduler is on |
 
-6. Click **Create Web Service**. Render starts building (~5 min).
-7. When build finishes, the dashboard shows your URL: `https://nexora-api.onrender.com`.
-8. Verify in a browser: `https://nexora-api.onrender.com/api/health` should return a healthy response.
+4. **Create Web Service**, wait for the build, then open `https://<your-service>.onrender.com/api/health`.
 
-**Important:** the scraper dependencies (`scrapling[fetchers]`, Playwright) have been moved to `backend/requirements-dev.txt` specifically because they're too heavy for Render free tier. The main `requirements.txt` is kept lean — the scraper code gracefully falls back to `httpx` + `BeautifulSoup` when Scrapling isn't installed. If you need local scraping, run `pip install -r requirements-dev.txt && playwright install chromium`.
+The HTTP scraper works on Render as-is (httpx + BeautifulSoup). Browser-based
+fetching (`use_js` / `use_stealth` sources) needs `requirements-dev.txt` and
+Playwright browsers, which don't fit the free tier.
 
----
+### 5 · Cloudflare Pages (host the frontend)
 
-### 6 · Cloudflare Pages (host the frontend)
-
-| Field | Value |
-|---|---|
-| **What it is** | Hosts the React app. Free at any traffic level. Auto-deploys on push. |
-| **How to get** | Go to `dash.cloudflare.com/sign-up`. Create a free Cloudflare account. |
-| **What to copy** | After deploy: the URL like `https://nexora.pages.dev` |
-| **Where it goes** | This is your final portfolio URL. Goes on your resume. |
-| **Time** | 15 min |
-| **Cost** | $0 (free forever) |
-
-**Steps:**
-
-1. Open `dash.cloudflare.com/sign-up` → create account. Enable 2FA on the account (Profile → Authentication).
-2. Left sidebar → **Workers & Pages** → click **Create application** → **Pages** tab → **Connect to Git**.
-3. Authorize Cloudflare to access GitHub. Pick the `nexora` repo.
-4. Fill in build config:
-   - **Project name:** `nexora`
-   - **Production branch:** `main`
-   - **Framework preset:** None
+1. `dash.cloudflare.com/sign-up` → **Workers & Pages** → **Create application** → **Pages** → **Connect to Git** → pick the repo.
+2. Build settings:
    - **Build command:** `cd frontend && npm install && npm run build`
    - **Build output directory:** `frontend/dist`
-5. Click **Environment variables (advanced)** → add:
-   - **Name:** `VITE_API_BASE_URL`
-   - **Value:** `https://nexora-api.onrender.com` (from step 5)
-   - Type: **Production**
-6. Click **Save and Deploy**. First build takes ~2 min.
-7. When done, Cloudflare gives you `https://nexora.pages.dev`. Click it → see your live site.
+3. Environment variable: `VITE_API_BASE_URL` = your Render URL.
+   Never put an admin key in a `VITE_*` variable: every `VITE_*` value is
+   compiled into the public JavaScript bundle.
+4. **Save and Deploy**, then go back to Render and set `CORS_ORIGINS` and `FRONTEND_URL` to the Pages URL.
 
-**Finish step 5's CORS:** go back to Render → your `nexora-api` service → **Environment** → set `CORS_ORIGINS` to `https://nexora.pages.dev` → save → service auto-redeploys.
+### 6 · GitHub Actions cron (pipeline automation)
 
----
+In the GitHub repo → **Settings → Secrets and variables → Actions**, add:
 
-## ✅ Final verification (the moment of truth)
+| Secret | Value |
+|---|---|
+| `NEXORA_API_URL` | your Render URL, no trailing slash |
+| `NEXORA_ADMIN_SECRET_KEY` | the same value as Render's `ADMIN_SECRET_KEY` |
 
-Open `https://nexora.pages.dev` in a fresh browser tab and do:
-
-1. Click **Sign Up** → create a test account with a real email
-2. Complete the onboarding wizard
-3. Browse opportunities on the dashboard
-4. Click any opportunity → see the detail page
-5. Click **Apply via Nexora** → see the drawer open
-6. Try the AI **Generate Draft** button → see a cover letter appear
-7. Save an opportunity to your tracker
-
-If all 7 work, **you're live.** Your portfolio URL is ready.
+`.github/workflows/pipeline-cron.yml` then runs ingest every 6 hours, the
+lifecycle sweep daily, and the publishing refresh weekly. To run one now:
+**Actions → Nexora pipeline cron → Run workflow** and pick `ingest`,
+`lifecycle` or `publish`. A run fails (red) if the API reports the job failed
+or never answers after three cold-start retries.
 
 ---
 
-## 📋 Quick env-var cheat sheet
+## ✅ Final verification
 
-This is what each service ends up with. Save this somewhere:
+1. `https://<render>/api/health` returns `"status": "healthy"`.
+2. Open the Pages URL → sign up → complete onboarding → browse, open an opportunity, save it to the tracker.
+3. Log in with `ADMIN_EMAIL` / `ADMIN_PASSWORD` → you land on `/admin`.
+4. Run the workflow manually with `ingest`, then check the pipeline:
+   ```bash
+   curl -s -H "X-Admin-Key: $ADMIN_SECRET_KEY" https://<render>/api/pipeline/status
+   ```
+   `sources.detail[]` shows each source's health and last error.
+
+---
+
+## 📋 Env-var cheat sheet
 
 ```
 # Render (backend)
 DATABASE_URL=postgresql://...neon.tech/neondb?sslmode=require
-SECRET_KEY=<64-char hex from secrets.token_hex(32)>
-GROQ_API_KEY=gsk_...
-USE_MOCK_AI=True
+DEBUG=False
+SECRET_KEY=<generated>
+ADMIN_SECRET_KEY=<generated, different>
+ADMIN_EMAIL=you@example.com
+ADMIN_PASSWORD=<12+ characters>
 ENABLE_INTERNAL_SCHEDULER=False
 CORS_ORIGINS=https://nexora.pages.dev
+FRONTEND_URL=https://nexora.pages.dev
+# optional
+GROQ_API_KEY=gsk_...
+USE_MOCK_AI=False
 
 # Cloudflare Pages (frontend)
 VITE_API_BASE_URL=https://nexora-api.onrender.com
+
+# GitHub Actions secrets
+NEXORA_API_URL=https://nexora-api.onrender.com
+NEXORA_ADMIN_SECRET_KEY=<same as ADMIN_SECRET_KEY>
 ```
 
 ---
 
-## 🟢 What you'll add to your resume
+## Upgrading an existing deployment
 
-Once deployed, your project entry can read:
+Earlier builds created an `admin@nexora.ai` / `admin123` account on every boot.
+On the first boot of this version:
 
-> **Nexora** — Full-stack opportunity discovery & application platform
-> Built with FastAPI · React 18 · PostgreSQL · Groq · Gemini · Cloudflare R2
-> 🔗 Live demo: nexora.pages.dev · Code: github.com/<your-username>/nexora
-
-The clickable demo URL is the difference between "this person worked on a project" and "this person ships software."
-
----
-
-## ⚠️ Things to know about the free-tier setup
-
-1. **Render free tier sleeps.** After 15 min of no requests, the backend goes to sleep. First request after wakes it (~30 sec cold start). This is acceptable for a portfolio — recruiters will wait for one cold start. If you want zero-sleep, Render paid is $7/mo (or switch to Fly.io which doesn't sleep but needs a credit card).
-
-2. **Neon free tier auto-suspends.** Similar to Render — DB sleeps when idle, wakes on first query in ~1 sec. Fine for demo.
-
-3. **File uploads don't persist.** Render's free disk is ephemeral. Uploaded CVs in the Asset Vault demo will disappear on the next deploy. If a recruiter actually uploads something this is a problem — fix by signing up for free Cloudflare R2 (10 GB free) and setting `R2_*` env vars. Otherwise leave it as a known demo limitation.
-
-4. **Emails don't send.** Without `RESEND_API_KEY`, the mailer falls back to `ConsoleMailer` which prints the email to the Render logs instead of sending. For a demo, this is actually fine — you can show the recruiter the log output as proof the email pathway works. If you want real emails, sign up for Resend free (3k/month) and add `RESEND_API_KEY`.
-
-5. **Scraper doesn't run on Render.** Playwright needs ~500 MB just for browsers — won't fit on free tier. The 10,000+ opportunities currently in your local DB need to be seeded into Neon. Two options:
-   - **Easy:** export your local Postgres data and import into Neon (one-time `pg_dump` + `psql`). Below.
-   - **Skip:** the demo works with the 5 seed opportunities in `main.py` — they're auto-inserted when the DB is empty.
+- that account is locked (random password) and loses its admin role, unless
+  you set `ADMIN_EMAIL=admin@nexora.ai` with a new `ADMIN_PASSWORD`;
+- set `ADMIN_EMAIL` / `ADMIN_PASSWORD` to get an admin login back;
+- if the service fails to boot, the Render log lists which secret is missing
+  or still a public default — set it and redeploy;
+- set `DEBUG=False` if it isn't already.
 
 ---
 
-## 📦 Optional: seed your local data to Neon
+## ⚠️ Free-tier notes
 
-If you want all 10,000+ opportunities in the live demo (more impressive than 5 seeds):
+1. **Render sleeps** after 15 minutes idle; the first request takes ~30–60 s. The cron workflow retries through cold starts.
+2. **Neon auto-suspends** when idle and wakes in about a second.
+3. **Email** goes to the Render logs until `MAILER=smtp` is configured.
+
+### Optional: copy your local data to Neon
 
 ```bash
-# From your laptop, dump your local DB
 pg_dump postgresql://localhost:5432/nexora_db > nexora_dump.sql
-
-# Connect to Neon and import
 psql "postgresql://user:pass@ep-xxx.neon.tech/neondb?sslmode=require" < nexora_dump.sql
 ```
-
-Takes ~30 seconds. Now the live demo shows the real index.
-
----
-
-## 🚀 What you've achieved
-
-| Asset | Status |
-|---|---|
-| Public live demo URL | ✅ |
-| Clickable code on GitHub | ✅ |
-| Real database with real data | ✅ |
-| Working AI features | ✅ |
-| Architecture diagram in MASTER_PLAN.md | ✅ |
-| Engineering decisions documented | ✅ |
-| Auto-deploys on every git push | ✅ |
-| **Total monthly cost** | **$0** |
-| **Hours of your time invested** | ~90 min |
 
 ---
 
 ## 🔧 Troubleshooting
 
-**Render build fails on Playwright:**
-Edit `backend/requirements.txt`, remove `playwright` and `beautifulsoup4` lines. Re-push.
+**Service won't start, log says "Refusing to start with unsafe production configuration":** set the variables it lists (see step 4).
 
-**Frontend can't reach backend (CORS errors):**
-Check `CORS_ORIGINS` in Render env vars matches your Cloudflare Pages URL exactly (no trailing slash).
+**Frontend can't reach the backend (CORS errors):** `CORS_ORIGINS` must match the Pages URL exactly, without a trailing slash.
 
-**Database connection refused:**
-Check `DATABASE_URL` ends with `?sslmode=require`. Neon requires SSL.
+**Database connection refused:** `DATABASE_URL` must end with `?sslmode=require` for Neon.
 
-**AI features fail silently:**
-Check `USE_MOCK_AI=False` and that `GROQ_API_KEY` + `GEMINI_API_KEY` are both set in Render env.
+**Extraction looks thin:** set `GROQ_API_KEY` and `USE_MOCK_AI=False`, then re-extract existing pages once per source:
+`curl -X POST -H "X-Admin-Key: $ADMIN_SECRET_KEY" "https://<render>/api/sources/<id>/run?reextract=true"`.
 
-**404 on /explore/:slug after deploy:**
-The slug backfill runs on startup. Check Render logs for `[Startup] Backfilled X opportunity slugs.` If you see 0, the seed data didn't load — check `DATABASE_URL`.
-
----
-
-## 🆘 If anything breaks
-
-Tell me what URL you tried and what error appeared (Render logs, browser console, etc.). I'll diagnose. Everything in this guide has been tested for the stack we're using.
-
-When all 6 steps are done and verification passes — congrats, you have a real, deployed portfolio project. Put `nexora.pages.dev` on your resume.
+**Cron workflow fails:** open the failed run. "must be set" means a repository secret is missing; `"success": false` includes the application error; "did not return a valid response" means the service never woke up.

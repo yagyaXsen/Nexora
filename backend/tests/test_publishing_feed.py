@@ -15,10 +15,12 @@ import os
 import sys
 from datetime import datetime, timedelta, timezone
 
-# Isolated throwaway DB — must be set BEFORE any app import.
-os.environ["DATABASE_URL"] = "sqlite:////tmp/nexora_publish_test.db"
-if os.path.exists("/tmp/nexora_publish_test.db"):
-    os.remove("/tmp/nexora_publish_test.db")
+# Isolated throwaway DB — must be set BEFORE any app import. Under pytest,
+# tests/conftest.py has already pinned one; this path is for script runs.
+if not os.environ.get("NEXORA_TEST_DB_PINNED"):
+    os.environ["DATABASE_URL"] = "sqlite:////tmp/nexora_publish_test.db"
+    if os.path.exists("/tmp/nexora_publish_test.db"):
+        os.remove("/tmp/nexora_publish_test.db")
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 
@@ -166,7 +168,7 @@ def test_new_verified_opportunity_becomes_publishable():
 def test_unverified_opportunity_is_not_published():
     """Seed-style rows (never pipeline-verified) stay out of the feed."""
     db = _fresh_db()
-    src = db.query(Source).first()
+    src = db.query(Source).order_by(Source.id).first()
     opp = _make_opp(db, src, "unverified-seed", verified=False,
                     title="Unverified Seed Fellowship")
     live = get_live_records(db, force=True)
@@ -186,7 +188,7 @@ def test_active_opportunity_appears_in_feed():
 
 def test_expired_opportunity_is_excluded():
     db = _fresh_db()
-    src = db.query(Source).first()
+    src = db.query(Source).order_by(Source.id).first()
     opp = _make_opp(db, src, "expired-one", status="expired", verified=True,
                     deadline=datetime.now(timezone.utc) - timedelta(days=1),
                     title="Expired Fellowship Program")
@@ -201,7 +203,7 @@ def test_expired_opportunity_is_excluded():
 
 def test_dead_link_opportunity_is_excluded():
     db = _fresh_db()
-    src = db.query(Source).first()
+    src = db.query(Source).order_by(Source.id).first()
     opp = _make_opp(db, src, "dead-one", status="dead_link", verified=True,
                     title="Dead Link Fellowship")
     assert not eligible_for_publishing(opp)
@@ -211,7 +213,7 @@ def test_dead_link_opportunity_is_excluded():
 
 def test_needs_review_and_low_confidence_excluded():
     db = _fresh_db()
-    src = db.query(Source).first()
+    src = db.query(Source).order_by(Source.id).first()
     nr = _make_opp(db, src, "review-one", needs_review=True, title="Review Fellowship")
     low = _make_opp(db, src, "lowconf-one", confidence=0.5, title="Low Conf Fellowship")
     assert not eligible_for_publishing(nr)
@@ -223,7 +225,7 @@ def test_needs_review_and_low_confidence_excluded():
 
 def test_expiring_soon_still_publishable():
     db = _fresh_db()
-    src = db.query(Source).first()
+    src = db.query(Source).order_by(Source.id).first()
     _make_opp(db, src, "expiring-one", status="expiring_soon", verified=True,
               deadline=datetime.now(timezone.utc) + timedelta(days=3),
               title="Expiring Soon Fellowship")
@@ -234,7 +236,7 @@ def test_expiring_soon_still_publishable():
 def test_revived_opportunity_becomes_publishable_again():
     """EXPIRED → successful revalidation → ACTIVE → back in the feed."""
     db = _fresh_db()
-    src = db.query(Source).first()
+    src = db.query(Source).order_by(Source.id).first()
     opp = _make_opp(db, src, "revived-one", status="expired", verified=True,
                     title="Revived Fellowship Program")
     invalidate_live_feed()
@@ -255,7 +257,7 @@ def test_revived_opportunity_becomes_publishable_again():
 
 def test_deadline_extension_keeps_opportunity_active():
     db = _fresh_db()
-    src = db.query(Source).first()
+    src = db.query(Source).order_by(Source.id).first()
     opp = _make_opp(db, src, "extended-one", title="Extended Deadline Fellowship")
     assert "extended-one" in _slugs(get_live_records(db, force=True))
 
@@ -276,7 +278,7 @@ def test_duplicate_static_twin_is_replaced_not_duplicated():
     """A live record matching a static record's URL replaces it (enriched by
     it) — the program appears exactly once in the feed."""
     db = _fresh_db()
-    src = db.query(Source).first()
+    src = db.query(Source).order_by(Source.id).first()
     _make_opp(db, src, "twin-program", verified=True,
               url="https://twin-official.example.org/apply",
               title="Twin Research Fellowship")
@@ -300,7 +302,7 @@ def test_duplicate_static_twin_is_replaced_not_duplicated():
 def test_invalid_apply_url_is_not_published():
     """Spec §18 Publishing #13: junk / non-http apply URLs stay out of the feed."""
     db = _fresh_db()
-    src = db.query(Source).first()
+    src = db.query(Source).order_by(Source.id).first()
     bad1 = _make_opp(db, src, "badurl-one", url="not-a-valid-url",
                      title="Bad URL Fellowship")
     bad2 = _make_opp(db, src, "jsurl-one", url="javascript:alert(1)",
@@ -405,7 +407,7 @@ def test_publishing_refresh_measures_real_churn():
     db.commit()
 
     base = publishing_refresh(db)
-    src = db.query(Source).first()
+    src = db.query(Source).order_by(Source.id).first()
     _make_opp(db, src, "churn-new", title="Churn Brand New Fellowship")
 
     after = publishing_refresh(db)
@@ -451,10 +453,26 @@ def test_published_api_serves_new_opportunities():
     db.close()
 
 
+def test_related_items_work_for_live_records():
+    """A pipeline-published record's detail page used to get zero related
+    items: /related only searched the static catalog."""
+    from app.routes.published import related_published
+    db = _fresh_db()
+    src = _make_source(db, "srcRelated")
+    _make_opp(db, src, "related-live-a", title="Related Live Alpha Fellowship")
+    _make_opp(db, src, "related-live-b", title="Related Live Beta Fellowship")
+    invalidate_live_feed()
+
+    related = [r.slug for r in related_published(slug="related-live-a", limit=12, db=db)]
+    assert "related-live-b" in related, related
+    assert "related-live-a" not in related
+    db.close()
+
+
 def test_expired_opportunities_disappear_from_api_response():
     from app.routes.published import list_published
     db = _fresh_db()
-    src = db.query(Source).first()
+    src = db.query(Source).order_by(Source.id).first()
     opp = _make_opp(db, src, "vanishing-one", title="Vanishing Fellowship Program")
     invalidate_live_feed()
     resp = list_published(category=None, country=None, status=None, q=None,
@@ -509,7 +527,7 @@ def test_status_endpoint_reports_full_observability():
     from app.pipeline.runner import runner as _runner
 
     db = _fresh_db()
-    src = db.query(Source).first()
+    src = db.query(Source).order_by(Source.id).first()
 
     # Produce a real failed run so last_failed_scrape is measurable.
     broken = _make_source(db, "ObsBroken", )

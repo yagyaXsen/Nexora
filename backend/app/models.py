@@ -36,7 +36,8 @@ class RawDocumentStatus(str, enum.Enum):
     FETCHED = "fetched"
     EXTRACTED = "extracted"
     NORMALIZED = "normalized"
-    FAILED = "failed"
+    FAILED = "failed"          # retried on the next run
+    REJECTED = "rejected"      # junk / non-opportunity content — not retried while unchanged
 
 class ApplicationStatus(str, enum.Enum):
     SAVED = "Saved"
@@ -207,6 +208,11 @@ class Opportunity(Base):
     last_checked_at = Column(DateTime(timezone=True), nullable=True, index=True)
     last_verified_at = Column(DateTime(timezone=True), nullable=True, index=True)
     link_check_failures = Column(Integer, default=0, nullable=False)
+    # closed_by_source: the source page itself announces applications are
+    #   closed. Sticky: it keeps the row expired even when the stored deadline
+    #   is in the future (often next cycle's date), until a later scrape of the
+    #   page no longer says so.
+    closed_by_source = Column(Boolean, default=False, nullable=False)
     created_at = Column(DateTime(timezone=True), default=utc_now, nullable=False)
     updated_at = Column(DateTime(timezone=True), default=utc_now, onupdate=utc_now, nullable=False)
 

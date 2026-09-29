@@ -33,11 +33,7 @@ export default function Profile() {
   const [targetCountries, setTargetCountries] = useState('')
 
   // Embedded Settings Module State
-  const [emailInput, setEmailInput] = useState(user?.email || '')
   const [twoFactor, setTwoFactor] = useState(false)
-  const [activeSessions] = useState([
-    { id: 1, device: 'Current session', isCurrent: true },
-  ])
 
   const [privacy, setPrivacy] = useState({
     recruiterVisible: true,
@@ -46,22 +42,6 @@ export default function Profile() {
     analyticsSharing: false,
   })
 
-  const [notifications, setNotifications] = useState({
-    emailAlerts: true,
-    pushAlerts: true,
-    weeklyDigest: true,
-    quietHours: '22:00 - 07:00',
-  })
-
-  const [appearance, setAppearance] = useState({
-    theme: 'System Default',
-    language: 'English (US)',
-  })
-
-  const [aiPreferences, setAiPreferences] = useState({
-    sensitivity: '85% High Precision',
-    personalizationLevel: 'Full Vector Profile',
-  })
 
   const [connected, setConnected] = useState({
     linkedin: false,
@@ -81,7 +61,6 @@ export default function Profile() {
         const prof = data.profile || {}
         setProfile(prof)
         setFullName(data.name || '')
-        setEmailInput(data.email || '')
         setAcademicDegree(prof.academic_degree || '')
         setInstitution(prof.institution || '')
         setCitizenship(prof.citizenship || '')

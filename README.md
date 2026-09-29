@@ -14,144 +14,96 @@ Ambitious students, researchers, and early-stage founders waste dozens of hours 
 * **Leaking Funnels**: Discovering opportunities is only half the struggle. Candidates lose track of deadlines, documents, and application states, managing them in scattered spreadsheets, Notion lists, or notes.
 
 ### Nexora’s Solution
-Nexora solves these problems by building a robust **Collect → Extract → Categorize → Index → Search → Track** pipeline:
-1. **Automated Discovery**: A crawling service that scrapes target websites daily and converts messy DOM trees into clean structured content.
-2. **AI-Powered Structured Extraction**: A Gemini LLM pipeline that reads raw crawled pages and parses them into strict, type-validated Pydantic models (extracting titles, organizations, deadlines, countries, categories, and tags).
-3. **Hybrid AI Search Assistant**: Translates natural language queries into logical database conditions (intent mapping, cross-country eligibility, and JSON tag intersections) merged with fallback keyword indices.
-4. **Interactive Kanban Pipeline & Calendar**: A visual tracking console allowing students to transition bookmarks from *Saved* to *Accepted* with custom workspace diaries.
+Nexora answers this with a **Collect → Extract → Deduplicate → Maintain → Publish → Track** pipeline:
+1. **Automated discovery**: configured sources (HTML listings, RSS feeds, sitemaps) are crawled on a schedule and each program page is fetched.
+2. **Structured extraction**: page text is turned into a validated `OpportunityExtract` record, using Groq (`llama-3.3-70b-versatile`) when configured, or a heuristic parser that only reports facts printed on the page.
+3. **Continuous maintenance**: records are re-verified against their source, expired when their deadline passes or the source says applications are closed, revived when a program reopens, and link-checked with a transient-failure threshold.
+4. **Publishing**: the frontend reads one published feed that merges the hand-verified static catalog with pipeline records that pass strict quality gates.
+5. **Tracking**: candidates save opportunities to a tracker, move them through application stages, and get deadline reminders.
 
 ---
 
-## 2. Technical System Architecture
+## 2. Architecture
 
 ```
-                 [ DAILY SCHEDULER / SSE MANUAL EVENT ]
-                                  │
-                                  ▼
-                     ┌─────────────────────────┐
-                     │  Playwright Scraper /   │
-                     │  HTTPX Rotated Crawler  │
-                     └─────────────────────────┘
-                                  │
-                                  ▼
-                     ┌─────────────────────────┐
-                     │   BeautifulSoup DOM     │
-                     │  HTML-to-MD Text Clean  │
-                     └─────────────────────────┘
-                                  │
-                                  ▼
-                     ┌─────────────────────────┐
-                     │    Gemini LLM Engine    │
-                     │ (JSON Schema Extraction)│
-                     └────────────┬────────────┘
-                                  │  (Failover: Regex Heuristics)
-                                  ▼
-                     ┌─────────────────────────┐
-                     │   Pydantic Validation   │
-                     │    and Sanitize Layer   │
-                     └─────────────────────────┘
-                                  │
-                                  ▼
-                     ┌─────────────────────────┐
-                     │   PostgreSQL Database   │
-                     └─────────────────────────┘
-                        ▲                 ▲
-                        │                 │
-                (Search Query API) (Kanban Tracker API)
-                        │                 │
-                     ┌──┴─────────────────┴────┐
-                     │   FastAPI Backend API   │
-                     └─────────────────────────┘
-                                  ▲
-                                  │ (REST / EventSource SSE)
-                                  ▼
-                     ┌─────────────────────────┐
-                     │   React Vite Frontend   │
-                     │   Premium Dark Mode     │
-                     └─────────────────────────┘
+ Sources (DB table; 4 seeded)        GitHub Actions cron ──► /api/pipeline/cron/{ingest,lifecycle,publish}
+        │                            APScheduler (in-process, optional) ──┘
+        ▼
+ fetcher.py      listing / feed / sitemap → up to 15 program pages each
+                 Scrapling (if installed) or httpx + BeautifulSoup
+        │        content hash: unchanged page → re-validate only (no AI call)
+        ▼
+ extractor.py    clean text, lift the resolved direct apply URL
+ normalizer.py   junk filter → Groq JSON extraction, or heuristic parser
+        ▼
+ deduper.py      match by canonical apply URL, else fuzzy title + organizer
+                 → insert or update; status recomputed from the data
+        ▼
+ opportunities table  (SQLite locally, Postgres when deployed)
+        │
+ lifecycle.py    expiry sweep · "applications closed" · revival · link checks
+        ▼
+ live_feed.py    eligible records (verified, open, confidence ≥ 0.75, official URL)
+   + catalog.py  static verified catalog (backend/nexora_verified_opportunities.json)
+        ▼
+ /api/published/*  ──►  React frontend (Explore, Dashboard, Detail, Tracker)
 ```
 
----
+## 3. Components
 
-## 3. Deep-Dive: How & Why Each Component Works
+| Component | Where | What it does |
+|---|---|---|
+| Fetcher | `backend/app/pipeline/fetcher.py` | Per-source config picks the backend: `{}` HTTP, `{"use_js": true}` browser rendering, `{"use_stealth": true}` anti-bot browser (the last two need `requirements-dev.txt`). A failed listing marks the run failed; a failed program page is skipped, never turned into a junk record. |
+| Extraction | `backend/app/ai_service.py`, `pipeline/extractor.py`, `pipeline/normalizer.py` | Groq when `USE_MOCK_AI=false` and `GROQ_API_KEY` is set; otherwise a heuristic parser that fills only what it finds (deadline, amount, eligibility sentence) and leaves the rest empty. Non-opportunity pages are rejected once and not retried while unchanged. |
+| Dedupe | `backend/app/pipeline/deduper.py` | Exact match on the canonical apply URL, then fuzzy title + organizer (including expired rows, so a reopened program updates its old record). |
+| Runner | `backend/app/pipeline/runner.py` | One isolated run per source, recorded in `pipeline_runs`. Per-page errors are rolled back, logged on the run, and the page is retried on the next run. `POST /api/sources/{id}/run?reextract=true` re-extracts unchanged pages (e.g. after enabling Groq). |
+| Lifecycle | `backend/app/pipeline/lifecycle.py` | Status from deadline (`active` / `expiring_soon` / `expired`); a source page saying applications are closed keeps the row expired until the notice disappears; link checks rotate least-recently-checked first and need 3 consecutive transient failures before `dead_link`. |
+| Scheduling | `backend/app/scheduler.py`, `.github/workflows/pipeline-cron.yml` | Ingest every 6h, lifecycle daily, publishing metrics weekly. Hosts that sleep (Render free) use the GitHub Actions cron; each job runs at most once at a time per process, and a failed job returns HTTP 500 so the workflow run fails visibly. |
+| Publishing | `backend/app/publishing/` | `eligible_for_publishing()` is the single gate for pipeline records; the static catalog is always the base, so a pipeline or DB failure can never empty the feed. |
+| Observability | `GET /api/pipeline/status` (admin key) | Running jobs, next runs, last success/failure, per-source health, 24h counts, publishing metrics. |
 
-### A. The Scraper & Crawler Engine (`backend/app/scraper.py`)
-* **Why**: Loading heavy pages via headless browsers is resource-intensive. If a crawler gets blocked by Cloudflare, DNS timeouts, or request limits, the backend pipeline should never freeze or crash.
-* **How**:
-  1. Utilizes rotated `User-Agent` headers and lightweight `httpx` connections for immediate HTML returns.
-  2. Parses the raw HTML using `BeautifulSoup`. It strips out irrelevant sections (header, footer, style sheets, scripts, iframe banners) and reconstructs standard HTML elements into clean readable Markdown text.
-  3. If a request is blocked, throws an exception, or targets a mock URL, it engages a **high-fidelity mockup generator** that serves simulated content. This keeps the application fully demonstrable under any network conditions.
-
-### B. AI Structured Extraction (`backend/app/ai_service.py`)
-* **Why**: LLM outputs are naturally conversational and unpredictable. To load these into PostgreSQL, they must be parsed into strict SQL types (e.g., date formats, list parameters, and category enums).
-* **How**:
-  1. Integrates with the **Gemini API** (`gemini-1.5-flash`) using Structured Outputs (`response_mime_type: "application/json"`).
-  2. Prompt templates instruct the LLM to convert vague deadline texts (e.g., *"closing at the end of next July"*) into valid SQL dates (`YYYY-MM-DD`).
-  3. **Bulletproof Fallback Engine**: If the `GEMINI_API_KEY` is not present, the system runs an advanced local regex parser that reads the scraped markdown blocks, extracts fields, parses months into date structures, and maps keywords into tags deterministically.
-
-### C. PostgreSQL Database Schema (`backend/app/models.py`)
-* We use a relational schema to manage structural dependencies and application states:
-  * **`opportunities`**: Contains fully detailed opportunity specs. We use a **`url` unique index** to prevent duplicate entries from multiple scrapes.
-  * **`scraped_sources`**: Tracks our target scrapers, their respective crawl status, and last scraped timestamps.
-  * **`applications`**: User tracking table. References `opportunities.id` with `ondelete="CASCADE"`. This ensures that if an opportunity is removed, its bookmarks disappear instantly.
-
-### D. Hybrid Search Assistant (`backend/app/search.py`)
-* **Why**: Traditional keyword searches (e.g. `ILIKE`) are too literal. If a user asks for *"paid fellowships for Indian developers in Europe"*, a keyword search misses opportunities that say *"Global eligibility"* or fail to contain the specific word *"paid"* (using *"funded"* instead).
-* **How**:
-  1. The search assistant passes the user query to the AI parser, which extracts the structural intent (Category: `Fellowship`, Country: `Europe`, Tags: `['AI', 'Developer']`, FundingRequired: `True`).
-  2. The query constructor then builds a dynamic SQL query:
-     - **Cross-Region Coverage**: If `Country=Europe` is searched, SQL matches `country ILIKE '%europe%'` OR `country ILIKE '%global%'` (since global applicants apply).
-     - **Array Intersection**: Scans the PostgreSQL `JSONB` array for overlapping tags.
-     - **Broad Search Fallback**: If strict conditions yield zero matches, the system gracefully degrades to a full-text SQL broad keyword scan.
-
-### E. Server-Sent Events Scraping Stream (`backend/app/routes/scraper.py`)
-* **Why**: Scraping multiple sites is slow and typically blocks HTTP responses. The user must not experience a blank loader screen that times out.
-* **How**:
-  * Implements Server-Sent Events (SSE) using FastAPI's `StreamingResponse`. 
-  * When clicked, the frontend opens an `EventSource` connection. The backend streams real-time JSON log frames detailing Playwright crawls, LLM structures, duplicate validations, and SQL inserts, providing a highly visual experience.
+The detailed audit and design history is in [`docs/PIPELINE_AUDIT.md`](docs/PIPELINE_AUDIT.md); deployment is in [`docs/DEPLOYMENT.md`](docs/DEPLOYMENT.md).
 
 ---
 
-## 4. How to Set Up & Run the MVP
+## 4. Running locally
 
-### Prerequisites
-* **macOS** with Homebrew
-* **PostgreSQL** running locally
-* **Python 3.13** and **Node.js v25** (with NPM)
+Prerequisites: Python 3.11+ and Node.js 20.19+ or 22.12+ (required by Vite 8). No database server is needed — local development uses SQLite (`backend/nexora.db`) by default.
 
-### 1. Database Creation
-Verify your local postgres is running, then create the database:
+### Backend
 ```bash
-createdb nexora_db
+cd backend
+python3 -m venv .venv && source .venv/bin/activate
+pip install -r requirements.txt          # add requirements-dev.txt for Scrapling/browser fetching
+python3 run.py                           # http://localhost:8000  (API docs at /docs)
 ```
 
-### 2. Backend Setup
-1. Open a new terminal tab and enter the backend directory:
-   ```bash
-   cd backend
-   ```
-2. Install the required Python packages:
-   ```bash
-   pip3 install -r requirements.txt
-   ```
-3. Initialize your environment file. Create `/Users/alokkumar/Nexora/.env` (or a `.env` in the `backend/` directory) and populate it:
-   ```env
-   DATABASE_URL=postgresql://localhost:5432/nexora_db
-   GEMINI_API_KEY=your_gemini_api_key_here
-   ```
-   *Note: If you leave `GEMINI_API_KEY` blank, Nexora's regex heuristics will automatically handle all scrapes and queries, making it fully operational.*
+Optional `backend/.env`:
+```env
+GROQ_API_KEY=gsk_...          # with USE_MOCK_AI=false, enables LLM extraction and search parsing
+USE_MOCK_AI=false
+ADMIN_EMAIL=you@example.com   # creates an admin login on boot (there is no default admin account)
+ADMIN_PASSWORD=a-long-unique-passphrase
+```
+On localhost the admin console at `/admin` also works without logging in (dev-only, via the development admin key).
 
-4. Launch the FastAPI server:
-   ```bash
-   python3 run.py
-   ```
-   The backend will boot up at `http://localhost:8000`. You can inspect the fully interactive Swagger documentation at `http://localhost:8000/docs`.
+### Frontend
+```bash
+cd frontend
+npm install
+npm run dev                              # http://localhost:5173
+```
+Set `VITE_API_BASE_URL` if the API is not on `http://localhost:8000`.
 
-### 3. Frontend Setup
-1. Open a new terminal tab and enter the frontend directory.
-2. Initialize Vite + React (we will build this in Phase 4).
-3. Run npm setup and boot the dev server:
-   ```bash
-   npm run dev
-   ```
-   The frontend UI dashboard will be accessible at `http://localhost:5173`.
+### Tests
+```bash
+cd backend
+pip install -r requirements.txt pytest
+python -m pytest tests/
+```
+The suite runs against a throwaway database (see `tests/conftest.py`) and never touches `backend/nexora.db`.
+Production runs on Postgres; to run the same suite against a Postgres database (it is wiped first, so its name must contain `test`):
+```bash
+NEXORA_TEST_DATABASE_URL=postgresql://user@localhost:5432/nexora_test python -m pytest tests/
+```
+CI (`.github/workflows/ci.yml`) runs the backend suite on Python 3.11 and 3.13 against both SQLite and PostgreSQL 16, plus the frontend lint and production build, on every push.

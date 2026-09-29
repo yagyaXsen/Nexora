@@ -4,9 +4,13 @@ import { useAuth } from '../lib/auth.jsx'
 import { CountUp } from '../components/CountUp.jsx'
 import { isLocalhost, ADMIN_NO_LOGIN } from '../lib/env.js'
 
-const hasUserKey = !!import.meta.env.VITE_ADMIN_KEY
-const ADMIN_KEY =
-  import.meta.env.VITE_ADMIN_KEY || 'nexora_admin_secret_dev_key'
+// Only local dev builds may send an admin key: every VITE_* value is compiled
+// into the public JS bundle, so a production build must never carry one. The
+// deployed console authenticates with the admin's login session instead.
+const hasUserKey = import.meta.env.DEV && !!import.meta.env.VITE_ADMIN_KEY
+const ADMIN_KEY = import.meta.env.DEV
+  ? import.meta.env.VITE_ADMIN_KEY || 'nexora_admin_secret_dev_key'
+  : null
 
 async function adminRequest(path, { method = 'GET' } = {}) {
   const headers = {}
@@ -16,7 +20,7 @@ async function adminRequest(path, { method = 'GET' } = {}) {
   let res
   try {
     res = await fetch(apiUrl(path), { method, headers })
-  } catch (err) {
+  } catch {
     throw new ApiError(0, 'Unable to reach backend server. Please retry in a few moments.')
   }
   let data = null
@@ -60,10 +64,10 @@ export default function Admin() {
   const [notice, setNotice] = useState(null)
 
   // In dev-only no-login mode the console is accessible without a session;
-  // otherwise it requires admin role or admin@nexora.ai account.
+  // otherwise it requires a session whose role is admin.
   const localOnly = isLocalhost()
   const noLoginMode = ADMIN_NO_LOGIN && localOnly
-  const isAdmin = noLoginMode || user?.role === 'admin' || user?.email === 'admin@nexora.ai'
+  const isAdmin = noLoginMode || user?.role === 'admin'
 
   const load = useCallback(async () => {
     setLoading(true)

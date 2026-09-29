@@ -3,7 +3,7 @@ from typing import Optional
 from sqlalchemy.orm import Session
 from app.models import RawDocument, RawDocumentStatus
 from app.schemas import OpportunityExtract
-from app.ai_service import ai_service
+from app.ai_service import ai_service, JunkContentError
 from app.pipeline.extractor import ExtractedCandidate
 
 logger = logging.getLogger(__name__)
@@ -16,6 +16,7 @@ class PipelineNormalizer:
         candidate: ExtractedCandidate,
         source_name: str,
         raw_doc: RawDocument,
+        category_hint: Optional[str] = None,
     ) -> Optional[OpportunityExtract]:
         extract: Optional[OpportunityExtract] = None
         attempts = 2
@@ -30,6 +31,7 @@ class PipelineNormalizer:
                     text_content=candidate.cleaned_text,
                     source_name=source_name,
                     candidate_url=authoritative_url,
+                    category_hint=category_hint,
                 )
                 if extract:
                     # Override whatever the AI returned for apply_url with the
@@ -38,6 +40,13 @@ class PipelineNormalizer:
                     if authoritative_url and authoritative_url != candidate.candidate_url:
                         extract.apply_url = authoritative_url
                     break
+            except JunkContentError as junk:
+                # Deterministic verdict on this exact content: retrying (now or
+                # on later runs while the page is unchanged) cannot change it.
+                logger.info(f"Raw doc ID {raw_doc.id} rejected as non-opportunity: {junk}")
+                raw_doc.status = RawDocumentStatus.REJECTED.value
+                db.commit()
+                return None
             except Exception as e:
                 logger.warning(f"Normalization attempt {attempt + 1} failed for raw doc ID {raw_doc.id}: {e}")
 

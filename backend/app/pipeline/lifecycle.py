@@ -2,6 +2,7 @@ import logging
 from typing import Optional
 from datetime import datetime, timedelta, timezone
 import httpx
+from sqlalchemy import and_, or_
 from sqlalchemy.orm import Session
 
 from app.config import settings
@@ -21,12 +22,16 @@ logger = logging.getLogger(__name__)
 def recompute_status(opp: Opportunity, now: Optional[datetime] = None) -> str:
     """Set opp.status from its deadline relative to `now`.
 
-    Returns the new status value. Rows without a deadline keep their current
-    status unless it is dead_link (a live source check supersedes a stale
-    link verdict only when the caller verified the source — see callers).
+    Returns the new status value. A row whose source page says applications
+    are closed (closed_by_source) is expired regardless of its deadline. Rows
+    without a deadline keep their current status.
     """
     if now is None:
         now = datetime.now(timezone.utc)
+
+    if getattr(opp, "closed_by_source", False):
+        opp.status = OpportunityStatus.EXPIRED.value
+        return opp.status
 
     deadline = opp.deadline
     if deadline is not None and deadline.tzinfo is None:
@@ -51,10 +56,13 @@ def recompute_status(opp: Opportunity, now: Optional[datetime] = None) -> str:
 def run_daily_expiry_sweep(db: Session) -> dict:
     now = datetime.now(timezone.utc)
 
-    # 1. Active/Expiring -> Expired
+    # 1. Active/Expiring -> Expired (deadline passed, or the source page says
+    #    applications are closed)
     expired_opps = db.query(Opportunity).filter(
-        Opportunity.deadline != None,
-        Opportunity.deadline < now,
+        or_(
+            and_(Opportunity.deadline != None, Opportunity.deadline < now),
+            Opportunity.closed_by_source == True,
+        ),
         Opportunity.status.in_([OpportunityStatus.ACTIVE.value, OpportunityStatus.EXPIRING_SOON.value])
     ).all()
 
@@ -67,7 +75,8 @@ def run_daily_expiry_sweep(db: Session) -> dict:
         Opportunity.deadline != None,
         Opportunity.deadline >= now,
         Opportunity.deadline <= now + timedelta(days=settings.EXPIRING_SOON_DAYS),
-        Opportunity.status == OpportunityStatus.ACTIVE.value
+        Opportunity.status == OpportunityStatus.ACTIVE.value,
+        Opportunity.closed_by_source == False,
     ).all()
 
     for opp in expiring_soon_opps:
@@ -76,11 +85,13 @@ def run_daily_expiry_sweep(db: Session) -> dict:
 
     # 3. Expired -> Active (a source pushed the deadline out; the sweep must
     #    agree with the scrape-time recompute or a revived row would flip back
-    #    on the next sweep).
+    #    on the next sweep). Rows the source itself declared closed stay
+    #    expired: their future deadline is usually the next cycle's date.
     revived_opps = db.query(Opportunity).filter(
         Opportunity.deadline != None,
         Opportunity.deadline >= now,
-        Opportunity.status == OpportunityStatus.EXPIRED.value
+        Opportunity.status == OpportunityStatus.EXPIRED.value,
+        Opportunity.closed_by_source == False,
     ).all()
 
     for opp in revived_opps:
@@ -182,13 +193,19 @@ def check_dead_links(db: Session, max_checks: Optional[int] = None) -> dict:
         max_checks = settings.CRON_MAX_DEAD_LINK_CHECKS
 
     # dead_link rows are checked too — otherwise a row killed by a transient
-    # outage could never be re-verified and recovered.
+    # outage could never be re-verified and recovered. Least recently checked
+    # first (never-checked rows lead), so a capped sweep rotates through the
+    # whole table instead of re-checking the same first N rows every day.
     active_opps = db.query(Opportunity).filter(
         Opportunity.status.in_([
             OpportunityStatus.ACTIVE.value,
             OpportunityStatus.EXPIRING_SOON.value,
             OpportunityStatus.DEAD_LINK.value,
         ])
+    ).order_by(
+        Opportunity.last_checked_at.isnot(None),
+        Opportunity.last_checked_at.asc(),
+        Opportunity.id.asc(),
     ).limit(max_checks).all()
 
     now = datetime.now(timezone.utc)
@@ -221,12 +238,14 @@ def check_dead_links(db: Session, max_checks: Optional[int] = None) -> dict:
                     dead_count += 1
                 else:
                     transient_count += 1
-                    _record_transient_failure(opp)
+                    if _record_transient_failure(opp):
+                        dead_count += 1
 
             except Exception as e:
                 logger.warning(f"Link check failed for opp ID {opp.id} ({opp.apply_url}): {e}")
                 transient_count += 1
-                _record_transient_failure(opp)
+                if _record_transient_failure(opp):
+                    dead_count += 1
 
     db.commit()
     if dead_count or recovered_count:
@@ -246,12 +265,13 @@ def check_dead_links(db: Session, max_checks: Optional[int] = None) -> dict:
 def _record_transient_failure(opp: Opportunity) -> bool:
     """Increment the strike counter; dead_link only after N consecutive strikes.
 
-    Returns True when this failure crossed the threshold and the row was marked
-    dead_link.
+    Returns True when this failure crossed the threshold and the row was just
+    marked dead_link (False when it already was).
     """
     opp.link_check_failures = (opp.link_check_failures or 0) + 1
     opp.last_checked_at = utc_now()
-    if opp.link_check_failures >= settings.DEAD_LINK_FAILURE_THRESHOLD:
+    if (opp.link_check_failures >= settings.DEAD_LINK_FAILURE_THRESHOLD
+            and opp.status != OpportunityStatus.DEAD_LINK.value):
         opp.status = OpportunityStatus.DEAD_LINK.value
         return True
     return False

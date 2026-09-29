@@ -1,68 +1,43 @@
-import hmac
-import ipaddress
 import logging
 from datetime import datetime, timedelta, timezone
 from typing import Optional
 
-from fastapi import APIRouter, Depends, Header, HTTPException, Request, status
+from fastapi import APIRouter, Depends, Header, HTTPException, status
 from sqlalchemy import func, text
 from sqlalchemy.orm import Session
 
-from app.config import settings
 from app.database import get_db
 from app.models import (
     User, Profile, Application, Notification, OrganizationFollower,
     PasswordResetToken, AuditEvent,
 )
 from app.auth import get_optional_current_user
+from app.routes.deps import admin_key_matches
 
 router = APIRouter(prefix="/api/admin", tags=["Admin"])
 logger = logging.getLogger(__name__)
 
 
-def _is_loopback(host: str) -> bool:
-    """True for 127.0.0.1, ::1, and localhost."""
-    if not host:
-        return False
-    host = host.strip().lower()
-    if host in {"localhost", "::1"}:
-        return True
-    try:
-        return ipaddress.ip_address(host).is_loopback
-    except ValueError:
-        return False
-
-
 def require_admin(
-    request: Request,
     current_user: Optional[User] = Depends(get_optional_current_user),
     x_admin_key: Optional[str] = Header(None),
 ) -> Optional[User]:
     """Admin guard — private by default.
 
-    Access is granted when ANY of these hold:
-      * the caller holds the X-Admin-Key secret (ADMIN_SECRET_KEY env var) —
-        this works without a login session, which is how the dev-only
-        no-login console on localhost reaches the API, or
-      * the request originates from localhost (loopback) AND the user has
-        role == 'admin'.
-
-    A remote client without the secret key is always rejected, even with
-    role == 'admin' — the console stays localhost-only unless the secret
-    key is explicitly provided.
+    Access is granted when EITHER holds:
+      * the caller sends the X-Admin-Key secret (ADMIN_SECRET_KEY env var,
+        constant-time compare) — works without a login session, which is how
+        the dev-only no-login console on localhost and cron tooling reach
+        the API, or
+      * the caller holds a valid JWT for a user whose role is 'admin'. The
+        only admin account is the one provisioned from ADMIN_EMAIL /
+        ADMIN_PASSWORD (see startup._seed_admin_user); role is never granted
+        by email address.
     """
-    client_host = (request.client.host if request.client else "") or ""
-    is_loopback = _is_loopback(client_host)
-
-    # Secret-key bypass works from anywhere and does not require a session
-    # (constant-time compare). This is the sole path for no-login access.
-    if settings.ADMIN_SECRET_KEY and x_admin_key and hmac.compare_digest(
-        x_admin_key, settings.ADMIN_SECRET_KEY
-    ):
+    if admin_key_matches(x_admin_key):
         return current_user
 
-    # Authenticated Admin session via verified JWT
-    if current_user and (current_user.role == "admin" or current_user.email == "admin@nexora.ai"):
+    if current_user and current_user.role == "admin":
         return current_user
 
     raise HTTPException(

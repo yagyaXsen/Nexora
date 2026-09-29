@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { api } from '../lib/api'
 import { useAuth } from '../lib/auth.jsx'
@@ -9,7 +9,6 @@ export default function Settings() {
   const navigate = useNavigate()
 
   const [activeTab, setActiveTab] = useState('account')
-  const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [message, setMessage] = useState(null)
   const [error, setError] = useState(null)
@@ -56,7 +55,7 @@ export default function Settings() {
   })
 
   // Theme & Localization State
-  const [locale, setLocale] = useState({
+  const [locale] = useState({
     language: 'English (US)',
     timezone: typeof Intl !== 'undefined' ? Intl.DateTimeFormat().resolvedOptions().timeZone : 'UTC',
     dateFormat: 'YYYY-MM-DD',
@@ -98,11 +97,13 @@ export default function Settings() {
   }
 
   // Load saved preferences from localStorage
-  const getStorageKey = (suffix) => `nexora_prefs_${user?.id || 'guest'}_${suffix}`
+  const getStorageKey = useCallback(
+    (suffix) => `nexora_prefs_${user?.id || 'guest'}_${suffix}`,
+    [user?.id],
+  )
 
   useEffect(() => {
     let cancelled = false
-    setLoading(true)
 
     // Load cached preferences
     try {
@@ -146,7 +147,6 @@ export default function Settings() {
           },
         ])
 
-        setLoading(false)
       })
       .catch(() => {
         if (cancelled) return
@@ -166,13 +166,12 @@ export default function Settings() {
             isCurrent: true,
           },
         ])
-        setLoading(false)
       })
 
     return () => {
       cancelled = true
     }
-  }, [user])
+  }, [user, getStorageKey])
 
   const handleSaveAccount = async (e) => {
     if (e) e.preventDefault()

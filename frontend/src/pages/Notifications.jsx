@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { Link, useNavigate } from 'react-router-dom'
+import { useNavigate } from 'react-router-dom'
 import { api } from '../lib/api'
 import './Notifications.css'
 
@@ -24,10 +24,14 @@ export default function Notifications() {
   const [filter, setFilter] = useState('all')
   const [items, setItems] = useState([])
   const [loading, setLoading] = useState(true)
+  const [loadError, setLoadError] = useState(null)
   const [catalogTotal, setCatalogTotal] = useState(null)
 
   useEffect(() => {
-    api.notifications().then(setItems).catch(() => {}).finally(() => setLoading(false))
+    api.notifications()
+      .then(setItems)
+      .catch((e) => setLoadError(e?.message || 'Request failed'))
+      .finally(() => setLoading(false))
     // Real indexed-catalog count (verified + enriched records), not a claim.
     api.publishedStats().then((s) => setCatalogTotal(s?.total ?? null)).catch(() => {})
   }, [])
@@ -170,7 +174,20 @@ export default function Notifications() {
             </div>
           ))}
 
-          {filteredItems.length === 0 && (
+          {loading && (
+            <div aria-live="polite" className="p-12 text-center text-sm text-slate-400">
+              <i className="ti ti-loader-2 animate-spin mr-2" aria-hidden="true" />
+              Loading notifications…
+            </div>
+          )}
+
+          {!loading && loadError && (
+            <div role="alert" className="p-6 border border-red-200 bg-red-50 text-red-700 rounded-3xl text-sm">
+              Couldn&apos;t load notifications: {loadError}
+            </div>
+          )}
+
+          {!loading && !loadError && filteredItems.length === 0 && (
             <div className="p-12 bg-slate-50 border border-slate-200 rounded-3xl text-center space-y-3">
               <p className="font-serif text-sm text-slate-500">No active notifications matching current filter criteria.</p>
             </div>

@@ -1,5 +1,5 @@
 import { motion } from 'framer-motion'
-import { Building2, Globe2, Layers, Award } from 'lucide-react'
+import { Globe2 } from 'lucide-react'
 import { Link } from 'react-router-dom'
 
 const regions = [
