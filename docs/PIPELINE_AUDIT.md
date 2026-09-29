@@ -514,3 +514,55 @@ API answered; a human decides whether "no answer" was a cold start.
   fields above). The pipeline does not circumvent access controls or add
   browser automation; a blocked source simply keeps failing visibly until the
   source or its access path changes.
+
+---
+
+# Round-4 audit addendum (verified bugs and fixes)
+
+> Every item below was first reproduced with a probe against the previous code,
+> then fixed; each fix has a regression test in `backend/tests/test_security.py`
+> or `backend/tests/test_pipeline_hardening.py`, and each of those tests was
+> checked to fail when its fix is reverted.
+
+## Security
+| Problem | Fix |
+|---|---|
+| Every boot created `admin@nexora.ai` / `admin123` (and reset that password), and admin rights were also granted by email address — anyone could log in and reach `/api/admin/users`, delete users, or wipe all users. | No default account. The admin login comes only from `ADMIN_EMAIL` / `ADMIN_PASSWORD`; the legacy account is locked and demoted on boot; the role is never granted by email (backend and frontend). |
+| An empty `ADMIN_SECRET_KEY` disabled the admin-key check entirely. | `verify_admin_key` fails closed (constant-time compare). |
+| The production-safety check only ran with `DEBUG=false`, which the deployment guide never set. | A remote database host also counts as deployed; empty/default secrets and weak `ADMIN_PASSWORD` refuse to boot. |
+| The frontend bundle shipped an admin key (`VITE_ADMIN_KEY` or the dev default). | Only dev builds send a key; production uses the admin session. |
+| `/api/pipeline/status`, `/runs`, `/review` were public (error logs, source health). | Require `X-Admin-Key`. |
+| Two SQLite backups with user accounts were committed. | Untracked (still in git history). |
+
+## Pipeline correctness
+| Problem | Fix |
+|---|---|
+| "Applications closed" marked a row expired, but the next sweep or revalidation revived it from its (future) deadline. | Sticky `closed_by_source` column honoured by `recompute_status`, the sweep and revalidation; cleared when a scrape no longer finds the notice. New records honour it too. |
+| Link checks used `LIMIT` without `ORDER BY` — the same first 30 rows were checked every day. | Least-recently-checked first. Threshold crossings now count as dead links. |
+| The ingest batch applied `LIMIT` before its LRU sort — sources past `CRON_MAX_SOURCES` never ran. | Ordered in SQL by last *attempt*, so failing sources cannot starve healthy ones. |
+| A DB error on one page poisoned the session: later pages failed and the run stayed `running`. | Per-page rollback; runs finish; runs orphaned by a dead process are closed at boot/next batch. |
+| Per-page errors were appended in place to a JSON column and never saved. | Error log is reassigned once at the end. |
+| A page whose processing failed was skipped forever by the content-hash check. | `fetched`/`failed` raw documents are retried; junk is marked `rejected` and not retried; `?reextract=true` forces re-extraction. |
+| Lifecycle/publish cron jobs swallowed exceptions and returned `success: true`; the workflow grep also accepted `"success": false`. | Jobs raise, endpoints answer 500, the workflow requires `true` and stops retrying genuine failures. Overlapping triggers are skipped per process. |
+
+## Data quality
+| Problem | Fix |
+|---|---|
+| The default (mock) extractor fabricated category, funding amount, country and eligibility from a hash, used the fetcher's `**Source:**` header as the description, and reported 0.88–0.97 confidence (published as "officially verified"). | Heuristic parser reports only what the page says (deadline, amount, eligibility sentence, category from title/`category_hint`/body); confidence 0.75–0.85. |
+| One odd LLM field (`"deadline": "Rolling"`) discarded the whole Groq extraction; long values overflowed `String(n)` columns on Postgres. | Lenient validators on `OpportunityExtract`; values truncated to column sizes; dedupe key capped at 255. |
+| The live feed published aggregator URLs the static loader rejects. | Same `AGGREGATOR_DOMAINS` gate in `eligible_for_publishing`. |
+| An empty live feed was never cached (a DB query per request). | Cache validity no longer depends on the result being non-empty. |
+
+## Fetcher (Scrapling 0.4)
+| Problem | Fix |
+|---|---|
+| `StealthyFetcher().get(...)` — the method does not exist, so every `use_stealth` source failed. | Classmethod `StealthyFetcher.fetch`. |
+| Browser fetchers got `timeout=25.0`, but they take milliseconds (25 ms). | Seconds for the HTTP fetcher, milliseconds for browser fetchers. |
+| Fetchers were instantiated (deprecated; a warning on every fetch). | Classmethods. |
+| A browser backend that cannot run returned nothing. | Falls back to plain HTTP; `PageResult` records its parser explicitly, because bs4 ≥ 4.12 also has a `.css` attribute. |
+
+## Tests
+The full suite used to write into the developer's `backend/nexora.db` (the
+first imported test module built the engine before the others set their
+`DATABASE_URL`) and failed on every second run. `tests/conftest.py` now pins a
+throwaway database and forces mock AI and no scheduler before any app import.
