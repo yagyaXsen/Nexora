@@ -15,10 +15,12 @@ import os
 import sys
 from datetime import datetime, timedelta, timezone
 
-# Isolated throwaway DB — must be set BEFORE any app import.
-os.environ["DATABASE_URL"] = "sqlite:////tmp/nexora_publish_test.db"
-if os.path.exists("/tmp/nexora_publish_test.db"):
-    os.remove("/tmp/nexora_publish_test.db")
+# Isolated throwaway DB — must be set BEFORE any app import. Under pytest,
+# tests/conftest.py has already pinned one; this path is for script runs.
+if not os.environ.get("NEXORA_TEST_DB_PINNED"):
+    os.environ["DATABASE_URL"] = "sqlite:////tmp/nexora_publish_test.db"
+    if os.path.exists("/tmp/nexora_publish_test.db"):
+        os.remove("/tmp/nexora_publish_test.db")
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 
