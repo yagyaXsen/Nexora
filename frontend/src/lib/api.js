@@ -82,7 +82,7 @@ async function request(path, { method = 'GET', body, form, skipCache = false } =
   let res
   try {
     res = await fetch(apiUrl(path), { method, headers, body: payload })
-  } catch (err) {
+  } catch {
     throw new ApiError(
       0,
       'Unable to connect to the server. If the server was sleeping, please retry in 10 seconds.'

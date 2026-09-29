@@ -20,7 +20,7 @@ async function adminRequest(path, { method = 'GET' } = {}) {
   let res
   try {
     res = await fetch(apiUrl(path), { method, headers })
-  } catch (err) {
+  } catch {
     throw new ApiError(0, 'Unable to reach backend server. Please retry in a few moments.')
   }
   let data = null
