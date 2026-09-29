@@ -566,3 +566,19 @@ The full suite used to write into the developer's `backend/nexora.db` (the
 first imported test module built the engine before the others set their
 `DATABASE_URL`) and failed on every second run. `tests/conftest.py` now pins a
 throwaway database and forces mock AI and no scheduler before any app import.
+
+## Round-5: verified on PostgreSQL 16 and in the browser
+
+The suite now also runs against Postgres (`NEXORA_TEST_DATABASE_URL`, see the
+README); it passes on both SQLite and Postgres 16, and an upgrade from a
+database built by the previous release (`da1ed2f`) was booted end to end.
+
+| Problem | Fix |
+|---|---|
+| `requirements.txt` allows any SQLAlchemy ≥ 2.0; pip now installs 2.1, which maps a bare `postgresql://` URL (what Neon provides) to psycopg 3 — not installed. Reproduced: the previous release crashes at boot with `ModuleNotFoundError: psycopg`. | `DATABASE_URL` is normalized to `postgresql+psycopg2://`; URLs that name a driver are left alone. |
+| `ensure_tables()` ran `create_all()` without importing the models: `python -m app.startup` on an empty database created no tables and failed. | Imports `app.models` first. |
+| Two tests only passed on SQLite: one relied on `.first()` without `ORDER BY`, one stored a fake raw-document id that Postgres' foreign key rejects. | Deterministic ordering; a real raw document. |
+| Rate-limiter keys (client-controlled `X-Forwarded-For`, emails) were never evicted; the password-reset per-IP limit keyed on the proxy address, so all users could share one 3-per-10-minutes budget. | Shared limiter with idle-key eviction; one parsed client IP for both limiters (the per-email reset limit is the unspoofable guard). |
+| `/api/published/opportunities/{slug}/related` searched only the static catalog — live records got no related items. | Searches the merged feed. |
+| `enrich_opportunities.py` / `fix_*.py` overwrote hard-coded row ids as a side effect of being imported. | Refuse to import; running needs `NEXORA_CONFIRM_LEGACY_PATCH=1`. |
+| Frontend: the landing page fetched stats and six opportunities it never rendered (3 API calls per visit → 1 warm-up ping); the tracker and notifications pages never showed their loading/error state (a failed request looked like an empty account); the tracker showed a hard-coded "98% Avg Match"; the landing showcase re-rendered on every mouse move for state nothing read. | Removed the unused fetch; loading and error states with retry; a real "Due in 14 days" count; removed the dead state. Checked in Chromium against the production build. |

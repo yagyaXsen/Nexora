@@ -102,3 +102,7 @@ pip install -r requirements.txt pytest
 python -m pytest tests/
 ```
 The suite runs against a throwaway database (see `tests/conftest.py`) and never touches `backend/nexora.db`.
+Production runs on Postgres; to run the same suite against a Postgres database (it is wiped first, so its name must contain `test`):
+```bash
+NEXORA_TEST_DATABASE_URL=postgresql://user@localhost:5432/nexora_test python -m pytest tests/
+```
