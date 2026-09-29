@@ -90,7 +90,7 @@ gh repo create nexora --private --source=. --remote=origin --push
    | `EXPIRING_SOON_DAYS` | `7` | Deadline window for `expiring_soon` |
    | `PUBLISH_MIN_CONFIDENCE` | `0.75` | Minimum extraction confidence for a pipeline record to publish |
    | `LIVE_FEED_TTL_SECONDS` | `60` | Cache for the live part of the published feed |
-   | `INGEST_INTERVAL_HOURS` / `LIFECYCLE_INTERVAL_HOURS` / `PUBLISH_REFRESH_INTERVAL_HOURS` | `6` / `24` / `168` | Only used when the internal scheduler is on |
+   | `INGEST_INTERVAL_HOURS` / `LIFECYCLE_INTERVAL_HOURS` / `PUBLISH_REFRESH_INTERVAL_HOURS` | `84` / `84` / `168` | Only used when the internal scheduler is on |
 
 4. **Create Web Service**, wait for the build, then open `https://<your-service>.onrender.com/api/health`.
 
@@ -123,8 +123,9 @@ In the GitHub repo → **Settings → Secrets and variables → Actions**, add:
 | `NEXORA_API_URL` | your Render URL, no trailing slash |
 | `NEXORA_ADMIN_SECRET_KEY` | the same value as Render's `ADMIN_SECRET_KEY` |
 
-`.github/workflows/pipeline-cron.yml` then runs ingest every 6 hours, the
-lifecycle sweep daily, and the publishing refresh weekly. To run one now:
+`.github/workflows/pipeline-cron.yml` then runs ingest and the lifecycle
+sweep every Monday and Thursday, and the publishing refresh on Sundays (UTC).
+Edit its `cron:` lines to change the cadence. To run one now:
 **Actions → Nexora pipeline cron → Run workflow** and pick `ingest`,
 `lifecycle` or `publish`. A run fails (red) if the API reports the job failed
 or never answers after three cold-start retries.

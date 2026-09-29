@@ -36,7 +36,7 @@ from urllib.parse import urlparse
 from sqlalchemy.orm import Session, joinedload
 
 from app.config import settings
-from app.models import Opportunity, OpportunityStatus, Source
+from app.models import Opportunity, OpportunityStatus, Source, is_currently_open
 from app.publishing.loader import AGGREGATOR_DOMAINS
 from app.publishing.models import PublishedOpportunity
 
@@ -83,7 +83,8 @@ def eligible_for_publishing(opp: Opportunity) -> bool:
         apply link never resolved past them is not an official source),
       * a sane title (the existing junk rules).
     """
-    if opp.status not in (OpportunityStatus.ACTIVE.value, OpportunityStatus.EXPIRING_SOON.value):
+    if not is_currently_open(opp):
+        # Not open, or its deadline passed since the last lifecycle sweep.
         return False
     if opp.last_verified_at is None:
         return False
@@ -149,11 +150,7 @@ def db_opportunity_to_published(opp: Opportunity) -> PublishedOpportunity:
         deadline=opp.deadline.date().isoformat() if opp.deadline else None,
         # Lifecycle truth: eligible records map to open; expired/dead_link map
         # to closed so a history detail view never presents them as active.
-        status=(
-            "open"
-            if opp.status in (OpportunityStatus.ACTIVE.value, OpportunityStatus.EXPIRING_SOON.value)
-            else "closed"
-        ),
+        status="open" if is_currently_open(opp) else "closed",
         funding_amount=opp.funding_amount or None,
         tags=list(opp.tags or []),
         confidence_score=confidence,

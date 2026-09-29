@@ -1,7 +1,8 @@
 import enum
 from datetime import datetime, timezone
 from sqlalchemy import (
-    Column, Integer, String, Text, Boolean, Float, DateTime, Enum, ForeignKey, JSON, UniqueConstraint
+    Column, Integer, String, Text, Boolean, Float, DateTime, Enum, ForeignKey, JSON, UniqueConstraint,
+    and_, or_,
 )
 from sqlalchemy.orm import relationship
 from app.database import Base
@@ -31,6 +32,34 @@ class OpportunityStatus(str, enum.Enum):
     EXPIRING_SOON = "expiring_soon"
     EXPIRED = "expired"
     DEAD_LINK = "dead_link"
+
+OPEN_STATUSES = (OpportunityStatus.ACTIVE.value, OpportunityStatus.EXPIRING_SOON.value)
+
+
+def is_currently_open(opp, now=None) -> bool:
+    """Open right now: an open status AND the deadline (if any) not yet passed.
+
+    The lifecycle sweep that moves passed deadlines to 'expired' runs only a
+    couple of times a week, so between sweeps a stored status can still read
+    'active' after the deadline. Everything user-facing checks the date too.
+    """
+    if opp.status not in OPEN_STATUSES:
+        return False
+    deadline = opp.deadline
+    if deadline is None:
+        return True
+    if deadline.tzinfo is None:  # SQLite returns naive datetimes (stored as UTC)
+        deadline = deadline.replace(tzinfo=timezone.utc)
+    return deadline >= (now or datetime.now(timezone.utc))
+
+
+def currently_open_clause(now=None):
+    """SQL version of is_currently_open() for query filters."""
+    return and_(
+        Opportunity.status.in_(OPEN_STATUSES),
+        or_(Opportunity.deadline.is_(None), Opportunity.deadline >= (now or datetime.now(timezone.utc))),
+    )
+
 
 class RawDocumentStatus(str, enum.Enum):
     FETCHED = "fetched"

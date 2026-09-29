@@ -469,6 +469,29 @@ def test_related_items_work_for_live_records():
     db.close()
 
 
+def test_passed_deadline_is_hidden_before_the_lifecycle_sweep_runs():
+    """The sweep runs only twice a week. A record whose stored status still
+    says active but whose deadline passed must already be hidden/closed."""
+    from app.routes.published import list_published, get_published
+    from app.routes.opportunities import list_opportunities
+    db = _fresh_db()
+    src = _make_source(db, "srcDeadline")
+    stale = _make_opp(db, src, "deadline-passed", title="Deadline Passed Yesterday Fellowship",
+                      deadline=datetime.now(timezone.utc) - timedelta(days=1))
+    assert stale.status == "active", "precondition: the sweep has not run"
+    invalidate_live_feed()
+
+    assert not eligible_for_publishing(stale)
+    listed = list_published(category=None, country=None, status=None, q=None,
+                            funded_only=False, page=1, page_size=100, db=db)
+    assert "deadline-passed" not in [i.slug for i in listed.items]
+    assert get_published(slug="deadline-passed", db=db).status == "closed"
+    legacy = list_opportunities(category=None, country=None, status=None, q=None,
+                                sort="relevance", page=1, page_size=100, db=db)
+    assert "deadline-passed" not in [o.slug for o in legacy.items]
+    db.close()
+
+
 def test_expired_opportunities_disappear_from_api_response():
     from app.routes.published import list_published
     db = _fresh_db()

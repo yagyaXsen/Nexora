@@ -17,7 +17,7 @@ const faqs = [
   },
   {
     q: 'How often is the opportunity database updated?',
-    a: 'Our background pipeline crawls partner feeds and portal index pages multiple times daily using automated schedulers.'
+    a: 'Our automated pipeline re-checks every source twice a week, and an opportunity is hidden the moment its deadline passes.'
   }
 ]
 
