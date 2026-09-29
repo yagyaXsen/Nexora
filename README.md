@@ -1,5 +1,9 @@
 # Nexora: AI-Driven Opportunity Discovery & Tracking System
 
+[![CI](https://github.com/yagyaXsen/Nexora/actions/workflows/ci.yml/badge.svg)](https://github.com/yagyaXsen/Nexora/actions/workflows/ci.yml)
+
+**Live:** [nexora-8y5.pages.dev](https://nexora-8y5.pages.dev) · **API:** [nexora-vjf8.onrender.com/api/health](https://nexora-vjf8.onrender.com/api/health) (free tier — the first request after idle takes ~30–60 s)
+
 Nexora is an intelligent, high-fidelity platform that automates the collection, extraction, categorization, semantic searching, and tracking of academic and professional opportunities (scholarships, research fellowships, startup accelerators, hackathons, and corporate grants). 
 
 ---
@@ -20,6 +24,16 @@ Nexora answers this with a **Collect → Extract → Deduplicate → Maintain �
 3. **Continuous maintenance**: records are re-verified against their source, expired when their deadline passes or the source says applications are closed, revived when a program reopens, and link-checked with a transient-failure threshold.
 4. **Publishing**: the frontend reads one published feed that merges the hand-verified static catalog with pipeline records that pass strict quality gates.
 5. **Tracking**: candidates save opportunities to a tracker, move them through application stages, and get deadline reminders.
+
+### What users get
+| Page | What it does |
+|---|---|
+| **Explore** (`/explore`) | Search and filter the published catalog by type, country, status and funding. |
+| **Opportunity detail** | Eligibility, benefits, deadline, application steps, verification status and related opportunities. |
+| **Dashboard** | Opportunities ranked against the user's profile (field, skills, degree, target countries), with the reasons for each match. |
+| **Tracker** | Kanban board from *Saved* to *Accepted*, notes per application, and a count of deadlines due in the next 14 days. |
+| **Notifications** | Deadline reminders for tracked applications. |
+| **Accounts** | Email/password or Google sign-in, onboarding, profile, settings, password reset by email. |
 
 ---
 
@@ -64,6 +78,27 @@ Nexora answers this with a **Collect → Extract → Deduplicate → Maintain �
 
 The detailed audit and design history is in [`docs/PIPELINE_AUDIT.md`](docs/PIPELINE_AUDIT.md); deployment is in [`docs/DEPLOYMENT.md`](docs/DEPLOYMENT.md).
 
+### Tech stack
+- **Backend:** Python 3.11+, FastAPI, SQLAlchemy 2, PostgreSQL (Neon) in production / SQLite locally, APScheduler, httpx + BeautifulSoup (Scrapling optional), Groq (optional)
+- **Frontend:** React 19, Vite 8, React Router 7, Tailwind CSS 3, Framer Motion
+- **Hosting:** Render (API), Cloudflare Pages (frontend), Neon (database), GitHub Actions (pipeline cron + CI)
+
+### Repository layout
+```
+backend/
+  app/
+    pipeline/     fetcher, extractor, normalizer, deduper, runner, lifecycle
+    publishing/   static catalog + live feed (what the frontend shows)
+    routes/       REST API (auth, published, opportunities, applications, pipeline, admin, …)
+    config.py     settings + production safety checks
+    startup.py    schema sync, seeding, admin provisioning (runs on every boot)
+  tests/          pytest suite (SQLite or Postgres)
+  nexora_verified_opportunities.json   hand-verified static catalog
+frontend/src/     pages/, components/, lib/ (API client)
+docs/             DEPLOYMENT.md, PIPELINE_AUDIT.md
+.github/workflows ci.yml (tests on every push), pipeline-cron.yml (scheduled pipeline)
+```
+
 ---
 
 ## 4. Running locally
@@ -107,3 +142,63 @@ Production runs on Postgres; to run the same suite against a Postgres database (
 NEXORA_TEST_DATABASE_URL=postgresql://user@localhost:5432/nexora_test python -m pytest tests/
 ```
 CI (`.github/workflows/ci.yml`) runs the backend suite on Python 3.11 and 3.13 against both SQLite and PostgreSQL 16, plus the frontend lint and production build, on every push.
+
+---
+
+## 5. Deployment
+
+Full step-by-step guide: [`docs/DEPLOYMENT.md`](docs/DEPLOYMENT.md). In short:
+
+**Render (backend)** — root directory `backend`, build `pip install -r requirements.txt`, start `uvicorn app.main:app --host 0.0.0.0 --port $PORT`, and these environment variables:
+
+| Variable | Required | Notes |
+|---|---|---|
+| `DATABASE_URL` | yes | Neon connection string (`postgresql://…?sslmode=require`) |
+| `SECRET_KEY` | yes | Random secret; signs login tokens |
+| `ADMIN_SECRET_KEY` | yes | Different random secret; guards admin, pipeline and cron endpoints |
+| `ADMIN_EMAIL` / `ADMIN_PASSWORD` | for admin login | Creates the admin account on boot (password ≥ 12 characters). There is no default admin. |
+| `DEBUG` | yes | `False` |
+| `ENABLE_INTERNAL_SCHEDULER` | yes | `False` — Render's free tier sleeps, so GitHub Actions drives the pipeline |
+| `CORS_ORIGINS`, `FRONTEND_URL` | yes | The Cloudflare Pages URL |
+| `GROQ_API_KEY` + `USE_MOCK_AI=False` | optional | LLM extraction; without it the heuristic parser is used |
+| `MAILER=smtp` + `SMTP_*` | optional | Real email for password resets and the contact form |
+
+The server **refuses to start** in a deployed environment if `SECRET_KEY` or `ADMIN_SECRET_KEY` is missing or a development default, or if `ADMIN_PASSWORD` is weak; the Render log names the variable.
+
+**Cloudflare Pages (frontend)** — build `cd frontend && npm install && npm run build`, output `frontend/dist`, variable `VITE_API_BASE_URL` = the Render URL. Never put secrets in `VITE_*` variables: they are compiled into the public JavaScript.
+
+**GitHub Actions secrets** (Settings → Secrets and variables → Actions) — `NEXORA_API_URL` (the Render URL) and `NEXORA_ADMIN_SECRET_KEY` (same value as `ADMIN_SECRET_KEY`), used by the pipeline cron.
+
+---
+
+## 6. Operating the pipeline
+
+The **Nexora pipeline cron** workflow calls the API on a schedule: ingest every 6 hours, lifecycle sweep daily, publishing metrics weekly. Each call also wakes the sleeping Render instance. To run a job now: **Actions → Nexora pipeline cron → Run workflow** and pick `ingest`, `lifecycle` or `publish`. A red run means the API reported a failure or never answered.
+
+Useful admin calls (replace `$KEY` with `ADMIN_SECRET_KEY`, `$API` with the Render URL):
+```bash
+# Pipeline health: running jobs, last success/failure, per-source health and last error
+curl -H "X-Admin-Key: $KEY" $API/api/pipeline/status
+
+# Recent runs with their counts and error logs
+curl -H "X-Admin-Key: $KEY" $API/api/pipeline/runs
+
+# Scrape one source now; add ?reextract=true to re-extract unchanged pages (e.g. after enabling Groq)
+curl -X POST -H "X-Admin-Key: $KEY" "$API/api/sources/<id>/run?reextract=true"
+
+# Add a source (type: html | rss | sitemap)
+curl -X POST -H "X-Admin-Key: $KEY" -H "Content-Type: application/json" \
+  -d '{"name":"Example Fellowships","type":"html","url":"https://example.org/fellowships","config":{"category_hint":"fellowship"}}' \
+  $API/api/sources
+```
+
+A source whose listing fails is recorded as a failed run and retried on the next batch; after 3 consecutive failures `/api/pipeline/status` reports it as `persistently_failing` with the last error.
+
+---
+
+## 7. Security
+
+- **Admin access** is either a login whose account was provisioned from `ADMIN_EMAIL` / `ADMIN_PASSWORD`, or the `X-Admin-Key` header. Admin rights are never granted by email address, and there is no built-in account.
+- **The admin console** (`/admin`) works on the deployed site for the admin login; on `localhost` during development it also works without logging in.
+- **Secrets** live only in Render / GitHub environment settings — never in the repository or in `VITE_*` variables. `.env` files and local databases (`*.db`, `*.db.bak*`) are git-ignored.
+- **Reporting:** please report security issues privately to the maintainer rather than in a public issue.
