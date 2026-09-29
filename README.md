@@ -85,7 +85,7 @@ The schema is created and extended automatically at startup (`backend/app/startu
 | Dedupe | `backend/app/pipeline/deduper.py` | Exact match on the canonical apply URL, then fuzzy title + organizer (including expired rows, so a reopened program updates its old record). |
 | Runner | `backend/app/pipeline/runner.py` | One isolated run per source, recorded in `pipeline_runs`. Per-page errors are rolled back, logged on the run, and the page is retried on the next run. `POST /api/sources/{id}/run?reextract=true` re-extracts unchanged pages (e.g. after enabling Groq). |
 | Lifecycle | `backend/app/pipeline/lifecycle.py` | Status from deadline (`active` / `expiring_soon` / `expired`); a source page saying applications are closed keeps the row expired until the notice disappears; link checks rotate least-recently-checked first and need 3 consecutive transient failures before `dead_link`. |
-| Scheduling | `backend/app/scheduler.py`, `.github/workflows/pipeline-cron.yml` | Ingest every 6h, lifecycle daily, publishing metrics weekly. Hosts that sleep (Render free) use the GitHub Actions cron; each job runs at most once at a time per process, and a failed job returns HTTP 500 so the workflow run fails visibly. |
+| Scheduling | `backend/app/scheduler.py`, `.github/workflows/pipeline-cron.yml` | Ingest and lifecycle twice a week (Monday + Thursday), publishing metrics weekly. Hosts that sleep (Render free) use the GitHub Actions cron; each job runs at most once at a time per process, and a failed job returns HTTP 500 so the workflow run fails visibly. |
 | Publishing | `backend/app/publishing/` | `eligible_for_publishing()` is the single gate for pipeline records; the static catalog is always the base, so a pipeline or DB failure can never empty the feed. |
 | Observability | `GET /api/pipeline/status` (admin key) | Running jobs, next runs, last success/failure, per-source health, 24h counts, publishing metrics. |
 
@@ -119,9 +119,11 @@ docs/             DEPLOYMENT.md, PIPELINE_AUDIT.md
 ### Triggers and schedule
 | Job | Production trigger (GitHub Actions, UTC) | In-process scheduler (`ENABLE_INTERNAL_SCHEDULER=true`) | Endpoint |
 |---|---|---|---|
-| **Ingest** — scrape sources | `17 */6 * * *` (00:17, 06:17, 12:17, 18:17) | every `INGEST_INTERVAL_HOURS` (6), first run 120 s after boot | `POST /api/pipeline/cron/ingest` |
-| **Lifecycle** — expiry, reminders, link checks | `43 1 * * *` (daily 01:43) | every `LIFECYCLE_INTERVAL_HOURS` (24), first run 5 min after boot | `POST /api/pipeline/cron/lifecycle` |
+| **Ingest** — scrape sources | `17 0 * * 1,4` (Mon + Thu 00:17) | every `INGEST_INTERVAL_HOURS` (84 = twice a week), first run 120 s after boot | `POST /api/pipeline/cron/ingest` |
+| **Lifecycle** — expiry, reminders, link checks | `43 1 * * 1,4` (Mon + Thu 01:43, after ingest) | every `LIFECYCLE_INTERVAL_HOURS` (84), first run 5 min after boot | `POST /api/pipeline/cron/lifecycle` |
 | **Publish** — publishing metrics | `7 3 * * 0` (Sundays 03:07) | every `PUBLISH_REFRESH_INTERVAL_HOURS` (168), first run 10 min after boot | `POST /api/pipeline/cron/publish` |
+
+Twice a week is enough because deadlines are usually weeks away, and the website hides an opportunity the moment its deadline passes without waiting for the next run (see [What reaches the website](#what-reaches-the-website)). To change the cadence, edit the `cron:` lines in the workflow.
 
 Render's free tier sleeps, so production runs with the in-process scheduler off and the GitHub workflow (`.github/workflows/pipeline-cron.yml`) calling the endpoints with the `X-Admin-Key` header. Each job runs at most once at a time per process: a second trigger while one is running returns `{"skipped": "already_running"}`. A failed job returns HTTP 500, so the workflow run turns red.
 
@@ -155,12 +157,12 @@ Four sources are created on first boot: **CERN Careers Portal**, **DAAD Scholars
 |---|---|
 | `active` | Deadline more than `EXPIRING_SOON_DAYS` (7) away, or no deadline known |
 | `expiring_soon` | Deadline within 7 days |
-| `expired` | Deadline passed, **or** the source page says applications are closed ("applications are closed", "deadline has passed", …). The closed notice is sticky until a scrape no longer finds it |
+| `expired` | Deadline passed (the website hides it immediately; the stored status updates at the next lifecycle run or scrape), **or** the source page says applications are closed ("applications are closed", "deadline has passed", …). The closed notice is sticky until a scrape no longer finds it |
 | `dead_link` | Apply link returns 404/410, or fails 3 checks in a row (`DEAD_LINK_FAILURE_THRESHOLD`) with 5xx/timeouts. Recovers automatically when the link works again |
 
 Expired and dead records are never deleted: they stay for history and come back to life when the source changes. The only deletions are records rejected from the review queue and leftover `#`-titled extraction junk removed at startup.
 
-### The daily lifecycle job
+### The lifecycle job (twice a week)
 1. **Expiry sweep** — applies the status rules above to every record: expires past deadlines, flags the 7-day window, revives records whose deadline moved into the future (unless the source says closed).
 2. **Deadline reminders** — users with a tracked application (*Saved*, *Preparing*, *Ready to Apply*) closing within 7 days get a notification, at most one per opportunity per week.
 3. **Link checks** — up to `CRON_MAX_DEAD_LINK_CHECKS` (30) apply links, least recently checked first, so the whole table is covered over time.
@@ -169,7 +171,7 @@ Expired and dead records are never deleted: they stay for history and come back 
 ### What reaches the website
 The frontend reads one feed from `/api/published/*`:
 - **Base:** the hand-verified static catalog (`backend/nexora_verified_opportunities.json` + `nexora_legacy_enriched.json`). Its open/closed status is recomputed from the deadline on every request, so a passed deadline reads *closed* the same day.
-- **Plus live pipeline records** that pass every gate in `eligible_for_publishing()`: status `active` or `expiring_soon`; verified against the source page (`last_verified_at`); scraped from a real source (seed rows never publish); not `needs_review`; confidence ≥ `PUBLISH_MIN_CONFIDENCE` (0.75); an http(s) apply link that is not an aggregator site; a real title and a non-empty description.
+- **Plus live pipeline records** that pass every gate in `eligible_for_publishing()`: status `active` or `expiring_soon` **and** the deadline not yet passed (checked on every request, so a record disappears the moment its deadline passes even though the lifecycle job only runs twice a week); verified against the source page (`last_verified_at`); scraped from a real source (seed rows never publish); not `needs_review`; confidence ≥ `PUBLISH_MIN_CONFIDENCE` (0.75); an http(s) apply link that is not an aggregator site; a real title and a non-empty description.
 - A live record that matches a static record (same apply URL or matching title) **replaces** it, taking the static record's richer fields (benefits, steps, documents) while its own status and deadline win — this is how a reopened program shows as open again.
 - The live part is cached for `LIVE_FEED_TTL_SECONDS` (60) and refreshed immediately after every run, sweep or link check. If the database or pipeline fails, the static catalog is still served — the feed can never be emptied.
 - The weekly **publish** job doesn't gate anything; it records the feed size and churn (published / newly published / removed) for monitoring.
@@ -261,7 +263,7 @@ The server **refuses to start** in a deployed environment if `SECRET_KEY` or `AD
 
 ## 7. Operating the pipeline
 
-The **Nexora pipeline cron** workflow calls the API on a schedule: ingest every 6 hours, lifecycle sweep daily, publishing metrics weekly. Each call also wakes the sleeping Render instance. To run a job now: **Actions → Nexora pipeline cron → Run workflow** and pick `ingest`, `lifecycle` or `publish`. A red run means the API reported a failure or never answered.
+The **Nexora pipeline cron** workflow calls the API on a schedule: ingest and lifecycle sweep every Monday and Thursday, publishing metrics on Sundays. Each call also wakes the sleeping Render instance. To run a job now: **Actions → Nexora pipeline cron → Run workflow** and pick `ingest`, `lifecycle` or `publish`. A red run means the API reported a failure or never answered.
 
 Useful admin calls (replace `$KEY` with `ADMIN_SECRET_KEY`, `$API` with the Render URL):
 ```bash
@@ -328,7 +330,7 @@ Backend settings are environment variables (or `backend/.env` locally); defaults
 | `CONFIDENCE_THRESHOLD` | `0.70` | Below this an extraction goes to the review queue |
 | `PUBLISH_MIN_CONFIDENCE` | `0.75` | Minimum confidence for a pipeline record to be published |
 | `ENABLE_INTERNAL_SCHEDULER` | `true` | In-process scheduler (set `false` on sleeping hosts) |
-| `INGEST_INTERVAL_HOURS` / `LIFECYCLE_INTERVAL_HOURS` / `PUBLISH_REFRESH_INTERVAL_HOURS` | `6` / `24` / `168` | In-process scheduler cadence |
+| `INGEST_INTERVAL_HOURS` / `LIFECYCLE_INTERVAL_HOURS` / `PUBLISH_REFRESH_INTERVAL_HOURS` | `84` / `84` / `168` | In-process scheduler cadence |
 | `RUN_INGEST_ON_STARTUP` / `INGEST_STARTUP_DELAY_SECONDS` | `false` / `120` | First in-process ingest timing |
 | `CRON_MAX_SOURCES` | `10` | Sources per ingest batch |
 | `MIN_SOURCE_RESCRAPE_HOURS` | `5` | Skip sources scraped successfully more recently |

@@ -89,10 +89,10 @@ class Settings(BaseSettings):
     # ── Automation cadence (hours) ────────────────────────────────────────────
     # The internal scheduler converts these to IntervalTriggers so both the
     # in-process cron and the external GitHub-Actions cron can be tuned from
-    # env vars without code changes. Defaults: ingest every 6h (matches the
-    # GH Actions "17 */6 * * *" cadence), lifecycle sweep once a day.
-    INGEST_INTERVAL_HOURS: int = 6
-    LIFECYCLE_INTERVAL_HOURS: int = 24
+    # env vars without code changes. Defaults: twice a week (84h), matching
+    # the GH Actions Monday + Thursday cadence.
+    INGEST_INTERVAL_HOURS: int = 84
+    LIFECYCLE_INTERVAL_HOURS: int = 84
     # Kick a full ingest shortly after boot (useful for dev; off by default so
     # frequent redeploys on sleeping hosts don't hammer sources).
     RUN_INGEST_ON_STARTUP: bool = False

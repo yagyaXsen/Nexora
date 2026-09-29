@@ -5,7 +5,7 @@ from sqlalchemy import or_, func, cast, String
 from sqlalchemy.orm import Session
 
 from app.database import get_db
-from app.models import Opportunity, OpportunityStatus, OpportunityCategory
+from app.models import Opportunity, OpportunityStatus, OpportunityCategory, currently_open_clause
 from app.publishing.catalog import catalog as published_catalog
 from app.schemas import (
     OpportunityRead, OpportunityStats, PaginatedOpportunities,
@@ -90,8 +90,8 @@ def list_opportunities(
     if status:
         query = query.filter(Opportunity.status == status)
     else:
-        # Default: active & expiring_soon
-        query = query.filter(Opportunity.status.in_([OpportunityStatus.ACTIVE.value, OpportunityStatus.EXPIRING_SOON.value]))
+        # Default: open now (active / expiring_soon with the deadline not passed)
+        query = query.filter(currently_open_clause())
 
     if category:
         query = query.filter(Opportunity.category == category)
@@ -160,7 +160,7 @@ def get_search_suggestions(
     pattern = f"%{terms[0]}%"
     opps = db.query(Opportunity).filter(
         Opportunity.needs_review == False,
-        Opportunity.status.in_([OpportunityStatus.ACTIVE.value, OpportunityStatus.EXPIRING_SOON.value]),
+        currently_open_clause(),
         or_(
             Opportunity.title.ilike(pattern),
             Opportunity.organizer.ilike(pattern),
@@ -212,7 +212,7 @@ def ai_search(payload: SearchRequest, db: Session = Depends(get_db)):
         ~Opportunity.title.ilike("About%"),
         ~Opportunity.title.ilike("%Meet founders%"),
         ~Opportunity.title.ilike("%Discover what it means%"),
-        Opportunity.status.in_([OpportunityStatus.ACTIVE.value, OpportunityStatus.EXPIRING_SOON.value])
+        currently_open_clause()
     )
 
     valid_categories = {c.value for c in OpportunityCategory}
@@ -285,7 +285,7 @@ def trending_opportunities(
     return db.query(Opportunity)\
         .filter(
             Opportunity.needs_review == False,
-            Opportunity.status.in_([OpportunityStatus.ACTIVE.value, OpportunityStatus.EXPIRING_SOON.value])
+            currently_open_clause()
         )\
         .order_by(Opportunity.click_count.desc(), Opportunity.created_at.desc())\
         .limit(limit).all()
@@ -340,7 +340,7 @@ def get_opportunity_stats(db: Session = Depends(get_db)):
     review = db.query(Opportunity).filter(Opportunity.needs_review == True).count()
 
     cat_counts = db.query(Opportunity.category, func.count(Opportunity.id))\
-        .filter(Opportunity.status.in_([OpportunityStatus.ACTIVE.value, OpportunityStatus.EXPIRING_SOON.value]))\
+        .filter(currently_open_clause())\
         .group_by(Opportunity.category).all()
     breakdown = {cat: count for cat, count in cat_counts if cat}
 

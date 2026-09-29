@@ -2,9 +2,12 @@ name: Nexora pipeline cron
 
 on:
   schedule:
-    - cron: "17 */6 * * *"  # ingest
-    - cron: "43 1 * * *"    # lifecycle sweep
-    - cron: "7 3 * * 0"     # weekly publishing refresh
+    # Twice a week: Monday and Thursday (UTC). Deadlines are usually weeks
+    # away, and the website hides passed deadlines at read time, so more
+    # frequent runs add load without adding freshness.
+    - cron: "17 0 * * 1,4"  # ingest (Mon + Thu 00:17)
+    - cron: "43 1 * * 1,4"  # lifecycle sweep (Mon + Thu 01:43, after ingest)
+    - cron: "7 3 * * 0"     # weekly publishing refresh (Sun 03:07)
   workflow_dispatch:
     inputs:
       job:
@@ -29,7 +32,7 @@ jobs:
           DISPATCH_JOB: ${{ inputs.job }}
         run: |
           case "$SCHEDULE" in
-            "43 1 * * *") job=lifecycle ;;
+            "43 1 * * 1,4") job=lifecycle ;;
             "7 3 * * 0")  job=publish ;;
             "")           job="${DISPATCH_JOB:-ingest}" ;;
             *)            job=ingest ;;
