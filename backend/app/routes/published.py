@@ -145,8 +145,8 @@ def get_published(slug: str, db: Session = Depends(get_db)):
 
 
 @router.get("/opportunities/{slug}/related", response_model=List[PublishedOpportunity])
-def related_published(slug: str, limit: int = Query(4, ge=1, le=12)):
-    return catalog.related(slug, limit=limit)
+def related_published(slug: str, limit: int = Query(4, ge=1, le=12), db: Session = Depends(get_db)):
+    return catalog.related(slug, limit=limit, records=_published_feed(db))
 
 
 @router.get("/stats", response_model=PublishedStats)

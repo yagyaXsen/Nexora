@@ -215,7 +215,7 @@ def test_duplicate_run_does_not_create_rows_but_revalidates():
     from app.pipeline.runner import runner
     from app.models import Source
     db = _fresh_db()
-    src = db.query(Source).first()
+    src = db.query(Source).order_by(Source.id).first()
 
     run1 = runner.run_source(db, src)
     before = len(_opps(db))
@@ -237,7 +237,7 @@ def test_changed_deadline_updates_existing_record():
     from app.pipeline.runner import runner
     from app.models import Source
     db = _fresh_db()
-    src = db.query(Source).first()
+    src = db.query(Source).order_by(Source.id).first()
 
     STATE["alpha_deadline"] = "October 15, 2027"
     run = runner.run_source(db, src)
@@ -255,7 +255,7 @@ def test_changed_eligibility_updates_existing_record():
     from app.models import Source, RawDocument
     from app.schemas import OpportunityExtract, OpportunityCategory
     db = _fresh_db()
-    src = db.query(Source).first()
+    src = db.query(Source).order_by(Source.id).first()
     alpha = _opps(db)["Alpha Research Fellowship"]
 
     extract = OpportunityExtract(
@@ -285,7 +285,7 @@ def test_expired_deadline_marks_expired_at_scrape_time():
     from app.models import Source, RawDocument
     from app.schemas import OpportunityExtract, OpportunityCategory
     db = _fresh_db()
-    src = db.query(Source).first()
+    src = db.query(Source).order_by(Source.id).first()
     alpha = _opps(db)["Alpha Research Fellowship"]
 
     extract = OpportunityExtract(
@@ -308,7 +308,7 @@ def test_revived_source_deadline_reactivates_expired_record():
     from app.pipeline.runner import runner
     from app.models import Source
     db = _fresh_db()
-    src = db.query(Source).first()
+    src = db.query(Source).order_by(Source.id).first()
     alpha = _opps(db)["Alpha Research Fellowship"]
     alpha.status = "expired"
     db.commit()
@@ -328,7 +328,7 @@ def test_source_says_closed_marks_expired():
     from app.models import Source, RawDocument
     from app.schemas import OpportunityExtract, OpportunityCategory
     db = _fresh_db()
-    src = db.query(Source).first()
+    src = db.query(Source).order_by(Source.id).first()
     alpha = _opps(db)["Alpha Research Fellowship"]
 
     class FakeDoc:
@@ -378,7 +378,7 @@ def test_temporary_500_creates_no_junk_and_keeps_existing_row():
     from app.pipeline.runner import runner
     from app.models import Source
     db = _fresh_db()
-    src = db.query(Source).first()
+    src = db.query(Source).order_by(Source.id).first()
     before = _opps(db)
     alpha = before["Alpha Research Fellowship"]
     n_rows = len(before)
@@ -402,7 +402,7 @@ def test_permanent_404_is_silently_skipped():
     from app.pipeline.runner import runner
     from app.models import Source
     db = _fresh_db()
-    src = db.query(Source).first()
+    src = db.query(Source).order_by(Source.id).first()
     n_rows = len(_opps(db))
 
     STATE["alpha_status"] = 404
@@ -440,7 +440,7 @@ def test_revalidation_refreshes_verification_timestamps():
     from app.pipeline.runner import runner
     from app.models import Source
     db = _fresh_db()
-    src = db.query(Source).first()
+    src = db.query(Source).order_by(Source.id).first()
     alpha = _opps(db)["Alpha Research Fellowship"]
 
     alpha.last_checked_at = None
@@ -467,7 +467,7 @@ def test_repeated_execution_is_idempotent():
     from app.pipeline.runner import runner
     from app.models import Source
     db = _fresh_db()
-    src = db.query(Source).first()
+    src = db.query(Source).order_by(Source.id).first()
 
     counts = []
     for _ in range(3):
@@ -609,7 +609,7 @@ def test_timeout_is_transient_and_does_not_create_or_destroy_data():
 
 def src_query(db):
     from app.models import Source
-    return db.query(Source).first()
+    return db.query(Source).order_by(Source.id).first()
 
 
 def test_deadline_into_expiring_window_transitions_at_scrape_time():
@@ -693,11 +693,16 @@ def test_fuzzy_match_finds_expired_twin_when_url_changes():
         description="moved application portal", confidence=0.95,
     )
 
-    class FakeDoc:
-        id = -1
-        raw_content = "Alpha Research Fellowship new cycle page."
+    from app.models import RawDocument
+    src = src_query(db)
+    # A real row: Postgres enforces opportunities.raw_document_id → raw_documents.
+    raw_doc = RawDocument(source_id=src.id, url="https://alpha-official.example.org/apply-2028",
+                          content_hash="fuzzy-url-change", status="fetched",
+                          raw_content="Alpha Research Fellowship new cycle page.")
+    db.add(raw_doc)
+    db.commit()
 
-    opp, is_new, is_updated = deduper.process_extract(db, extract, src_query(db), FakeDoc())
+    opp, is_new, is_updated = deduper.process_extract(db, extract, src, raw_doc)
     assert (is_new, is_updated) == (False, True)
     assert len(_opps(db)) == n_before
     assert opp.status == "active"
@@ -818,7 +823,7 @@ def test_detail_merge_prefers_fresh_pipeline_data_over_frozen_twin():
     alpha = _alpha(db)
 
     # Simulate: the pipeline re-scraped the live source and pushed the deadline.
-    alpha.source_id = db.query(Source).first().id
+    alpha.source_id = db.query(Source).order_by(Source.id).first().id
     alpha.last_verified_at = datetime.now(timezone.utc)
     alpha.deadline = datetime(2028, 6, 1, tzinfo=timezone.utc)
     alpha.status = "active"

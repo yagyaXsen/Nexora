@@ -38,7 +38,7 @@ import pytest
 import uvicorn
 from fastapi import FastAPI, Response
 from fastapi.testclient import TestClient
-from sqlalchemy import create_engine
+from sqlalchemy import create_engine, text
 from sqlalchemy.orm import sessionmaker
 
 import app.scheduler as sched
@@ -54,8 +54,17 @@ from app.pipeline.lifecycle import check_dead_links, run_daily_expiry_sweep
 from app.pipeline.runner import fail_orphaned_runs, runner
 from app.publishing.live_feed import eligible_for_publishing, get_live_records, invalidate_live_feed
 
-_TMP = tempfile.mkdtemp(prefix="nexora-hardening-")
-engine = create_engine(f"sqlite:///{_TMP}/hardening.db", connect_args={"check_same_thread": False})
+_PG_TEST_URL = os.environ.get("NEXORA_TEST_DATABASE_URL", "").strip()
+if _PG_TEST_URL:
+    # Postgres run (see conftest.py): a private schema in the test database.
+    from conftest import HARDENING_PG_SCHEMA
+    engine = create_engine(settings.DATABASE_URL,
+                           connect_args={"options": f"-csearch_path={HARDENING_PG_SCHEMA}"})
+    with engine.begin() as _conn:
+        _conn.execute(text(f"CREATE SCHEMA IF NOT EXISTS {HARDENING_PG_SCHEMA}"))
+else:
+    _TMP = tempfile.mkdtemp(prefix="nexora-hardening-")
+    engine = create_engine(f"sqlite:///{_TMP}/hardening.db", connect_args={"check_same_thread": False})
 Base.metadata.create_all(bind=engine)
 Session = sessionmaker(bind=engine, autocommit=False, autoflush=False)
 

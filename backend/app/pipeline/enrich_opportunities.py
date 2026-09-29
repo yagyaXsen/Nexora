@@ -2,6 +2,17 @@
 Enrich all 21 opportunities with full scraped content.
 Run: PYTHONPATH=. python app/pipeline/enrich_opportunities.py
 """
+
+# One-off patch for rows of ONE historical database, addressed by hard-coded
+# IDs: on any other database those IDs are different opportunities and would
+# be overwritten. It must never run as a side effect of an import.
+import os as _os
+import sys as _sys
+if __name__ != "__main__":
+    raise ImportError(f"{__name__} is a one-off data patch; run it directly, never import it.")
+if _os.environ.get("NEXORA_CONFIRM_LEGACY_PATCH") != "1":
+    _sys.exit("Refusing to run: this patches hard-coded row IDs. Set NEXORA_CONFIRM_LEGACY_PATCH=1 "
+              "only if DATABASE_URL points at the database it was written for.")
 import sys, logging
 sys.path.insert(0, '.')
 logging.basicConfig(level=logging.WARNING)

@@ -175,3 +175,58 @@ def test_deployed_environment_with_safe_config_boots():
 
 def test_local_development_is_not_blocked():
     _assert_production_safe(Settings(DEBUG=True, DATABASE_URL="sqlite:///./nexora.db"))
+
+
+# ── Database URL normalization ────────────────────────────────────────────────
+
+@pytest.mark.parametrize("given", [
+    "postgres://u:p@ep-x.neon.tech/neondb?sslmode=require",
+    "postgresql://u:p@ep-x.neon.tech/neondb?sslmode=require",
+])
+def test_postgres_urls_use_the_installed_psycopg2_driver(given):
+    """SQLAlchemy 2.1 maps a bare postgresql:// URL to psycopg (v3), which is
+    not in requirements.txt: an unpinned rebuild crashed at boot with
+    ModuleNotFoundError. The URL must name psycopg2 explicitly."""
+    from sqlalchemy.engine import make_url
+    url = Settings(DATABASE_URL=given).DATABASE_URL
+    assert url == "postgresql+psycopg2://u:p@ep-x.neon.tech/neondb?sslmode=require"
+    assert make_url(url).get_dialect().driver == "psycopg2"
+
+
+def test_explicit_database_drivers_are_left_alone():
+    for url in ("postgresql+psycopg://u@h/db", "sqlite:///./nexora.db"):
+        assert Settings(DATABASE_URL=url).DATABASE_URL == url
+
+
+# ── Rate limiting ─────────────────────────────────────────────────────────────
+
+def test_rate_limiter_evicts_idle_keys_and_reports_remaining(monkeypatch):
+    """Keys are client-influenced; idle ones must not accumulate forever."""
+    from app.services import rate_limit
+    limiter = rate_limit.InMemoryRateLimiter()
+    clock = {"now": 1000.0}
+    monkeypatch.setattr(rate_limit.time, "monotonic", lambda: clock["now"])
+
+    assert limiter.hit("a", 2, 60) == (True, 1)
+    assert limiter.hit("a", 2, 60) == (True, 0)
+    assert limiter.hit("a", 2, 60) == (False, 0)
+
+    for i in range(rate_limit.InMemoryRateLimiter.SWEEP_EVERY):
+        limiter.hit(f"spoofed-{i}", 100, 60)
+    clock["now"] += 61  # every key is now idle
+    for _ in range(rate_limit.InMemoryRateLimiter.SWEEP_EVERY):
+        limiter.hit("fresh", 10**6, 60)
+    assert len(limiter) == 1, f"{len(limiter)} idle keys kept"
+
+
+def test_client_ip_uses_a_single_forwarded_address():
+    from starlette.requests import Request
+    from app.services.rate_limit import client_ip
+
+    def req(headers, peer="10.0.0.9"):
+        return Request({"type": "http", "headers": [(k.encode(), v.encode()) for k, v in headers.items()],
+                        "client": (peer, 1234)})
+
+    assert client_ip(req({"x-forwarded-for": "203.0.113.7, 10.1.2.3"})) == "203.0.113.7"
+    assert client_ip(req({})) == "10.0.0.9"
+    assert client_ip(req({"x-forwarded-for": " "})) == "10.0.0.9"
