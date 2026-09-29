@@ -3,11 +3,12 @@ Nexora Pipeline Fetcher — powered by Scrapling
 ===============================================
 Three fetch modes, chosen per-source via source.config:
 
-  config: {}                       → Fetcher     (fast HTTP, TLS impersonation)
-  config: {"use_js": true}         → PlayWrightFetcher  (JS-rendered pages)
-  config: {"use_stealth": true}    → StealthyFetcher    (Cloudflare / WAF bypass)
+  config: {}                       → Fetcher          (fast HTTP, TLS impersonation)
+  config: {"use_js": true}         → DynamicFetcher   (JS-rendered pages, Playwright)
+  config: {"use_stealth": true}    → StealthyFetcher  (Cloudflare / WAF bypass)
 
-Falls back to plain httpx if Scrapling is not installed (keeps dev bootstrap working).
+Falls back to plain httpx + BeautifulSoup if Scrapling is not installed, or if a
+browser-based backend cannot run here (e.g. browsers not installed).
 """
 
 import hashlib
@@ -107,10 +108,14 @@ def _is_junk_url(url: str) -> bool:
 
 class PageResult:
     """Normalised result from any fetcher backend."""
-    def __init__(self, url: str, text: str, soup=None):
+    def __init__(self, url: str, text: str, soup=None, backend: str = "bs4"):
         self.url = url          # final URL after redirects
         self.text = text        # full page text (stripped)
         self._soup = soup       # raw BeautifulSoup or Scrapling page object
+        # Which DOM API `soup` speaks. Explicit, because BeautifulSoup >= 4.12
+        # also has a (non-callable) `.css` attribute, so duck-typing on it
+        # would send a bs4 page down the Scrapling code path.
+        self.backend = backend
 
     # ── DOM-agnostic helpers ───────────────────────────────────────────────────
 
@@ -147,23 +152,9 @@ class PageResult:
 
         return None
 
-    @staticmethod
-    def _find_cards_impl(
-        css_all_fn, get_text_fn, get_attr_fn,
-        item_sel: str, title_sel: str, link_sel: str,
-    ):
-        """Single implementation of listing-card extraction."""
-        results = []
-        for el in (css_all_fn(item_sel) or [])[:15]:
-            title_el = css_all_fn.__wrapped__(title_sel, el) if hasattr(css_all_fn, '__wrapped__') else None
-            # Use simple one-element queries for title/link
-            results.append(('', ''))  # placeholder
-        # Cleaner approach below:
-        return []
-
     def find_apply_url(self, base_url: str, selector: Optional[str] = None) -> Optional[str]:
         """Extract the most direct apply link from the page."""
-        if _SCRAPLING_AVAILABLE and self._soup is not None and hasattr(self._soup, 'css'):
+        if self.backend == "scrapling" and self._soup is not None:
             return self._find_apply_url_impl(
                 lambda sel: (self._soup.css(sel) or [None])[0],
                 lambda sel: self._soup.css(sel),
@@ -183,7 +174,7 @@ class PageResult:
 
     def find_cards(self, item_sel: str, title_sel: str, link_sel: str):
         """Return list of (title, href) from listing page cards."""
-        if _SCRAPLING_AVAILABLE and self._soup is not None and hasattr(self._soup, 'css'):
+        if self.backend == "scrapling" and self._soup is not None:
             return self._scrapling_cards(item_sel, title_sel, link_sel)
         elif self._soup is not None:
             return self._bs4_cards(item_sel, title_sel, link_sel)
@@ -237,6 +228,21 @@ _STEALTH_HEADERS = {
 }
 
 
+def _scrapling_fetch(url: str, use_stealth: bool, use_js: bool, timeout: float):
+    """Call the requested Scrapling backend, degrading to the HTTP Fetcher when
+    that backend did not import.
+
+    Scrapling 0.4 fetchers are used through their classmethods (instantiating
+    them is deprecated). Units differ: the HTTP Fetcher takes seconds, the
+    browser fetchers take milliseconds.
+    """
+    if use_stealth and _StealthyFetcher:
+        return _StealthyFetcher.fetch(url, timeout=int(timeout * 1000))
+    if use_js and _PlayWrightFetcher:
+        return _PlayWrightFetcher.fetch(url, timeout=int(timeout * 1000))
+    return _ScraplingFetcher.get(url, timeout=timeout)
+
+
 def _fetch_page(
     url: str,
     use_stealth: bool = False,
@@ -254,18 +260,13 @@ def _fetch_page(
     """
     if _SCRAPLING_AVAILABLE:
         try:
-            # Degrade per-mode: if the requested fetcher class didn't load,
-            # fall back to the basic Fetcher or httpx.
-            if use_stealth and _StealthyFetcher:
-                page = _StealthyFetcher().get(url, timeout=timeout)
-            elif use_js and _PlayWrightFetcher:
-                page = _PlayWrightFetcher().fetch(url, timeout=timeout)
-            elif _ScraplingFetcher:
-                page = _ScraplingFetcher().get(url, timeout=timeout)
-            else:
-                # None of the Scrapling fetchers loaded — go straight to httpx fallback
-                page = None
-
+            page = _scrapling_fetch(url, use_stealth=use_stealth, use_js=use_js, timeout=timeout)
+        except Exception as e:
+            # Typically a browser backend that cannot run here (browsers not
+            # installed, sandbox restrictions). The server never answered, so
+            # a plain HTTP fetch is still worth a try.
+            logger.warning(f"Scrapling fetch failed for {url}: {e}. Trying plain HTTP.")
+        else:
             if page is None:
                 logger.warning(f"Scrapling returned None for {url}")
                 return None
@@ -278,36 +279,8 @@ def _fetch_page(
                 logger.warning(f"Scrapling got HTTP {page.status} for {url}")
                 return None
 
-            # get_all_text strips script/style/nav by default in 0.4.x
             text = page.get_all_text(ignore_tags=('script', 'style', 'nav', 'footer', 'header'))
-            return PageResult(url=url, text=text, soup=page)
-
-        except TypeError as te:
-            # timeout= kwarg not supported by this Scrapling version — retry without
-            logger.warning(f"Scrapling timeout kwarg not supported for {url}: {te}. Retrying without timeout.")
-            try:
-                if use_stealth and _StealthyFetcher:
-                    page = _StealthyFetcher().get(url)
-                elif use_js and _PlayWrightFetcher:
-                    page = _PlayWrightFetcher().fetch(url)
-                elif _ScraplingFetcher:
-                    page = _ScraplingFetcher().get(url)
-                else:
-                    page = None
-                if page is None:
-                    return None
-                if getattr(page, "status", 0) and page.status >= 400:
-                    logger.warning(f"Scrapling got HTTP {page.status} for {url} (retry)")
-                    return None
-                text = page.get_all_text(ignore_tags=('script', 'style', 'nav', 'footer', 'header'))
-                return PageResult(url=url, text=text, soup=page)
-            except Exception as inner_e:
-                logger.warning(f"Scrapling retry (no timeout) failed for {url}: {inner_e}")
-                return None
-
-        except Exception as e:
-            logger.warning(f"Scrapling fetch failed for {url}: {e}")
-            return None
+            return PageResult(url=url, text=text, soup=page, backend="scrapling")
 
     # ── Fallback: plain httpx + BeautifulSoup ──────────────────────────────────
     try:
@@ -324,7 +297,7 @@ def _fetch_page(
             for noise in soup.select('script,style,nav,footer,header'):
                 noise.decompose()
             text = soup.get_text(separator='\n', strip=True)
-            return PageResult(url=url, text=text, soup=soup)
+            return PageResult(url=url, text=text, soup=soup, backend="bs4")
     except Exception as e:
         logger.warning(f"httpx fallback fetch failed for {url}: {e}")
         return None

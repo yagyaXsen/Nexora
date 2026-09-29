@@ -16,6 +16,7 @@ Alembic remains available as a CLI tool for manual schema migrations.
 """
 
 import logging
+import secrets
 
 from sqlalchemy import inspect as sa_inspect, text as sa_text
 
@@ -43,6 +44,7 @@ def _sync_missing_columns() -> None:
             ("last_checked_at", "TIMESTAMP WITH TIME ZONE"),
             ("last_verified_at", "TIMESTAMP WITH TIME ZONE"),
             ("link_check_failures", "INTEGER NOT NULL DEFAULT 0"),
+            ("closed_by_source", "BOOLEAN NOT NULL DEFAULT FALSE"),
         ],
         "pipeline_runs": [
             ("revalidated_count", "INTEGER NOT NULL DEFAULT 0"),
@@ -409,59 +411,127 @@ def _sweep_expired_opportunities() -> None:
         db.close()
 
 
-def _seed_admin_user() -> None:
-    """Ensure the default administrator user exists with verified role and credentials.
-    
-    Safe & idempotent on all environments (Neon/Postgres & local SQLite).
+# Older builds created this account on every boot with a password published
+# in the source, and re-set that password if anyone changed it. It must never
+# keep working: _retire_legacy_default_admin() locks it on the next boot.
+LEGACY_ADMIN_EMAIL = "admin@nexora.ai"
+LEGACY_ADMIN_PASSWORD = "admin123"
+
+
+def _retire_legacy_default_admin(db) -> None:
+    """Lock the legacy default admin account if it still has the public password.
+
+    Its password is replaced with a random secret nobody knows, and its admin
+    role is dropped — unless ADMIN_EMAIL names this same account, in which case
+    _provision_configured_admin() sets the configured password right after.
     """
+    from app.models import User
+    from app.auth import hash_password, verify_password
+
+    legacy = db.query(User).filter(User.email == LEGACY_ADMIN_EMAIL).first()
+    if not legacy or not verify_password(LEGACY_ADMIN_PASSWORD, legacy.hashed_password):
+        return
+    if settings.ADMIN_EMAIL.strip().lower() == LEGACY_ADMIN_EMAIL and settings.ADMIN_PASSWORD:
+        return
+
+    legacy.hashed_password = hash_password(secrets.token_urlsafe(32))
+    if legacy.role == "admin":
+        legacy.role = "candidate"
+    db.commit()
+    logger.warning(
+        "Locked the legacy '%s' account: it still used the public default password. "
+        "Set ADMIN_EMAIL / ADMIN_PASSWORD to provision an admin login.",
+        LEGACY_ADMIN_EMAIL,
+    )
+
+
+def _provision_configured_admin(db) -> None:
+    """Create or sync the admin account named by ADMIN_EMAIL / ADMIN_PASSWORD.
+
+    The env vars are the source of truth: the account always has role=admin
+    and the configured password, so rotating the password means changing the
+    env var and restarting. Without both vars no admin login exists — the
+    X-Admin-Key header (and the localhost dev console) still work.
+    """
+    from sqlalchemy import func
     from app.models import User, Profile
     from app.auth import hash_password, verify_password
 
+    email = settings.ADMIN_EMAIL.strip().lower()
+    password = settings.ADMIN_PASSWORD
+    if not email or not password:
+        logger.info(
+            "No admin login provisioned (ADMIN_EMAIL / ADMIN_PASSWORD not set); "
+            "admin API access is available via the X-Admin-Key header."
+        )
+        return
+
+    admin = db.query(User).filter(func.lower(User.email) == email).first()
+    if not admin:
+        admin = User(
+            name="Nexora Admin",
+            email=email,
+            hashed_password=hash_password(password),
+            role="admin",
+            email_verified=True,
+        )
+        db.add(admin)
+        db.commit()
+        db.refresh(admin)
+        logger.info("Admin user '%s' provisioned from ADMIN_EMAIL.", email)
+    else:
+        updated = False
+        if admin.role != "admin":
+            admin.role = "admin"
+            updated = True
+        if not admin.email_verified:
+            admin.email_verified = True
+            updated = True
+        if not verify_password(password, admin.hashed_password):
+            admin.hashed_password = hash_password(password)
+            updated = True
+        if updated:
+            db.commit()
+            logger.info("Admin user '%s' synchronized with ADMIN_EMAIL / ADMIN_PASSWORD.", email)
+
+    # Ensure admin has a Profile record
+    profile = db.query(Profile).filter(Profile.user_id == admin.id).first()
+    if not profile:
+        db.add(Profile(
+            user_id=admin.id,
+            institution="Nexora Platform Operations",
+            academic_degree="Executive Administration",
+            field_of_study="Artificial Intelligence & Education",
+            citizenship="Global",
+            residence="Global",
+            interests=["Administration", "AI", "Scholarships", "Fellowships", "Grants"],
+            target_countries=["Global", "United States", "United Kingdom", "European Union"],
+        ))
+        db.commit()
+
+
+def _fail_orphaned_pipeline_runs() -> None:
+    from app.pipeline.runner import fail_orphaned_runs
+
     db = SessionLocal()
     try:
-        admin = db.query(User).filter(User.email == "admin@nexora.ai").first()
-        if not admin:
-            admin = User(
-                name="Nexora Admin",
-                email="admin@nexora.ai",
-                hashed_password=hash_password("admin123"),
-                role="admin",
-                email_verified=True,
-            )
-            db.add(admin)
-            db.commit()
-            db.refresh(admin)
-            logger.info("Admin user 'admin@nexora.ai' provisioned successfully.")
-        else:
-            updated = False
-            if admin.role != "admin":
-                admin.role = "admin"
-                updated = True
-            if not admin.email_verified:
-                admin.email_verified = True
-                updated = True
-            if not verify_password("admin123", admin.hashed_password):
-                admin.hashed_password = hash_password("admin123")
-                updated = True
-            if updated:
-                db.commit()
-                logger.info("Admin user 'admin@nexora.ai' credentials synchronized.")
+        fail_orphaned_runs(db)
+    except Exception:
+        db.rollback()
+        logger.exception("Orphaned pipeline-run cleanup failed (non-fatal)")
+    finally:
+        db.close()
 
-        # Ensure admin has a Profile record
-        profile = db.query(Profile).filter(Profile.user_id == admin.id).first()
-        if not profile:
-            profile = Profile(
-                user_id=admin.id,
-                institution="Nexora Platform Operations",
-                academic_degree="Executive Administration",
-                field_of_study="Artificial Intelligence & Education",
-                citizenship="Global",
-                residence="Global",
-                interests=["Administration", "AI", "Scholarships", "Fellowships", "Grants"],
-                target_countries=["Global", "United States", "United Kingdom", "European Union"],
-            )
-            db.add(profile)
-            db.commit()
+
+def _seed_admin_user() -> None:
+    """Retire the legacy default admin, then provision the configured one.
+
+    Safe & idempotent on all environments (Neon/Postgres & local SQLite).
+    """
+    db = SessionLocal()
+    try:
+        _retire_legacy_default_admin(db)
+        _provision_configured_admin(db)
     except Exception:
         db.rollback()
         logger.exception("Admin user provisioning failed (non-fatal)")
@@ -517,6 +587,9 @@ def run_startup():
 
     # Mark expired opportunities and remove dead_link / junk title entries
     _sweep_expired_opportunities()
+
+    # Close pipeline runs left 'running' by a process that died mid-run
+    _fail_orphaned_pipeline_runs()
 
     logger.info("Nexora startup lifecycle complete.")
     logger.info("─" * 50)

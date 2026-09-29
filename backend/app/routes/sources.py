@@ -1,5 +1,5 @@
 from typing import List
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy.orm import Session
 
 from app.database import get_db
@@ -47,10 +47,14 @@ def update_source(id: int, source_in: SourceUpdate, db: Session = Depends(get_db
     return source
 
 @router.post("/{id}/run", response_model=PipelineRunRead, dependencies=[Depends(verify_admin_key)])
-def trigger_source_run(id: int, db: Session = Depends(get_db)):
+def trigger_source_run(
+    id: int,
+    reextract: bool = Query(False, description="Re-extract unchanged pages too (e.g. after enabling Groq)"),
+    db: Session = Depends(get_db),
+):
     source = db.query(Source).filter(Source.id == id).first()
     if not source:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Source ID {id} not found")
 
-    pipeline_run = runner.run_source(db, source)
+    pipeline_run = runner.run_source(db, source, force_reextract=reextract)
     return pipeline_run

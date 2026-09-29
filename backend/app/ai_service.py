@@ -1,4 +1,3 @@
-import hashlib
 import json
 import logging
 import re
@@ -39,6 +38,100 @@ def _parse_deadline_hint(text: str) -> Optional[datetime]:
             except ValueError:
                 continue
     return None
+
+class JunkContentError(ValueError):
+    """The page is not an opportunity (forum thread, blog post, nav page…).
+
+    A deterministic verdict on the content itself, so the pipeline marks the
+    raw document rejected instead of retrying it."""
+
+
+# ── Heuristic (mock-mode) field extraction ────────────────────────────────────
+# Mock mode must only report what the page actually says. Anything it cannot
+# find stays None — the frontend renders unknowns honestly, while a made-up
+# value would be published as fact.
+
+_AMOUNT_RE = re.compile(
+    r"(?:(?:US|CA|AU|NZ|HK|S)?\$|€|£|₹|\b(?:USD|EUR|GBP|CHF|INR|CAD|AUD|SGD)\s?)"
+    r"\s?\d[\d,.]*\d(?:\s?(?:k|m|million|billion|thousand)\b)?",
+    re.IGNORECASE,
+)
+_FULLY_FUNDED_RE = re.compile(r"\bfully[\s-]funded\b|\bfull scholarship\b", re.IGNORECASE)
+_ELIGIBILITY_RE = re.compile(
+    r"[^.\n]*\b(?:eligib\w*|open to|applicants must|candidates must|who can apply)\b[^.\n]*",
+    re.IGNORECASE,
+)
+# Lines the fetcher/extractor add around page text — metadata, not content.
+_METADATA_LINE_RE = re.compile(r"^(?:#|\*\*|program page\b|direct_apply_url:)", re.IGNORECASE)
+
+# Checked in order: specific phrases before generic words ("travel grant"
+# before "grant"), so the first category whose keyword appears wins.
+_CATEGORY_KEYWORDS = (
+    ("travel", ("travel grant", "travel award", "travel fund")),
+    ("exchange", ("exchange program", "exchange programme", "student exchange")),
+    ("gov_scheme", ("government scheme", "ministry of", "national scheme")),
+    ("giveaway", ("giveaway", "free credits", "cloud credits")),
+    ("accelerator", ("accelerator", "incubator", "incubation", "startup program", "seed funding")),
+    ("competition", ("hackathon", "competition", "challenge", "contest", "olympiad", "prize")),
+    ("conference", ("conference", "summit", "symposium")),
+    ("scholarship", ("scholarship", "studentship", "bursary")),
+    ("fellowship", ("fellowship", "postdoctoral", "postdoc")),
+    ("grant", ("grant", "funding call", "call for proposals", "research funding")),
+)
+_VALID_CATEGORIES = {c.value for c in OpportunityCategory}
+
+
+def _parse_funding_hint(text: str) -> Optional[str]:
+    match = _AMOUNT_RE.search(text[:6000])
+    if match:
+        return match.group(0).strip()
+    if _FULLY_FUNDED_RE.search(text[:6000]):
+        return "Fully Funded"
+    return None
+
+
+def _parse_eligibility_hint(text: str) -> Optional[str]:
+    match = _ELIGIBILITY_RE.search(text[:6000])
+    if not match:
+        return None
+    sentence = match.group(0).strip(" :-*")
+    return sentence[:300] if len(sentence) >= 12 else None
+
+
+def _infer_category(title: str, text: str, hint: Optional[str]) -> OpportunityCategory:
+    """Title keywords, then the source's category_hint, then body keywords.
+
+    In the title the RIGHTMOST keyword wins — the head noun of a title
+    usually comes last ("Grand Challenges Fellowship" is a fellowship,
+    "Research Grant Competition" a competition). On a tie the more specific
+    phrase listed first wins ("travel grant" over "grant").
+    """
+    title_l = title.lower()
+    best_end, best_cat = -1, None
+    for cat, words in _CATEGORY_KEYWORDS:
+        for w in words:
+            pos = title_l.rfind(w)
+            if pos >= 0 and pos + len(w) > best_end:
+                best_end, best_cat = pos + len(w), cat
+    if best_cat:
+        return OpportunityCategory(best_cat)
+    if hint and hint in _VALID_CATEGORIES:
+        return OpportunityCategory(hint)
+    body_l = text[:6000].lower()
+    best, best_hits = None, 0
+    for cat, words in _CATEGORY_KEYWORDS:
+        hits = sum(body_l.count(w) for w in words)
+        if hits > best_hits:
+            best, best_hits = cat, hits
+    return OpportunityCategory(best) if best else OpportunityCategory.GRANT
+
+
+def _content_lines(text_content: str):
+    return [
+        l.strip() for l in text_content.splitlines()
+        if l.strip() and not _METADATA_LINE_RE.match(l.strip())
+    ]
+
 
 class AIService:
     def __init__(self):
@@ -161,16 +254,18 @@ class AIService:
 
         return False
 
-    def extract_opportunity(self, text_content: str, source_name: str, candidate_url: str) -> OpportunityExtract:
+    def extract_opportunity(self, text_content: str, source_name: str, candidate_url: str,
+                            category_hint: Optional[str] = None) -> OpportunityExtract:
         if self.is_invalid_junk_url(candidate_url, text_content):
-            raise ValueError(f"URL {candidate_url} identified as forum or discussion thread — skipping normalization.")
+            raise JunkContentError(f"URL {candidate_url} identified as a non-opportunity page — skipping normalization.")
 
         if self.use_mock or not self.client:
-            return self._mock_extraction(text_content, source_name, candidate_url)
+            return self._mock_extraction(text_content, source_name, candidate_url, category_hint)
 
         prompt = f"""
 You are an expert opportunity discovery AI. Analyze the text content from "{source_name}" below and extract key opportunity details.
 Target URL: {candidate_url}
+{f'This source usually lists "{category_hint}" opportunities (a hint, not a rule).' if category_hint else ''}
 
 Output strictly a valid JSON object with the following fields:
 - category: one of ["scholarship", "fellowship", "grant", "accelerator", "competition", "conference", "exchange", "travel", "gov_scheme", "giveaway"]
@@ -202,45 +297,62 @@ Text Content:
             )
             content = chat_completion.choices[0].message.content
             parsed = json.loads(content)
+            parsed.setdefault("apply_url", candidate_url)
             return OpportunityExtract(**parsed)
         except Exception as e:
             logger.error(f"Groq AI extraction failed: {e}. Retrying with fallback mock mode.")
-            return self._mock_extraction(text_content, source_name, candidate_url)
+            return self._mock_extraction(text_content, source_name, candidate_url, category_hint)
 
-    def _mock_extraction(self, text_content: str, source_name: str, candidate_url: str) -> OpportunityExtract:
-        text_hash = hashlib.md5(text_content.encode("utf-8")).hexdigest()
-        hash_val = int(text_hash[:8], 16)
+    def _mock_extraction(self, text_content: str, source_name: str, candidate_url: str,
+                         category_hint: Optional[str] = None) -> OpportunityExtract:
+        """Heuristic extraction used when Groq is off or failed.
 
-        categories = list(OpportunityCategory)
-        cat = categories[hash_val % len(categories)]
-
-        # Derive title lines
-        lines = [l.strip() for l in text_content.splitlines() if l.strip()]
-        first_line = lines[0] if lines else "Global Opportunity Program"
+        Every field comes from the page text or stays None — mock mode must
+        NEVER fabricate data (random deadlines, amounts or countries would be
+        published as fact and then faithfully maintained by the pipeline).
+        Confidence reflects how much the parser actually found and stays below
+        0.90, so heuristic records are never labelled officially verified.
+        """
+        lines = _content_lines(text_content)
+        first_line = text_content.strip().splitlines()[0] if text_content.strip() else ""
         # Strip markdown/pipeline artifacts ('# ', 'Program Page', nav junk) so
         # mock records don't carry '#'-prefixed titles that the startup junk
         # sweep would later delete.
-        title = _clean_title(first_line)[:120] or f"{source_name} Opportunity Program {hash_val % 1000}"
+        title = _clean_title(first_line)[:120] or (lines[0][:120] if lines else f"{source_name} Opportunity")
 
-        # Use a real date printed on the page when one exists. Mock mode must
-        # NEVER fabricate a deadline: a made-up future date would make a
-        # closed/expired program look open (and an automated pipeline would
-        # then faithfully maintain fabricated data). No date on the page →
-        # deadline stays null and the record renders as "Deadline Unclear".
+        # Description: the first substantive sentences of page text, skipping
+        # the title and the fetcher's metadata header lines.
+        content = [l for l in lines if l != title]
+        body = [l for l in content if len(l) >= 40]
+        if body:
+            description = " ".join(body)[:300].strip()
+        elif content:
+            description = "; ".join(content)[:300].strip()  # page is only short lines
+        else:
+            description = f"Opportunity listed by {source_name}."
+
         deadline_dt = _parse_deadline_hint(text_content)
-        
+        funding = _parse_funding_hint(text_content)
+        eligibility = _parse_eligibility_hint(text_content)
+        category = _infer_category(title, text_content, category_hint)
+
+        confidence = 0.75
+        confidence += 0.05 if deadline_dt else 0.0
+        confidence += 0.03 if funding else 0.0
+        confidence += 0.02 if eligibility else 0.0
+
         return OpportunityExtract(
-            category=cat,
+            category=category,
             title=title,
-            organizer=source_name if source_name else "Global Grants Foundation",
+            organizer=source_name if source_name else "Unknown organizer",
             deadline=deadline_dt,
             apply_url=candidate_url,
-            country="Global" if hash_val % 2 == 0 else "United States",
-            funding_amount=f"${(hash_val % 50 + 5) * 1000} USD" if hash_val % 3 != 0 else "Fully Funded",
-            eligibility_text="Open to students, researchers, and early-stage innovators worldwide.",
-            description=lines[1][:250] if len(lines) > 1 else f"Discovered opportunity from {source_name}. Applications are open for eligible candidates worldwide.",
-            tags=[cat.value, "innovation", "funding", "global"],
-            confidence=0.88 + (hash_val % 10) / 100.0,
+            country=None,
+            funding_amount=funding,
+            eligibility_text=eligibility,
+            description=description,
+            tags=[category.value],
+            confidence=round(confidence, 2),
         )
 
     # --- AI-powered search query parsing ---
