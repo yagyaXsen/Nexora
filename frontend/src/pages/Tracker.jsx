@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { api, applyUrl } from '../lib/api'
 import { cleanTitle, formatDate } from '../lib/format'
@@ -36,22 +36,28 @@ export default function Tracker() {
     passport: true,
   })
 
-  useEffect(() => {
+  const loadApps = useCallback(() => {
     let cancelled = false
     setLoading(true)
+    setError(null)
     api
       .applications()
       .then((data) => {
-        if (cancelled) return
-        setApps(data)
-        setLoading(false)
+        if (!cancelled) setApps(data)
       })
-      .catch((e) => !cancelled && setError(e.message))
+      .catch((e) => {
+        if (!cancelled) setError(e.message || 'Request failed')
+      })
+      .finally(() => {
+        if (!cancelled) setLoading(false)
+      })
 
     return () => {
       cancelled = true
     }
   }, [])
+
+  useEffect(() => loadApps(), [loadApps])
 
   const openDrawer = (app) => {
     setActiveApp(app)
@@ -69,7 +75,7 @@ export default function Tracker() {
       if (activeApp && activeApp.id === appId) {
         setActiveApp(updated)
       }
-    } catch (e) {
+    } catch {
       /* rollback safe */
     }
   }
@@ -91,7 +97,7 @@ export default function Tracker() {
       const updated = await api.updateApplication(activeApp.id, { notes: notesInput })
       setApps((prev) => prev.map((a) => (a.id === activeApp.id ? updated : a)))
       setActiveApp(updated)
-    } catch (e) {
+    } catch {
       /* rollback safe */
     }
   }
@@ -101,7 +107,7 @@ export default function Tracker() {
       await api.deleteApplication(appId)
       setApps((prev) => prev.filter((a) => a.id !== appId))
       if (activeApp && activeApp.id === appId) setActiveApp(null)
-    } catch (e) {
+    } catch {
       /* Error */
     }
   }
@@ -112,6 +118,13 @@ export default function Tracker() {
   const appliedCount = apps.filter((a) => ['Applied', 'Ready to Apply'].includes(a.status)).length
   const interviewCount = apps.filter((a) => ['Assessment', 'Interview'].includes(a.status)).length
   const offerCount = apps.filter((a) => ['Offer', 'Accepted'].includes(a.status)).length
+  // Open applications whose deadline falls in the next 14 days.
+  const soon = Date.now() + 14 * 24 * 60 * 60 * 1000
+  const dueSoonCount = apps.filter((a) => {
+    const deadline = a.opportunity?.deadline ? new Date(a.opportunity.deadline).getTime() : NaN
+    return !['Applied', 'Offer', 'Accepted', 'Rejected', 'Archived'].includes(a.status)
+      && deadline >= Date.now() && deadline <= soon
+  }).length
 
   return (
     <div className="prism-tracker bg-white min-h-screen pt-24 pb-20 font-sans relative overflow-hidden">
@@ -176,12 +189,29 @@ export default function Tracker() {
             <span className="prism-mono text-[9px] text-slate-400 font-bold uppercase">Offers</span>
           </div>
           <div className="bg-slate-50 border border-slate-200 p-4 rounded-2xl space-y-1 hover:border-slate-400 transition-colors">
-            <div className="text-2xl font-extrabold text-emerald-600">98%</div>
-            <span className="prism-mono text-[9px] text-slate-400 font-bold uppercase">Avg Match</span>
+            <div className={`text-2xl font-extrabold ${dueSoonCount > 0 ? 'text-red-500' : 'text-slate-900'}`}><CountUp end={dueSoonCount} /></div>
+            <span className="prism-mono text-[9px] text-slate-400 font-bold uppercase">Due in 14 Days</span>
           </div>
         </div>
 
         {/* 3. Kanban Pipeline Canvas */}
+        {error ? (
+          <div role="alert" className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border border-red-200 bg-red-50 text-red-700 p-6 rounded-3xl text-sm">
+            <span>Couldn&apos;t load your applications: {error}</span>
+            <button
+              type="button"
+              onClick={loadApps}
+              className="shrink-0 px-4 py-2 rounded-full bg-white border border-red-200 font-bold text-xs hover:border-red-400 transition-colors"
+            >
+              Try again
+            </button>
+          </div>
+        ) : loading ? (
+          <div aria-live="polite" className="flex items-center justify-center gap-2 py-16 text-sm text-slate-400">
+            <i className="ti ti-loader-2 animate-spin" aria-hidden="true" />
+            <span>Loading your applications…</span>
+          </div>
+        ) : (
         <div className="flex gap-4 overflow-x-auto pb-6 select-none items-start">
           {STAGES.slice(0, 7).map((stage) => {
             const stageApps = apps.filter((a) => (a.status || 'Saved') === stage)
@@ -231,6 +261,7 @@ export default function Tracker() {
             )
           })}
         </div>
+        )}
 
       </div>
 

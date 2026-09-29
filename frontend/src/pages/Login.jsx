@@ -98,7 +98,7 @@ export default function Login() {
     setSsoLoading(true)
     try {
       triggerGoogleLogin()
-    } catch (err) {
+    } catch {
       setError('Unable to launch Google Account Picker. Please try again.')
       setSsoLoading(false)
     }

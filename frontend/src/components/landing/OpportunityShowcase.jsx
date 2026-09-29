@@ -2,7 +2,7 @@ import React, { useState } from 'react'
 import { motion } from 'framer-motion'
 import { 
   Sparkles, Bookmark, ArrowRight, MapPin, DollarSign, 
-  Clock, Building2, CheckCircle2, ShieldCheck, TrendingUp
+  Clock, Building2, CheckCircle2, ShieldCheck
 } from 'lucide-react'
 
 // Data for Editorial Bento Layout (Zero Emojis, Clean Vector Badges)
@@ -92,16 +92,6 @@ const filterTabs = ['All Calls', 'Scholarships', 'Fellowships', 'Accelerators', 
 export default function OpportunityShowcase() {
   const [activeTab, setActiveTab] = useState('All Calls')
   const [savedIds, setSavedIds] = useState(new Set())
-  const [hoveredCardId, setHoveredCardId] = useState(null)
-  const [mousePos, setMousePos] = useState({ x: 0, y: 0 })
-
-  const handleMouseMove = (e) => {
-    const rect = e.currentTarget.getBoundingClientRect()
-    setMousePos({
-      x: e.clientX - rect.left,
-      y: e.clientY - rect.top
-    })
-  }
 
   const toggleSave = (e, id) => {
     e.stopPropagation()
@@ -194,9 +184,6 @@ export default function OpportunityShowcase() {
             whileInView={{ opacity: 1, x: 0 }}
             transition={{ duration: 0.7 }}
             viewport={{ once: true }}
-            onMouseMove={(e) => handleMouseMove(e, featuredOpportunity.id)}
-            onMouseEnter={() => setHoveredCardId(featuredOpportunity.id)}
-            onMouseLeave={() => setHoveredCardId(null)}
             className="lg:col-span-7 bg-white/80 backdrop-blur-2xl border border-white/80 rounded-[32px] p-6 md:p-8 shadow-[0_20px_50px_rgba(0,0,0,0.06)] hover:shadow-xl transition-all duration-500 relative overflow-hidden group"
           >
             {/* Top Badges Row */}
@@ -326,9 +313,6 @@ export default function OpportunityShowcase() {
                 whileInView={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.5, delay: idx * 0.15 }}
                 viewport={{ once: true }}
-                onMouseMove={(e) => handleMouseMove(e, opp.id)}
-                onMouseEnter={() => setHoveredCardId(opp.id)}
-                onMouseLeave={() => setHoveredCardId(null)}
                 className="bg-white/80 backdrop-blur-2xl border border-white/80 rounded-[28px] p-6 shadow-[0_15px_35px_rgba(0,0,0,0.04)] hover:shadow-xl transition-all duration-300 relative overflow-hidden group"
               >
                 <div className="flex items-start justify-between gap-3 mb-4">
