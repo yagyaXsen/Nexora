@@ -104,7 +104,12 @@ Playwright browsers, which don't fit the free tier.
 2. Build settings:
    - **Build command:** `cd frontend && npm install && npm run build`
    - **Build output directory:** `frontend/dist`
-3. Environment variable: `VITE_API_BASE_URL` = your Render URL.
+3. Environment variables:
+   - `VITE_API_BASE_URL` = your Render URL
+   - `VITE_GOOGLE_CLIENT_ID` = your Google OAuth client ID, if you use
+     "Sign in with Google" (set the same value as `GOOGLE_CLIENT_ID` on Render)
+   - `VITE_SITE_URL` = your Pages URL (optional; used for SEO tags)
+
    Never put an admin key in a `VITE_*` variable: every `VITE_*` value is
    compiled into the public JavaScript bundle.
 4. **Save and Deploy**, then go back to Render and set `CORS_ORIGINS` and `FRONTEND_URL` to the Pages URL.
