@@ -106,3 +106,4 @@ Production runs on Postgres; to run the same suite against a Postgres database (
 ```bash
 NEXORA_TEST_DATABASE_URL=postgresql://user@localhost:5432/nexora_test python -m pytest tests/
 ```
+CI (`.github/workflows/ci.yml`) runs the backend suite on Python 3.11 and 3.13 against both SQLite and PostgreSQL 16, plus the frontend lint and production build, on every push.
