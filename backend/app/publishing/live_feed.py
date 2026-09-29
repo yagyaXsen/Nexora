@@ -31,11 +31,13 @@ import threading
 import time
 from datetime import datetime, timezone
 from typing import List, Optional, Tuple
+from urllib.parse import urlparse
 
 from sqlalchemy.orm import Session, joinedload
 
 from app.config import settings
 from app.models import Opportunity, OpportunityStatus, Source
+from app.publishing.loader import AGGREGATOR_DOMAINS
 from app.publishing.models import PublishedOpportunity
 
 logger = logging.getLogger(__name__)
@@ -75,7 +77,11 @@ def eligible_for_publishing(opp: Opportunity) -> bool:
         CONFIDENCE_THRESHOLD flags this).
       * confidence >= PUBLISH_MIN_CONFIDENCE (mirrors the static catalog's
         own publish quality gate of 75/100).
-      * a real http(s) apply URL and a sane title (the existing junk rules).
+      * a real http(s) apply URL that is not an aggregator site (the same
+        AGGREGATOR_DOMAINS rule the static catalog loader enforces — seeded
+        sources such as Opportunity Desk are aggregators, and a record whose
+        apply link never resolved past them is not an official source),
+      * a sane title (the existing junk rules).
     """
     if opp.status not in (OpportunityStatus.ACTIVE.value, OpportunityStatus.EXPIRING_SOON.value):
         return False
@@ -94,6 +100,8 @@ def eligible_for_publishing(opp: Opportunity) -> bool:
     url = (opp.apply_url or "").strip().lower()
     if not (url.startswith("http://") or url.startswith("https://")):
         return False
+    if _is_aggregator_url(url):
+        return False
     title = (opp.title or "").strip()
     if not title or title.startswith("#"):
         return False
@@ -102,6 +110,11 @@ def eligible_for_publishing(opp: Opportunity) -> bool:
     if not (opp.description or "").strip():
         return False
     return True
+
+
+def _is_aggregator_url(url: str) -> bool:
+    host = (urlparse(url).hostname or "").lower()
+    return any(host == d or host.endswith("." + d) for d in AGGREGATOR_DOMAINS)
 
 
 # ── DB → published mapping ─────────────────────────────────────────────────────
@@ -181,7 +194,10 @@ def get_live_records(db: Session, force: bool = False) -> List[PublishedOpportun
     """
     now = time.monotonic()
     with _cache_lock:
-        if not force and _cache["records"] and now - _cache["at"] < settings.LIVE_FEED_TTL_SECONDS:
+        # `at` (not the record list) marks a valid cache: an EMPTY live feed is
+        # a legitimate result and must be cached too, or every request re-runs
+        # the query whenever the pipeline has nothing publishable.
+        if not force and _cache["at"] and now - _cache["at"] < settings.LIVE_FEED_TTL_SECONDS:
             return list(_cache["records"])
 
     try:

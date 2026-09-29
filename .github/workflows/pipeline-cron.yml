@@ -2,67 +2,64 @@ name: Nexora pipeline cron
 
 on:
   schedule:
-    - cron: "17 */6 * * *"
-    - cron: "43 1 * * *"
-    - cron: "7 3 * * 0"
+    - cron: "17 */6 * * *"  # ingest
+    - cron: "43 1 * * *"    # lifecycle sweep
+    - cron: "7 3 * * 0"     # weekly publishing refresh
   workflow_dispatch:
+    inputs:
+      job:
+        description: Pipeline job to run now
+        type: choice
+        options: [ingest, lifecycle, publish]
+        default: ingest
 
-# Calls the authenticated cron endpoint with a bounded cold-start retry:
-# a sleeping Render instance may take ~60s to wake, so transient connection
-# failures/HTML splash pages are retried; real application errors still fail
-# the run visibly. GitHub masks the secret automatically in logs.
+# Calls the authenticated cron endpoint with a bounded cold-start retry: a
+# sleeping Render instance may take ~60s to wake, so connection failures and
+# HTML splash pages are retried. An application failure (HTTP 500 with
+# "success": false) fails the run immediately — it is not a cold start.
+# All jobs are idempotent and the API skips a job that is already running.
 jobs:
-  ingest:
-    if: github.event.schedule != '43 1 * * *' && github.event.schedule != '7 3 * * 0'
+  trigger:
     runs-on: ubuntu-latest
     steps:
-      - name: Trigger bounded source ingest
+      - name: Pick pipeline job
+        id: pick
+        env:
+          SCHEDULE: ${{ github.event.schedule }}
+          DISPATCH_JOB: ${{ inputs.job }}
         run: |
-          for attempt in 1 2 3; do
-            body=$(curl --fail --silent --show-error --max-time 900 --request POST \
-              --header "X-Admin-Key: ${{ secrets.NEXORA_ADMIN_SECRET_KEY }}" \
-              "${{ secrets.NEXORA_API_URL }}/api/pipeline/cron/ingest") \
-              && echo "$body" | grep -q '"success"[[:space:]]*:' && \
-              { echo "Ingest OK: $body"; exit 0; }
-            echo "Attempt $attempt did not reach a healthy API (cold start or error); retrying in 30s"
-            sleep 30
-          done
-          echo "Ingest endpoint did not return a valid success response after 3 attempts" >&2
-          exit 1
+          case "$SCHEDULE" in
+            "43 1 * * *") job=lifecycle ;;
+            "7 3 * * 0")  job=publish ;;
+            "")           job="${DISPATCH_JOB:-ingest}" ;;
+            *)            job=ingest ;;
+          esac
+          echo "job=$job" >> "$GITHUB_OUTPUT"
 
-  lifecycle:
-    if: github.event.schedule == '43 1 * * *'
-    runs-on: ubuntu-latest
-    steps:
-      - name: Trigger lifecycle sweep
+      - name: Trigger ${{ steps.pick.outputs.job }}
+        env:
+          JOB: ${{ steps.pick.outputs.job }}
+          API_URL: ${{ secrets.NEXORA_API_URL }}
+          ADMIN_KEY: ${{ secrets.NEXORA_ADMIN_SECRET_KEY }}
         run: |
+          if [ -z "$API_URL" ] || [ -z "$ADMIN_KEY" ]; then
+            echo "::error::Repository secrets NEXORA_API_URL and NEXORA_ADMIN_SECRET_KEY must be set" >&2
+            exit 1
+          fi
           for attempt in 1 2 3; do
-            body=$(curl --fail --silent --show-error --max-time 900 --request POST \
-              --header "X-Admin-Key: ${{ secrets.NEXORA_ADMIN_SECRET_KEY }}" \
-              "${{ secrets.NEXORA_API_URL }}/api/pipeline/cron/lifecycle") \
-              && echo "$body" | grep -q '"success"[[:space:]]*:' && \
-              { echo "Lifecycle OK: $body"; exit 0; }
-            echo "Attempt $attempt did not reach a healthy API (cold start or error); retrying in 30s"
-            sleep 30
+            body=$(curl --fail-with-body --silent --show-error --max-time 900 --request POST \
+              --header "X-Admin-Key: $ADMIN_KEY" \
+              "$API_URL/api/pipeline/cron/$JOB") || true
+            if echo "$body" | grep -q '"success"[[:space:]]*:[[:space:]]*true'; then
+              echo "$JOB OK: $body"
+              exit 0
+            fi
+            if echo "$body" | grep -q '"success"[[:space:]]*:[[:space:]]*false'; then
+              echo "::error::$JOB failed in the application: $body" >&2
+              exit 1
+            fi
+            echo "Attempt $attempt did not reach a healthy API (cold start or network error)"
+            if [ "$attempt" -lt 3 ]; then sleep 30; fi
           done
-          echo "Lifecycle endpoint did not return a valid success response after 3 attempts" >&2
-          exit 1
-
-  publish:
-    # Weekly publishing refresh (idempotent — safe to re-run manually).
-    if: github.event.schedule == '7 3 * * 0'
-    runs-on: ubuntu-latest
-    steps:
-      - name: Trigger publishing refresh
-        run: |
-          for attempt in 1 2 3; do
-            body=$(curl --fail --silent --show-error --max-time 900 --request POST \
-              --header "X-Admin-Key: ${{ secrets.NEXORA_ADMIN_SECRET_KEY }}" \
-              "${{ secrets.NEXORA_API_URL }}/api/pipeline/cron/publish") \
-              && echo "$body" | grep -q '"success"[[:space:]]*:' && \
-              { echo "Publish OK: $body"; exit 0; }
-            echo "Attempt $attempt did not reach a healthy API (cold start or error); retrying in 30s"
-            sleep 30
-          done
-          echo "Publish endpoint did not return a valid success response after 3 attempts" >&2
+          echo "::error::$JOB endpoint did not return a valid response after 3 attempts" >&2
           exit 1

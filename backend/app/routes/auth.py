@@ -52,10 +52,6 @@ def login(form_data: OAuth2PasswordRequestForm = Depends(), db: Session = Depend
             detail="Incorrect email or password",
             headers={"WWW-Authenticate": "Bearer"},
         )
-    if user.email == "admin@nexora.ai" and user.role != "admin":
-        user.role = "admin"
-        db.commit()
-        db.refresh(user)
     # Serialize through UserRead — TokenResponse.user must be JSON-serializable,
     # and passing the raw SQLAlchemy ORM object crashes pydantic serialization.
     return TokenResponse(
@@ -246,11 +242,7 @@ def reset_password(payload: ResetPasswordRequest, db: Session = Depends(get_db))
     return {"success": True}
 
 @router.get("/me", response_model=UserRead)
-def read_me(current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
-    if current_user.email == "admin@nexora.ai" and current_user.role != "admin":
-        current_user.role = "admin"
-        db.commit()
-        db.refresh(current_user)
+def read_me(current_user: User = Depends(get_current_user)):
     return current_user
 
 @router.patch("/me", response_model=UserRead)

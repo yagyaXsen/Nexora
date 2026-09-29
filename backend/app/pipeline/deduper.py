@@ -30,14 +30,21 @@ SOURCE_CLOSED_PHRASES = [
 ]
 
 
+# Opportunity.dedupe_key is String(255); a longer key would abort the whole
+# transaction on Postgres. Both sides of every comparison go through this
+# function, so capping here keeps matching consistent.
+DEDUPE_KEY_MAX_LEN = 255
+
+
 def canonicalize_url(url: str) -> str:
     try:
         parsed = urlparse(url.strip())
-        # keep scheme, netloc, path (stripped of trailing slash)
+        # keep netloc + path (stripped of trailing slash)
         path = parsed.path.rstrip('/')
-        return f"{parsed.netloc.lower()}{path.lower()}"
+        key = f"{parsed.netloc.lower()}{path.lower()}"
     except Exception:
-        return url.strip().lower()
+        key = url.strip().lower()
+    return key[:DEDUPE_KEY_MAX_LEN]
 
 class PipelineDeduper:
     def process_extract(
@@ -84,8 +91,6 @@ class PipelineDeduper:
         needs_review = extract.confidence < settings.CONFIDENCE_THRESHOLD
         now = datetime.now(timezone.utc)
 
-        # The source page was just fetched successfully — any earlier
-        # transient-failure strikes are obsolete.
         source_says_closed = self._source_says_closed(raw_doc)
 
         if existing_opp:
@@ -107,21 +112,23 @@ class PipelineDeduper:
                 existing_opp.organization_id = org_id
 
             # Deadline: write the newly extracted value, but don't let a
-            # "not found on page" (null) wipe a previously known date UNLESS
-            # the page explicitly says applications are closed.
+            # "not found on page" (null) wipe a previously known date.
             if extract.deadline is not None:
                 existing_opp.deadline = extract.deadline
-                if source_says_closed:
-                    logger.info(f"Source page says applications are closed for opp ID {existing_opp.id}")
-                    existing_opp.status = OpportunityStatus.EXPIRED.value
-                else:
-                    recompute_status(existing_opp, now)
-            elif source_says_closed:
-                existing_opp.status = OpportunityStatus.EXPIRED.value
-            elif existing_opp.deadline is not None:
-                # Keep the known deadline; still refresh its derived status so
-                # an expired/active label always matches the stored date.
-                recompute_status(existing_opp, now)
+
+            # "Applications closed" on the page is sticky (closed_by_source):
+            # recompute_status, the daily sweep and revalidation all keep the
+            # row expired until a scrape no longer finds the notice.
+            was_closed = bool(existing_opp.closed_by_source)
+            existing_opp.closed_by_source = source_says_closed
+            if source_says_closed and not was_closed:
+                logger.info(f"Source page says applications are closed for opp ID {existing_opp.id}")
+            if was_closed and not source_says_closed and existing_opp.deadline is None:
+                # The source withdrew its closed notice and gives no date —
+                # it is accepting applications again.
+                existing_opp.status = OpportunityStatus.ACTIVE.value
+            # Refresh the derived status so the label always matches the data.
+            recompute_status(existing_opp, now)
 
             # Keep the dedupe key aligned with the (possibly new) apply URL so
             # the next exact-match lookup hits instead of falling back to fuzz.
@@ -137,7 +144,7 @@ class PipelineDeduper:
             return (existing_opp, False, True)
 
         # Create new record
-        base_slug = slugify(extract.title) or "opportunity"
+        base_slug = slugify(extract.title)[:200] or "opportunity"
         slug = base_slug
         counter = 1
         while db.query(Opportunity).filter(Opportunity.slug == slug).first():
@@ -163,9 +170,11 @@ class PipelineDeduper:
             source_id=source.id,
             raw_document_id=raw_doc.id,
             organization_id=org_id,
+            closed_by_source=source_says_closed,
         )
-        # Even a brand-new record can carry a deadline that already passed —
-        # derive its status from data, not blind optimism.
+        # Even a brand-new record can carry a deadline that already passed (or
+        # a page saying applications are closed) — derive its status from
+        # data, not blind optimism.
         recompute_status(new_opp, now)
         new_opp.last_checked_at = utc_now()
         new_opp.last_verified_at = utc_now()
@@ -174,6 +183,10 @@ class PipelineDeduper:
         db.commit()
         db.refresh(new_opp)
         return (new_opp, True, False)
+
+    @staticmethod
+    def source_says_closed(raw_doc: RawDocument) -> bool:
+        return PipelineDeduper._source_says_closed(raw_doc)
 
     @staticmethod
     def _source_says_closed(raw_doc: RawDocument) -> bool:

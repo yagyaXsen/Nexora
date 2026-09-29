@@ -2,6 +2,7 @@ from typing import List
 from datetime import datetime, timedelta, timezone
 
 from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi.responses import JSONResponse
 from sqlalchemy import func
 from sqlalchemy.orm import Session
 
@@ -23,15 +24,36 @@ from app.pipeline.runner import runner
 
 router = APIRouter(prefix="/api/pipeline", tags=["Pipeline"])
 
+def _run_cron_job(job, name: str):
+    """Run a scheduled job for an external cron and report the real outcome.
+
+    A failed job answers HTTP 500 with success=false, so `curl --fail` in the
+    GitHub-Actions workflow fails the run visibly instead of going green.
+    A job already running in this process answers 200 with
+    data.skipped="already_running" (e.g. a workflow retry after a timeout).
+    """
+    try:
+        result = job()
+    except Exception as e:
+        return JSONResponse(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            content={
+                "success": False,
+                "data": None,
+                "error": {"code": "CRON_JOB_FAILED", "message": f"{name} failed: {e}"},
+            },
+        )
+    return {"success": True, "data": result}
+
 @router.post("/cron/ingest", dependencies=[Depends(verify_admin_key)])
 def trigger_scheduled_ingest():
     """External cron entry point for hosts that sleep when idle."""
-    return {"success": True, "data": scheduled_ingest_all_sources()}
+    return _run_cron_job(scheduled_ingest_all_sources, "ingest")
 
 @router.post("/cron/lifecycle", dependencies=[Depends(verify_admin_key)])
 def trigger_lifecycle_sweep():
     """External cron entry point for lifecycle maintenance."""
-    return {"success": True, "data": scheduled_daily_lifecycle_sweep()}
+    return _run_cron_job(scheduled_daily_lifecycle_sweep, "lifecycle sweep")
 
 @router.post("/cron/publish", dependencies=[Depends(verify_admin_key)])
 def trigger_publishing_refresh():
@@ -39,13 +61,13 @@ def trigger_publishing_refresh():
 
     Idempotent: visibility is computed at read time; this endpoint only
     recomputes the feed and records measured publishing metrics."""
-    return {"success": True, "data": scheduled_publishing_refresh()}
+    return _run_cron_job(scheduled_publishing_refresh, "publishing refresh")
 
-@router.get("/runs", response_model=List[PipelineRunRead])
+@router.get("/runs", response_model=List[PipelineRunRead], dependencies=[Depends(verify_admin_key)])
 def list_pipeline_runs(limit: int = 50, db: Session = Depends(get_db)):
     return db.query(PipelineRun).order_by(PipelineRun.started_at.desc()).limit(limit).all()
 
-@router.get("/status")
+@router.get("/status", dependencies=[Depends(verify_admin_key)])
 def pipeline_status(db: Session = Depends(get_db)):
     """Automation observability: is the pipeline alive, when did it last run,
     and what did it do? Aggregates the existing PipelineRun / AuditEvent
@@ -253,7 +275,7 @@ def _next_run_time(job_id: str):
     job = scheduler.get_job(job_id)
     return job.next_run_time.isoformat() if job and job.next_run_time else None
 
-@router.get("/review", response_model=List[OpportunityRead])
+@router.get("/review", response_model=List[OpportunityRead], dependencies=[Depends(verify_admin_key)])
 def get_review_queue(db: Session = Depends(get_db)):
     return db.query(Opportunity).filter(Opportunity.needs_review == True).order_by(Opportunity.created_at.desc()).all()
 
